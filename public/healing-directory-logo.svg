@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 560" role="img" aria-labelledby="title desc">
+  <title id="title">The Healing Directory</title>
+  <desc id="desc">Lotus mark above The Healing Directory text.</desc>
+  <rect width="980" height="560" fill="#dedfd3"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="9" transform="translate(490 74)">
+    <path d="M0 146C-43 104-43 49 0 0c43 49 43 104 0 146Z" stroke="#24736c"/>
+    <path d="M-35 151c-57-15-87-63-78-122 61 7 99 49 78 122Z" stroke="#23706d"/>
+    <path d="M35 151c57-15 87-63 78-122-61 7-99 49-78 122Z" stroke="#4d8b61"/>
+    <path d="M-14 153c-63 10-113-19-135-75 66-8 113 20 135 75Z" stroke="#bd9f31"/>
+    <path d="M14 153c63 10 113-19 135-75-66-8-113 20-135 75Z" stroke="#d8922a"/>
+    <path d="M0 154c-51 33-111 29-154-8 58-27 112-23 154 8Z" stroke="#e09a2d"/>
+    <path d="M0 154c51 33 111 29 154-8-58-27-112-23-154 8Z" stroke="#dc7f2e"/>
+  </g>
+  <text x="490" y="302" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="54" font-weight="700" fill="#19211f">THE</text>
+  <text x="490" y="380" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="76" font-weight="700" fill="#19211f">HEALING</text>
+  <text x="490" y="455" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="76" font-weight="700" fill="#19211f">DIRECTORY</text>
+</svg>
