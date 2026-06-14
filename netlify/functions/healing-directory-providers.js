@@ -5,16 +5,16 @@ const DEFAULT_VIEW_ID = "viwd0UGAiaOGCprXo";
 const FIELD_CANDIDATES = {
   name: ["Name", "Provider Name", "Full Name", "name"],
   pronouns: ["Pronouns", "pronouns"],
-  profession: ["Profession", "Title", "Professional Title", "Credentials", "profession"],
+  profession: ["Profession", "Title", "Professional Title", "Credentials", "Service Type", "profession"],
   bio: ["Bio", "Provider Bio", "About", "Description", "bio"],
   photo: ["Photo", "Profile Photo", "Headshot", "Image", "profilePhotoUrl"],
   email: ["Email", "Provider Email", "email"],
   phone: ["Phone", "Phone Number", "provider phone", "phone"],
   website: ["Website", "Web Site", "Site", "website"],
   consultationLink: ["Consultation Link", "Consult Link", "Booking Link", "Schedule Link", "Calendly", "consultationLink"],
-  providerType: ["Provider Type", "Provider Types", "Type", "providerType"],
-  servicesOffered: ["Services Offered", "Services", "Offerings", "servicesOffered"],
-  areasOfSupport: ["Areas of Support", "Concerns", "Specialties", "areasOfSupport"],
+  providerType: ["Service Type", "Provider Type", "Provider Types", "Type", "providerType"],
+  servicesOffered: ["Additional Services", "Services Offered", "Services", "Offerings", "servicesOffered"],
+  areasOfSupport: ["Areas of Support", "Concerns", "Specialties", "Support Areas", "areasOfSupport"],
   populationsServed: ["Populations Served", "Population", "Who I Serve", "populationsServed"],
   state: ["State", "Location", "Locations", "Virtual/In Person", "state"],
   payment: ["Payment", "Pay Type", "Insurance", "Fees", "additionalPayment", "payType"],
@@ -69,19 +69,22 @@ function isTruthy(value) {
 function recordToProvider(record) {
   const fields = record.fields || {};
   const name = unwrapValue(pickField(fields, "name"));
+  const providerType = toArray(pickField(fields, "providerType"));
+  const additionalServices = toArray(pickField(fields, "servicesOffered"));
+
   return {
     id: record.id,
     name: name || "Provider",
     pronouns: unwrapValue(pickField(fields, "pronouns")),
-    profession: unwrapValue(pickField(fields, "profession")),
+    profession: unwrapValue(pickField(fields, "profession")) || providerType.join(", "),
     bio: unwrapValue(pickField(fields, "bio")),
     photo: unwrapValue(pickField(fields, "photo")),
     email: unwrapValue(pickField(fields, "email")),
     phone: unwrapValue(pickField(fields, "phone")),
     website: unwrapValue(pickField(fields, "website")),
     consultationLink: unwrapValue(pickField(fields, "consultationLink")),
-    providerType: toArray(pickField(fields, "providerType")),
-    servicesOffered: toArray(pickField(fields, "servicesOffered")),
+    providerType,
+    servicesOffered: additionalServices,
     areasOfSupport: toArray(pickField(fields, "areasOfSupport")),
     populationsServed: toArray(pickField(fields, "populationsServed")),
     state: toArray(pickField(fields, "state")),
