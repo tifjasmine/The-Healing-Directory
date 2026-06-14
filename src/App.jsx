@@ -18,69 +18,10 @@ const PROVIDER_DATA_URL = "/.netlify/functions/healing-directory-providers";
 const ITEMS_PER_PAGE = 8;
 const STORAGE_KEY = "healing_directory_saved_providers";
 
-const previewProviders = [
-  {
-    id: "preview-maya-rivers",
-    name: "Maya Rivers",
-    pronouns: "she/her",
-    profession: "Somatic Therapist",
-    bio: "Body-based therapy for nervous system repair, burnout recovery, and reconnecting with inner steadiness after prolonged stress.",
-    providerType: ["Therapist", "Somatic Practitioner"],
-    servicesOffered: ["Individual therapy", "Somatic support", "Trauma-informed care"],
-    areasOfSupport: ["Burnout", "Anxiety", "Nervous system regulation"],
-    populationsServed: ["Women", "Adults", "Caregivers"],
-    state: ["Pennsylvania", "Virtual"],
-    payment: ["Private pay", "Sliding scale"],
-    verified: true,
-    email: "hello@example.com",
-    phone: "",
-    website: "example.com",
-    consultationLink: "https://example.com/consult",
-    photo: ""
-  },
-  {
-    id: "preview-elena-price",
-    name: "Elena Price",
-    pronouns: "she/they",
-    profession: "Holistic Wellness Coach",
-    bio: "Support for sensitive, high-achieving adults who want practical rituals, emotional clarity, and a grounded relationship with daily life.",
-    providerType: ["Wellness Coach"],
-    servicesOffered: ["Coaching", "Mindfulness", "Group support"],
-    areasOfSupport: ["Life transitions", "Self-trust", "Overfunctioning"],
-    populationsServed: ["Adults", "LGBTQIA+"],
-    state: ["New Jersey", "Virtual"],
-    payment: ["Private pay"],
-    verified: true,
-    email: "connect@example.com",
-    phone: "",
-    website: "example.com",
-    consultationLink: "",
-    photo: ""
-  },
-  {
-    id: "preview-nia-brooks",
-    name: "Nia Brooks",
-    pronouns: "she/her",
-    profession: "Breathwork Facilitator",
-    bio: "Gentle breathwork and restorative practices for people who need a softer way back into their bodies.",
-    providerType: ["Breathwork Facilitator"],
-    servicesOffered: ["Breathwork", "Workshops", "Restorative practices"],
-    areasOfSupport: ["Stress", "Embodiment", "Grief"],
-    populationsServed: ["Adults", "Parents"],
-    state: ["Virtual"],
-    payment: ["Private pay", "Community rate"],
-    verified: false,
-    email: "",
-    phone: "",
-    website: "example.com",
-    consultationLink: "https://example.com/intake",
-    photo: ""
-  }
-];
-
 export default function App() {
-  const [providers, setProviders] = React.useState(previewProviders);
+  const [providers, setProviders] = React.useState([]);
   const [dataStatus, setDataStatus] = React.useState("loading");
+  const [statusMessage, setStatusMessage] = React.useState("");
   const [searchTerm, setSearchTerm] = React.useState("");
   const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false);
   const [openFilter, setOpenFilter] = React.useState(null);
@@ -102,21 +43,31 @@ export default function App() {
     async function loadProviders() {
       try {
         const response = await fetch(PROVIDER_DATA_URL, { cache: "no-store" });
-        if (!response.ok) throw new Error("Provider data could not be loaded.");
-        const payload = await response.json();
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(payload.details || payload.error || "Provider data could not be loaded.");
+        }
+
         const nextProviders = Array.isArray(payload.providers) ? payload.providers : [];
 
-        if (!cancelled && nextProviders.length > 0) {
-          setProviders(nextProviders.map(normalizeProvider));
-          setDataStatus(payload.configured === false ? "preview" : "ready");
+        if (cancelled) return;
+
+        if (payload.configured === false) {
+          setProviders([]);
+          setDataStatus("not-configured");
+          setStatusMessage("Airtable is not connected to this Netlify site yet. Add AIRTABLE_TOKEN or AIRTABLE_API_KEY in Netlify environment variables, then redeploy.");
           return;
         }
 
-        if (!cancelled) setDataStatus(payload.configured === false ? "preview" : "empty");
-      } catch {
+        setProviders(nextProviders.map(normalizeProvider));
+        setDataStatus(nextProviders.length > 0 ? "ready" : "empty");
+        setStatusMessage(nextProviders.length > 0 ? "" : "Airtable connected, but no records were returned from the selected Directory view.");
+      } catch (error) {
         if (!cancelled) {
-          setProviders(previewProviders);
-          setDataStatus("preview");
+          setProviders([]);
+          setDataStatus("error");
+          setStatusMessage(error.message || "Unable to load Airtable records.");
         }
       }
     }
@@ -269,11 +220,11 @@ export default function App() {
 
         <div className="resultsTop">
           <p>{filteredProviders.length} providers found</p>
-          <span>{dataStatus === "preview" ? "Preview data is showing until Airtable is connected in Netlify" : "Curated support for therapy, wellness, and nervous system care"}</span>
+          <span>{dataStatus === "ready" ? "Curated support for therapy, wellness, and nervous system care" : statusMessage}</span>
         </div>
 
         {dataStatus === "loading" ? <StateBox text="Loading providers..." /> : null}
-        {dataStatus !== "loading" && visibleProviders.length === 0 ? <EmptyState hasActiveFilters={hasActiveFilters} clearFilters={clearFilters} /> : null}
+        {dataStatus !== "loading" && visibleProviders.length === 0 ? <EmptyState dataStatus={dataStatus} statusMessage={statusMessage} hasActiveFilters={hasActiveFilters} clearFilters={clearFilters} /> : null}
         {visibleProviders.length > 0 ? <div className="list">{visibleProviders.map((provider) => <ProviderCard key={provider.id} provider={provider} isSaved={savedIds.includes(provider.id)} onSave={() => toggleSaved(provider.id)} />)}</div> : null}
         {hasMore && <div className="loadMore"><button className="button" type="button" onClick={() => setVisibleCount((current) => current + ITEMS_PER_PAGE)}>View more providers</button></div>}
       </section>
@@ -283,8 +234,8 @@ export default function App() {
 
 function ProviderCard({ provider, isSaved, onSave }) {
   const initials = getInitials(provider.name);
-  const shownTags = [...provider.providerType.slice(0, 2), ...provider.areasOfSupport.slice(0, 3)];
-  const hiddenTagCount = provider.providerType.length + provider.areasOfSupport.length - shownTags.length;
+  const shownTags = [...provider.providerType.slice(0, 2), ...provider.servicesOffered.slice(0, 3), ...provider.areasOfSupport.slice(0, 2)].slice(0, 5);
+  const hiddenTagCount = provider.providerType.length + provider.servicesOffered.length + provider.areasOfSupport.length - shownTags.length;
 
   return (
     <article className="card">
@@ -329,8 +280,10 @@ function StateBox({ text }) {
   return <div className="stateBox"><div className="spinner" /><p>{text}</p></div>;
 }
 
-function EmptyState({ hasActiveFilters, clearFilters }) {
-  return <div className="stateBox"><h2>No providers match those filters.</h2><p>Try clearing a filter or searching for a broader concern.</p>{hasActiveFilters && <button className="button" type="button" onClick={clearFilters}>Clear filters</button>}</div>;
+function EmptyState({ dataStatus, statusMessage, hasActiveFilters, clearFilters }) {
+  const title = dataStatus === "not-configured" ? "Airtable is not connected yet." : dataStatus === "error" ? "Airtable could not be loaded." : "No providers found.";
+  const message = statusMessage || (hasActiveFilters ? "Try clearing a filter or searching for a broader concern." : "No records were returned from Airtable.");
+  return <div className="stateBox"><h2>{title}</h2><p>{message}</p>{hasActiveFilters && <button className="button" type="button" onClick={clearFilters}>Clear filters</button>}</div>;
 }
 
 function uniqueOptions(items, key) {
