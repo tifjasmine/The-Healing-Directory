@@ -2,11 +2,15 @@ import React from "react";
 import { getUser } from "@netlify/identity";
 import { X } from "lucide-react";
 import App from "./App.jsx";
+import EventWorkspace from "./EventWorkspace.jsx";
+import ProviderDashboard from "./ProviderDashboard.jsx";
 import PublicShowcase from "./PublicShowcase.jsx";
 import { ReferralRoomAdmin, ReferralRoomManager, ReferralRoomPage } from "./ReferralRoom.jsx";
 
 const REFERRAL_ROUTES = new Set(["/referral-room", "/referral-room-admin", "/referral-room-manager"]);
-const SHOWCASE_ROUTES = new Set(["/", "/providers", "/provider-details", "/events"]);
+const SHOWCASE_ROUTES = new Set(["/", "/providers", "/provider-details", "/events", "/event-details"]);
+const EVENT_WORKSPACE_ROUTES = new Set(["/my-events", "/add-event", "/edit-event"]);
+const PROVIDER_DASHBOARD_ROUTES = new Set(["/dashboard", "/provider-dashboard"]);
 
 export default function Root() {
   const path = window.location.pathname.replace(/\/$/, "") || "/";
@@ -41,6 +45,8 @@ export default function Root() {
   }, [path]);
 
   if (SHOWCASE_ROUTES.has(path)) return <PublicShowcase path={path} />;
+  if (EVENT_WORKSPACE_ROUTES.has(path)) return <EventWorkspace path={path} />;
+  if (PROVIDER_DASHBOARD_ROUTES.has(path)) return <ProviderDashboard />;
   if (!REFERRAL_ROUTES.has(path)) return <App />;
   if (!ready || !user) return <div className="state root-auth-state"><h2>Checking account...</h2></div>;
 
