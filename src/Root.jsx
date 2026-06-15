@@ -7,7 +7,8 @@ import ProviderDashboard from "./ProviderDashboard.jsx";
 import ClientDashboard from "./ClientDashboard.jsx";
 import PublicShowcase from "./PublicShowcase.jsx";
 import ReferralRoomAdminPage from "./ReferralRoomAdminPage.jsx";
-import { ReferralRoomManager, ReferralRoomPage } from "./ReferralRoom.jsx";
+import ReferralRoomProviderPage from "./ReferralRoomProviderPage.jsx";
+import { ReferralRoomManager } from "./ReferralRoom.jsx";
 import "./event-workspace-theme.css";
 
 const REFERRAL_ROUTES = new Set(["/referral-room", "/referral-room-admin", "/referral-room-manager"]);
@@ -57,7 +58,7 @@ export default function Root() {
   return <div className="app-shell referral-root">
     <header className="referral-root-header"><a className="brand" href="/"><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></a><nav><a href="/dashboard">Dashboard</a><a href="/events">Events</a>{user.roles.includes("admin") ? <><a href="/referral-room-admin">Create session</a><a href="/referral-room-manager">Manager</a></> : null}</nav></header>
     {notice ? <div className="global-notice"><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss"><X size={16} /></button></div> : null}
-    {path === "/referral-room" ? <ReferralRoomPage user={user} setNotice={setNotice} /> : null}
+    {path === "/referral-room" ? <ReferralRoomProviderPage user={user} setNotice={setNotice} /> : null}
     {path === "/referral-room-admin" ? <ReferralRoomAdminPage user={user} setNotice={setNotice} /> : null}
     {path === "/referral-room-manager" ? <ReferralRoomManager user={user} setNotice={setNotice} /> : null}
   </div>;
