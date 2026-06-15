@@ -1,8 +1,8 @@
 import React from "react";
 import {
   ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, CalendarDays, CheckCircle2,
-  ChevronDown, Clock, ExternalLink, HeartHandshake, LockKeyhole, LogIn, Mail,
-  MapPin, Menu, Phone, Plus, Search, Star, Users, X,
+  ChevronDown, CircleUserRound, Clock, ExternalLink, HeartHandshake, LockKeyhole,
+  LogIn, Mail, MapPin, Menu, Phone, Plus, Search, Star, Tag, Users, X,
 } from "lucide-react";
 
 const API = "/.netlify/functions/app-api";
@@ -37,7 +37,7 @@ export default function PublicShowcase({ path }) {
     }
   }
 
-  const warm = path === "/events" || path === "/provider-details";
+  const warm = path === "/events" || path === "/event-details" || path === "/provider-details";
   return <div className="app-shell">
     <header className={warm ? "site-header warm-header" : "site-header"}>
       <button className="brand" onClick={() => go("/")}>
@@ -53,6 +53,8 @@ export default function PublicShowcase({ path }) {
     </header>
     {path === "/provider-details"
       ? <ProviderDetails data={data} loading={loading} toggleSave={toggleSave} />
+      : path === "/event-details"
+        ? <EventDetails data={data} loading={loading} toggleSave={toggleSave} />
       : path === "/events"
         ? <EventsPage data={data} loading={loading} toggleSave={toggleSave} />
         : <DirectoryPage data={data} loading={loading} toggleSave={toggleSave} />}
@@ -191,6 +193,51 @@ function EventCard({ event, saved, onSave }) {
   return <article className="event-card"><div className="event-image">{event.image ? <img src={event.image} alt="" /> : <CalendarDays size={36} />}</div><div className="event-body"><div className="title-line"><p className="eyebrow ink">{event.category || event.eventType || "Event"}</p></div><h3>{event.name}</h3><p className="meta"><CalendarDays size={14} />{formatDate(event.start)}</p><p className="meta"><Clock size={14} />{formatTime(event.start)}{event.end ? ` - ${formatTime(event.end)}` : ""}</p><p>{truncate(event.description, 150)}</p><div className="card-footer"><button className="button" onClick={() => go(`/event-details?id=${event.id}`)}>View details <ArrowRight size={15} /></button>{event.registration ? <a className="button tertiary" href={href(event.registration)} target="_blank" rel="noreferrer">Register <ExternalLink size={15} /></a> : null}<button className={saved ? "icon-button saved" : "icon-button"} onClick={onSave}>{saved ? <BookmarkCheck /> : <Bookmark />}</button></div></div></article>;
 }
 
+function EventDetails({ data, loading, toggleSave }) {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id") || params.get("recordId");
+  const listedEvent = data.events.find((item) => item.id === id);
+  const [privateEvent, setPrivateEvent] = React.useState(null);
+  const [checking, setChecking] = React.useState(Boolean(id));
+  React.useEffect(() => {
+    if (!id || listedEvent) {
+      setChecking(false);
+      return;
+    }
+    api("event", { query: { id } })
+      .then((payload) => setPrivateEvent(payload.event || null))
+      .catch(() => setPrivateEvent(null))
+      .finally(() => setChecking(false));
+  }, [id, listedEvent]);
+  const event = listedEvent || privateEvent;
+  if (loading || checking) return <State label="Loading event" />;
+  if (!event) return <State label="Event not found" />;
+  const saved = data.savedEventIds.includes(event.id);
+  return <main className="event-detail-showcase">
+    <div className="event-detail-actions">
+      <button className="button event-back" onClick={() => go("/events")}><ArrowLeft size={17} /> Back to Events</button>
+      <button className="button event-primary" onClick={() => go("/add-event")}><Plus size={17} /> Add an Event</button>
+    </div>
+    <section className="event-showcase-hero">
+      <div className="event-showcase-image">{event.image ? <img src={event.image} alt="" /> : <img src="/healing-directory-logo.svg" alt="The Healing Directory" />}</div>
+      <div className="event-showcase-copy">
+        <div className="event-badges"><span><Users size={15} />{event.audience || "Community"}</span><span><CheckCircle2 size={15} />{event.status || "Approved"}</span><span><Tag size={15} />{event.category || event.eventType}</span></div>
+        <h1>{event.name}</h1>
+        <div className="event-facts"><span><CalendarDays />{formatDate(event.start)}</span><span><Clock />{formatTime(event.start)}{event.end ? ` - ${formatTime(event.end)}` : ""}</span>{event.hostName ? <span><CircleUserRound />{event.hostName}</span> : null}</div>
+        <div className="action-row">
+          {event.registration ? <a className="button event-primary" href={href(event.registration)} target="_blank" rel="noreferrer">Register <ExternalLink size={16} /></a> : null}
+          <button className="button event-outline" onClick={() => toggleSave("event", event.id, !saved)}>{saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}{saved ? "Saved Event" : "Save Event"}</button>
+          {event.hostEmail ? <a className="button event-outline" href={`mailto:${event.hostEmail}`}><Mail size={16} /> Email Host</a> : null}
+        </div>
+      </div>
+    </section>
+    <section className="event-detail-content">
+      <article className="event-description-card"><p className="eyebrow ink">About this event</p><h2>Details</h2><p>{event.description || "More details are coming soon."}</p></article>
+      <aside className="event-quick-card"><p className="eyebrow ink">Event snapshot</p><h2>Quick Info</h2><EventInfo icon={<CalendarDays />} label="Date" value={formatDate(event.start)} /><EventInfo icon={<Clock />} label="Time" value={`${formatTime(event.start)}${event.end ? ` - ${formatTime(event.end)}` : ""}`} /><EventInfo icon={<CircleUserRound />} label="Host" value={event.hostName} /><EventInfo icon={<Mail />} label="Host email" value={event.hostEmail} /><EventInfo icon={<Tag />} label="Category" value={event.category || event.eventType} /><EventInfo icon={<MapPin />} label="Location type" value={event.locationType} /><EventInfo icon={<MapPin />} label="Address / link" value={event.address} />{event.registration ? <a className="button event-primary full" href={href(event.registration)} target="_blank" rel="noreferrer">Register <ExternalLink size={16} /></a> : null}</aside>
+    </section>
+  </main>;
+}
+
 function DirectorySelect({ label, options, placeholder, ...props }) { return <label className="directory-select"><span>{label}</span><div><select {...props}><option value="">{placeholder}</option>{options.map((option) => <option key={option}>{option}</option>)}</select><ChevronDown size={16} /></div></label>; }
 function Avatar({ item, large }) { return <div className={large ? "avatar large" : "avatar"}>{item.photo ? <img src={item.photo} alt="" /> : <span>{initials(item.name)}</span>}</div>; }
 function ProfileTags({ label, values = [], warm }) { if (!values.length) return null; return <div className={warm ? "profile-tag-group warm" : "profile-tag-group"}><strong>{label}</strong><div>{values.map((value) => <span key={value}>{value}</span>)}</div></div>; }
@@ -198,6 +245,7 @@ function CareGroup({ label, values = [], warm, neutral }) { return <div classNam
 function ContentSection({ kicker, title, children }) { return <section className="content-section"><p className="eyebrow ink">{kicker}</p><h2>{title}</h2>{children}</section>; }
 function Info({ icon, label, value }) { if (!value) return null; return <div className="info-line">{React.cloneElement(icon, { size: 17 })}<span><small>{label}</small>{value}</span></div>; }
 function EventCount({ value, label }) { return <div className="event-count"><strong>{value}</strong><span>{label}</span></div>; }
+function EventInfo({ icon, label, value }) { if (!value) return null; return <div className="event-info">{React.cloneElement(icon, { size: 19 })}<span><small>{label}</small><strong>{value}</strong></span></div>; }
 function State({ label }) { return <div className="state"><HeartHandshake /><h2>{label}</h2></div>; }
 function go(path) { window.location.assign(path); }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
@@ -209,4 +257,4 @@ function capitalize(value) { return value.charAt(0).toUpperCase() + value.slice(
 function time(value) { const date = new Date(value || 0); return Number.isNaN(date.getTime()) ? null : date; }
 function formatDate(value) { const date = time(value); return date ? new Intl.DateTimeFormat(undefined, { weekday: "short", month: "long", day: "numeric", year: "numeric" }).format(date) : "Date TBA"; }
 function formatTime(value) { const date = time(value); return date ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(date) : "Time TBA"; }
-async function api(action, options = {}) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: options.body ? JSON.stringify(options.body) : undefined }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }
+async function api(action, options = {}) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); Object.entries(options.query || {}).forEach(([key, value]) => url.searchParams.set(key, value)); const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: options.body ? JSON.stringify(options.body) : undefined }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }
