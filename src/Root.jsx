@@ -8,7 +8,7 @@ import ClientDashboard from "./ClientDashboard.jsx";
 import PublicShowcase from "./PublicShowcase.jsx";
 import ReferralRoomAdminPage from "./ReferralRoomAdminPage.jsx";
 import ReferralRoomProviderPage from "./ReferralRoomProviderPage.jsx";
-import { ReferralRoomManager } from "./ReferralRoom.jsx";
+import ReferralRoomManagerPage from "./ReferralRoomManagerPage.jsx";
 import "./event-workspace-theme.css";
 
 const REFERRAL_ROUTES = new Set(["/referral-room", "/referral-room-admin", "/referral-room-manager"]);
@@ -60,6 +60,6 @@ export default function Root() {
     {notice ? <div className="global-notice"><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss"><X size={16} /></button></div> : null}
     {path === "/referral-room" ? <ReferralRoomProviderPage user={user} setNotice={setNotice} /> : null}
     {path === "/referral-room-admin" ? <ReferralRoomAdminPage user={user} setNotice={setNotice} /> : null}
-    {path === "/referral-room-manager" ? <ReferralRoomManager user={user} setNotice={setNotice} /> : null}
+    {path === "/referral-room-manager" ? <ReferralRoomManagerPage user={user} setNotice={setNotice} /> : null}
   </div>;
 }
