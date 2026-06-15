@@ -6,6 +6,7 @@ import EventWorkspace from "./EventWorkspace.jsx";
 import ProviderDashboard from "./ProviderDashboard.jsx";
 import PublicShowcase from "./PublicShowcase.jsx";
 import { ReferralRoomAdmin, ReferralRoomManager, ReferralRoomPage } from "./ReferralRoom.jsx";
+import "./event-workspace-theme.css";
 
 const REFERRAL_ROUTES = new Set(["/referral-room", "/referral-room-admin", "/referral-room-manager"]);
 const SHOWCASE_ROUTES = new Set(["/", "/providers", "/provider-details", "/events", "/event-details"]);
