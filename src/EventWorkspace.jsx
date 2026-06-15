@@ -1,0 +1,124 @@
+import React from "react";
+import { getUser } from "@netlify/identity";
+import {
+  ArrowLeft, CalendarDays, Clock, ExternalLink, Mail,
+  MapPin, Pencil, Plus, RefreshCw, Search, Send, Sparkles,
+} from "lucide-react";
+
+const API = "/.netlify/functions/app-api";
+
+export default function EventWorkspace({ path }) {
+  const [user, setUser] = React.useState(null);
+  const [ready, setReady] = React.useState(false);
+
+  React.useEffect(() => {
+    getUser().then((current) => {
+      if (!current) {
+        window.location.replace(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        return;
+      }
+      setUser({ email: current.email || "", name: current.name || current.userMetadata?.full_name || "" });
+      setReady(true);
+    });
+  }, []);
+
+  if (!ready || !user) return <div className="state"><RefreshCw className="spin" /><h2>Checking account...</h2></div>;
+  return <div className="app-shell event-workspace">
+    <header className="site-header warm-header">
+      <button className="brand" onClick={() => go("/")}><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></button>
+      <nav className="site-nav"><button onClick={() => go("/")}>Home</button><button onClick={() => go("/events")}>Events</button><button onClick={() => go("/dashboard")}>Dashboard</button></nav>
+    </header>
+    {path === "/my-events" ? <MyEvents user={user} /> : <EventEditor user={user} editing={path === "/edit-event"} />}
+  </div>;
+}
+
+function MyEvents({ user }) {
+  const [payload, setPayload] = React.useState({ hosted: [], saved: [] });
+  const [loading, setLoading] = React.useState(true);
+  const [query, setQuery] = React.useState("");
+  const [filter, setFilter] = React.useState("all");
+  React.useEffect(() => { api("my-events").then(setPayload).finally(() => setLoading(false)); }, []);
+  const hosted = payload.hosted || [];
+  const counts = {
+    all: hosted.length,
+    upcoming: hosted.filter((event) => new Date(event.start).getTime() >= Date.now()).length,
+    past: hosted.filter((event) => new Date(event.start).getTime() < Date.now()).length,
+    approved: hosted.filter((event) => lower(event.status).includes("approved")).length,
+    pending: hosted.filter((event) => lower(event.status).includes("pending")).length,
+    draft: hosted.filter((event) => lower(event.status).includes("draft")).length,
+  };
+  const events = hosted.filter((event) => {
+    const text = [event.name, event.category, event.eventType, event.audience].join(" ").toLowerCase();
+    const time = new Date(event.start).getTime();
+    const matches = filter === "all" || (filter === "upcoming" && time >= Date.now()) || (filter === "past" && time < Date.now()) || lower(event.status).includes(filter);
+    return matches && (!query || text.includes(query.toLowerCase()));
+  });
+
+  return <main className="my-events-page">
+    <section className="my-events-hero"><div>
+      <div className="workspace-actions"><button onClick={() => go("/events")}><ArrowLeft size={16} /> Browse Events</button><button className="warm" onClick={() => go("/add-event")}><Plus size={16} /> Add Event</button></div>
+      <p className="eyebrow">The Healing Directory</p><h1>Manage your<br />hosted events.</h1><p>View the workshops, circles, trainings, referral room events, and healing offerings connected to your provider email.</p>
+    </div><aside><Sparkles /><strong>{hosted.length}</strong><span>events connected to your provider email</span><div><Mail size={16} />{user.email}</div></aside></section>
+    <section className="my-events-panel">
+      <div className="my-events-heading"><div><p className="eyebrow ink">My Events</p><h2>Your event listings.</h2></div><button className="button event-gold" onClick={() => go("/add-event")}><Plus size={17} /> Add Event</button></div>
+      <div className="connected-email"><span><strong>Connected provider email</strong><small>Events show here when the Host Email on the event matches this email.</small></span><div>{user.email}</div></div>
+      <label className="workspace-search"><Search size={20} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search event name, category, type, audience..." /></label>
+      <div className="workspace-filters">{Object.keys(counts).map((key) => <button key={key} className={filter === key ? "active" : ""} onClick={() => setFilter(key)}>{capitalize(key)} <span>{counts[key]}</span></button>)}</div>
+    </section>
+    <section className="hosted-event-grid">{loading ? <WorkspaceState label="Loading your events" /> : events.map((event) => <HostedEventCard key={event.id} event={event} />)}</section>
+  </main>;
+}
+
+function HostedEventCard({ event }) {
+  return <article className="hosted-event-card">
+    <div className="hosted-image">{event.image ? <img src={event.image} alt="" /> : <img src="/healing-directory-logo.svg" alt="" />}<span className={`hosted-status ${lower(event.status).includes("approved") ? "approved" : ""}`}>{event.status || "Pending Review"}</span></div>
+    <div className="hosted-copy"><div className="hosted-tags"><span>{event.category || event.eventType}</span>{event.audience ? <span>{event.audience}</span> : null}</div><h3>{event.name}</h3><p>{truncate(event.description, 90)}</p><div className="hosted-facts"><span><CalendarDays />{formatDate(event.start)}</span><span><Clock />{formatTimeRange(event.start, event.end)}</span><span><MapPin />{event.locationType || "Location TBA"}</span></div><div className="hosted-links">{event.address ? <a href={href(event.address)} target="_blank" rel="noreferrer">Address / Link <ExternalLink size={14} /></a> : null}{event.registration ? <a href={href(event.registration)} target="_blank" rel="noreferrer">Registration <ExternalLink size={14} /></a> : null}</div><div className="hosted-actions"><button className="button event-gold" onClick={() => go(`/edit-event?id=${event.id}`)}><Pencil size={16} /> Edit Event</button><button className="button event-outline" onClick={() => go(`/event-details?id=${event.id}`)}>View Details</button></div></div>
+  </article>;
+}
+
+function EventEditor({ user, editing }) {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id") || params.get("recordId");
+  const [form, setForm] = React.useState({ eventName: "", category: "", eventAudience: "Community", eventType: "Workshop", date: "", endTime: "", locationType: "Virtual", addressLink: "", registrationLink: "", description: "" });
+  const [loading, setLoading] = React.useState(editing);
+  const [saving, setSaving] = React.useState(false);
+  const [message, setMessage] = React.useState("");
+  React.useEffect(() => {
+    if (!editing || !id) return;
+    api("event", { query: { id } }).then(({ event }) => setForm({ eventName: event.name || "", category: event.category || "", eventAudience: event.audience || "Community", eventType: event.eventType || "Workshop", date: localDate(event.start), endTime: localDate(event.end), locationType: event.locationType || "Virtual", addressLink: event.address || "", registrationLink: event.registration || "", description: event.description || "" })).finally(() => setLoading(false));
+  }, [editing, id]);
+  const change = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
+  async function submit(event) {
+    event.preventDefault(); setSaving(true); setMessage("");
+    try { const result = await api("save-event", { method: "POST", body: { ...form, recordId: editing ? id : "" } }); window.location.assign(`/event-details?id=${result.event.id}`); }
+    catch (error) { setMessage(error.message); setSaving(false); }
+  }
+  if (loading) return <WorkspaceState label="Loading event editor" />;
+  return <main className="event-editor-page">
+    <section className="event-editor-hero"><div className="workspace-actions"><button onClick={() => go("/events")}><ArrowLeft size={16} /> Back to Events</button><button onClick={() => go("/my-events")}>My Events</button></div><p className="eyebrow">The Healing Directory</p><h1>{editing ? "Update your event listing." : "Create your event listing."}</h1><p>Add provider-only or community-facing workshops, circles, trainings, referral room events, and healing offerings.</p></section>
+    <form className="event-editor-card" onSubmit={submit}>
+      <p className="eyebrow ink">Event details</p><h2>Share the details.</h2>
+      <div className="host-email-card"><label>Host Email *</label><strong>{user.email}</strong><p>This event stays connected to your provider account.</p></div>
+      <EditorSection number="01" title="Basic information" text="Name the event and choose how it should be categorized."><EditorField label="Event Name" value={form.eventName} onChange={change("eventName")} placeholder="Ex: Nervous System Reset Circle" required /><EditorField label="Category" value={form.category} onChange={change("category")} placeholder="Community Gathering" required /><EditorSelect label="Event Audience" value={form.eventAudience} onChange={change("eventAudience")} options={["Community", "For Providers"]} /><EditorSelect label="Event Type" value={form.eventType} onChange={change("eventType")} options={["Workshop", "Healing Circle / Support Group", "Training", "Referral Room", "Retreat", "Other"]} /></EditorSection>
+      <EditorSection number="02" title="Time and location" text="Add when it is happening and where people should go."><EditorField label="Start Date + Time" type="datetime-local" value={form.date} onChange={change("date")} required /><EditorField label="End Date + Time" type="datetime-local" value={form.endTime} onChange={change("endTime")} required /><EditorSelect label="Location Type" value={form.locationType} onChange={change("locationType")} options={["Virtual", "In Person", "Hybrid"]} /><EditorField label="Address or Link" value={form.addressLink} onChange={change("addressLink")} placeholder="Zoom link, registration page, studio address, etc." /><EditorField label="Registration Link" value={form.registrationLink} onChange={change("registrationLink")} placeholder="Optional" /></EditorSection>
+      <EditorSection number="03" title="Description" text="Let people know what this event is about, who it's for, what they can expect, and anything important to know before attending." single><EditorField label="Description" value={form.description} onChange={change("description")} textarea placeholder="Share what the event includes, who it's meant for, and what attendees will experience." required /></EditorSection>
+      {message ? <div className="editor-message">{message}</div> : null}<div className="editor-submit"><button className="button event-gold" disabled={saving}>{saving ? <RefreshCw className="spin" size={17} /> : <Send size={17} />}{saving ? "Submitting..." : editing ? "Save Changes" : "Submit Event"}</button></div>
+    </form>
+  </main>;
+}
+
+function EditorSection({ number, title, text, children, single }) { return <section className="editor-section"><div className="editor-section-title"><span>{number}</span><div><h3>{title}</h3><p>{text}</p></div></div><div className={single ? "editor-grid single" : "editor-grid"}>{children}</div></section>; }
+function EditorField({ label, textarea, ...props }) { return <label className={textarea ? "editor-field full" : "editor-field"}><span>{label}{props.required ? " *" : ""}</span>{textarea ? <textarea rows="8" {...props} /> : <input {...props} />}</label>; }
+function EditorSelect({ label, options, ...props }) { return <label className="editor-field"><span>{label} *</span><select {...props}>{options.map((option) => <option key={option}>{option}</option>)}</select></label>; }
+function WorkspaceState({ label }) { return <div className="state"><RefreshCw className="spin" /><h2>{label}...</h2></div>; }
+function go(path) { window.location.assign(path); }
+function lower(value) { return String(value || "").toLowerCase(); }
+function capitalize(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
+function truncate(value, max) { const text = String(value || "").trim(); return text.length > max ? `${text.slice(0, max - 1)}...` : text; }
+function href(value) { return /^(https?:|mailto:|tel:)/i.test(String(value || "")) ? value : `https://${value}`; }
+function date(value) { const parsed = new Date(value || 0); return Number.isNaN(parsed.getTime()) ? null : parsed; }
+function formatDate(value) { const parsed = date(value); return parsed ? new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" }).format(parsed) : "Date TBA"; }
+function formatTime(value) { const parsed = date(value); return parsed ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(parsed) : ""; }
+function formatTimeRange(start, end) { return [formatTime(start), formatTime(end)].filter(Boolean).join(" - ") || "Time TBA"; }
+function localDate(value) { const parsed = date(value); if (!parsed) return ""; return new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
+async function api(action, options = {}) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); Object.entries(options.query || {}).forEach(([key, value]) => url.searchParams.set(key, value)); const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: options.body ? JSON.stringify(options.body) : undefined }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }
