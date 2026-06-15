@@ -4,6 +4,7 @@ import Root from "./Root.jsx";
 import "./styles.css";
 import "./finishing.css";
 import "./referral-room.css";
+import "./referral-manager.css";
 import "./screenshot-theme.css";
 import "./dashboard-admin-theme.css";
 
