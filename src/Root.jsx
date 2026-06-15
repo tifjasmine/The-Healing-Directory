@@ -2,9 +2,11 @@ import React from "react";
 import { getUser } from "@netlify/identity";
 import { X } from "lucide-react";
 import App from "./App.jsx";
+import PublicShowcase from "./PublicShowcase.jsx";
 import { ReferralRoomAdmin, ReferralRoomManager, ReferralRoomPage } from "./ReferralRoom.jsx";
 
 const REFERRAL_ROUTES = new Set(["/referral-room", "/referral-room-admin", "/referral-room-manager"]);
+const SHOWCASE_ROUTES = new Set(["/", "/providers", "/provider-details", "/events"]);
 
 export default function Root() {
   const path = window.location.pathname.replace(/\/$/, "") || "/";
@@ -38,6 +40,7 @@ export default function Root() {
     });
   }, [path]);
 
+  if (SHOWCASE_ROUTES.has(path)) return <PublicShowcase path={path} />;
   if (!REFERRAL_ROUTES.has(path)) return <App />;
   if (!ready || !user) return <div className="state root-auth-state"><h2>Checking account...</h2></div>;
 
