@@ -1,0 +1,73 @@
+.referral-root-header { min-height: 68px; padding: 0 max(20px, calc((100vw - 1180px) / 2)); display: flex; align-items: center; justify-content: space-between; gap: 24px; background: #fff; border-bottom: 1px solid var(--line); }
+.referral-root-header nav { display: flex; align-items: center; gap: 6px; }
+.referral-root-header nav a { padding: 10px 11px; border-radius: 6px; color: #46534d; font-size: 13px; font-weight: 700; }
+.referral-root-header nav a:hover { color: var(--green); background: var(--green-soft); }
+.root-auth-state { min-height: 100vh; display: grid; place-items: center; }
+.referral-title .title-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.referral-title .title-inner > svg { color: var(--gold); }
+.referral-shell { display: grid; gap: 18px; }
+.referral-tabs { margin-bottom: 4px; }
+.referral-form-panel { padding: 22px; border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 6px 20px rgba(24,54,44,.045); }
+.referral-form-panel h2 { margin: 0 0 6px; color: var(--green-dark); font-family: "Cormorant Garamond", Georgia, serif; font-size: 32px; }
+.referral-form-panel > p { color: var(--muted); }
+.room-list { display: grid; gap: 12px; }
+.room-card, .attendance-card, .manager-request { border: 1px solid var(--line); border-left: 5px solid var(--green); border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 7px 22px rgba(24,54,44,.055); }
+.room-card-header, .manager-header { width: 100%; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.room-card-header h2, .manager-header h3 { margin: 0; color: var(--green-dark); font-family: "Cormorant Garamond", Georgia, serif; font-size: 27px; }
+.room-card-header p, .manager-header p { margin: 5px 0 0; display: flex; align-items: center; gap: 6px; color: var(--rose); font-size: 13px; font-weight: 700; }
+.room-header-meta, .manager-header > div:last-child { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 9px; }
+.rotate { transform: rotate(180deg); }
+.room-card-body, .manager-body { padding: 20px; border-top: 1px solid var(--line); }
+.room-description { margin: 0 0 16px; color: #53605a; line-height: 1.65; white-space: pre-wrap; }
+.room-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.room-stats > div { padding: 13px; border: 1px solid var(--line); border-radius: 6px; background: #f8faf9; }
+.room-stats small { display: block; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.room-stats strong { display: block; margin-top: 5px; color: var(--green); font-size: 22px; }
+.room-types { margin-top: 16px; padding: 16px; border: 1px solid #ead8b3; border-radius: 6px; background: #fffaf0; }
+.room-types > strong { color: var(--rose); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.room-types .closed { background: #eee; color: #777; text-decoration: line-through; }
+.availability { margin-top: 14px; padding: 12px; border-radius: 6px; font-size: 13px; font-weight: 700; }
+.availability.good { background: var(--green-soft); color: var(--green); }
+.availability.warm { background: var(--gold-soft); color: #76540f; }
+.room-request { margin-top: 16px; padding: 15px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-radius: 6px; background: #eef4f1; }
+.room-request strong { color: var(--green-dark); }
+.room-request p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.attendance-card { padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; }
+.attendance-card h3 { margin: 0; color: var(--green-dark); font-family: "Cormorant Garamond", Georgia, serif; font-size: 26px; }
+.attendance-card p { margin: 5px 0 0; display: flex; gap: 6px; align-items: center; color: var(--rose); font-size: 13px; font-weight: 700; }
+.attendance-meta { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.attendance-meta span { padding: 11px; border-radius: 6px; background: #f4f7f5; color: #4f5d56; font-size: 13px; }
+.attendance-meta strong { display: block; margin-bottom: 3px; color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+.referral-admin-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(420px, 1.1fr); gap: 16px; align-items: start; }
+.rule-list { max-height: 720px; padding-right: 3px; display: grid; gap: 7px; overflow: auto; }
+.rule-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) 72px; gap: 10px; align-items: center; padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: #fafbf9; }
+.rule-row.active { border-color: #b5d0c3; background: var(--green-soft); }
+.rule-row strong { min-width: 0; font-size: 13px; }
+.rule-check { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 5px; background: #fff; color: var(--green); cursor: pointer; }
+.rule-check.active { border-color: var(--green); background: var(--green); color: #fff; }
+.rule-row input { width: 100%; height: 38px; padding: 0 6px; border: 1px solid var(--line); border-radius: 5px; text-align: center; }
+.manager-header { padding: 16px; }
+.manager-body .full-field { grid-column: 1 / -1; }
+.referral-form-panel .section-heading { margin-bottom: 16px; }
+.referral-form-panel .section-heading h2 { margin: 0; }
+
+@media (max-width: 900px) {
+  .referral-admin-grid { grid-template-columns: 1fr; }
+  .referral-root-header { align-items: flex-start; flex-direction: column; padding: 12px 18px; }
+  .referral-root-header nav { width: 100%; overflow-x: auto; }
+  .referral-root-header nav a { white-space: nowrap; }
+}
+
+@media (max-width: 650px) {
+  .referral-title .title-inner { align-items: flex-start; }
+  .referral-title .title-inner > svg { display: none; }
+  .room-card-header, .manager-header, .room-request { align-items: flex-start; flex-direction: column; }
+  .room-header-meta, .manager-header > div:last-child { width: 100%; justify-content: space-between; }
+  .room-stats, .attendance-meta { grid-template-columns: 1fr; }
+  .attendance-card { grid-template-columns: 1fr; }
+  .attendance-card > .status { width: fit-content; }
+  .room-request .button { width: 100%; }
+  .referral-tabs { width: 100%; overflow-x: auto; }
+  .referral-tabs button { white-space: nowrap; }
+  .rule-row { grid-template-columns: 36px minmax(0, 1fr) 58px; }
+}
