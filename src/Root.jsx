@@ -4,8 +4,10 @@ import { X } from "lucide-react";
 import App from "./App.jsx";
 import EventWorkspace from "./EventWorkspace.jsx";
 import ProviderDashboard from "./ProviderDashboard.jsx";
+import ClientDashboard from "./ClientDashboard.jsx";
 import PublicShowcase from "./PublicShowcase.jsx";
-import { ReferralRoomAdmin, ReferralRoomManager, ReferralRoomPage } from "./ReferralRoom.jsx";
+import ReferralRoomAdminPage from "./ReferralRoomAdminPage.jsx";
+import { ReferralRoomManager, ReferralRoomPage } from "./ReferralRoom.jsx";
 import "./event-workspace-theme.css";
 
 const REFERRAL_ROUTES = new Set(["/referral-room", "/referral-room-admin", "/referral-room-manager"]);
@@ -47,6 +49,7 @@ export default function Root() {
 
   if (SHOWCASE_ROUTES.has(path)) return <PublicShowcase path={path} />;
   if (EVENT_WORKSPACE_ROUTES.has(path)) return <EventWorkspace path={path} />;
+  if (path === "/client-dashboard") return <ClientDashboard />;
   if (PROVIDER_DASHBOARD_ROUTES.has(path)) return <ProviderDashboard />;
   if (!REFERRAL_ROUTES.has(path)) return <App />;
   if (!ready || !user) return <div className="state root-auth-state"><h2>Checking account...</h2></div>;
@@ -55,7 +58,7 @@ export default function Root() {
     <header className="referral-root-header"><a className="brand" href="/"><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></a><nav><a href="/dashboard">Dashboard</a><a href="/events">Events</a>{user.roles.includes("admin") ? <><a href="/referral-room-admin">Create session</a><a href="/referral-room-manager">Manager</a></> : null}</nav></header>
     {notice ? <div className="global-notice"><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss"><X size={16} /></button></div> : null}
     {path === "/referral-room" ? <ReferralRoomPage user={user} setNotice={setNotice} /> : null}
-    {path === "/referral-room-admin" ? <ReferralRoomAdmin user={user} setNotice={setNotice} /> : null}
+    {path === "/referral-room-admin" ? <ReferralRoomAdminPage user={user} setNotice={setNotice} /> : null}
     {path === "/referral-room-manager" ? <ReferralRoomManager user={user} setNotice={setNotice} /> : null}
   </div>;
 }
