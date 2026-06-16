@@ -8,7 +8,7 @@ import {
 const API = "/.netlify/functions/app-api";
 
 export default function PublicShowcase({ path }) {
-  const [data, setData] = React.useState({ providers: [], events: [], savedProviderIds: [], savedEventIds: [] });
+  const [data, setData] = React.useState({ providers: [], events: [], savedProviderIds: [], savedEventIds: [], directoryOptions: {} });
   const [loading, setLoading] = React.useState(true);
   const [menuOpen, setMenuOpen] = React.useState(false);
 
@@ -18,6 +18,7 @@ export default function PublicShowcase({ path }) {
       events: payload.events || [],
       savedProviderIds: payload.savedProviderIds || [],
       savedEventIds: payload.savedEventIds || [],
+      directoryOptions: payload.directoryOptions || {},
     })).finally(() => setLoading(false));
   }, []);
 
@@ -65,11 +66,11 @@ export default function PublicShowcase({ path }) {
 function DirectoryPage({ data, loading, toggleSave }) {
   const [query, setQuery] = React.useState("");
   const [verified, setVerified] = React.useState(false);
-  const [filters, setFilters] = React.useState({ type: "", service: "", concern: "", population: "", location: "", payment: "" });
+  const [filters, setFilters] = React.useState({ type: "", service: "", support: "", population: "", location: "", payment: "" });
   const choices = {
     type: unique(data.providers.flatMap((item) => item.providerType || [])).sort(),
     service: unique(data.providers.flatMap((item) => item.services || [])).sort(),
-    concern: unique(data.providers.flatMap((item) => item.support || [])).sort(),
+    support: optionChoices(data.directoryOptions?.support, data.providers.flatMap((item) => item.support || [])),
     population: unique(data.providers.flatMap((item) => item.populations || [])).sort(),
     location: unique(data.providers.flatMap((item) => item.location || [])).sort(),
     payment: unique(data.providers.flatMap((item) => item.payment || [])).sort(),
@@ -79,7 +80,7 @@ function DirectoryPage({ data, loading, toggleSave }) {
     return (!query || text.includes(query.toLowerCase())) && (!verified || item.verified) &&
       (!filters.type || item.providerType?.includes(filters.type)) &&
       (!filters.service || item.services?.includes(filters.service)) &&
-      (!filters.concern || item.support?.includes(filters.concern)) &&
+      (!filters.support || item.support?.includes(filters.support)) &&
       (!filters.population || item.populations?.includes(filters.population)) &&
       (!filters.location || item.location?.includes(filters.location)) &&
       (!filters.payment || item.payment?.includes(filters.payment));
@@ -91,16 +92,16 @@ function DirectoryPage({ data, loading, toggleSave }) {
       <div className="band-inner directory-heading">
         <p className="eyebrow">The Healing Directory</p>
         <h1>Find the right support.</h1>
-        <p className="lede">Browse trusted therapists, wellness professionals, and healing providers by specialty, services, and concerns.</p>
+        <p className="lede">Browse trusted therapists, wellness professionals, and healing providers by specialty, services, and areas of support.</p>
         <div className="trust-panel"><CheckCircle2 size={24} /><p><strong>Verified Member</strong> means this provider has been personally introduced within our trusted referral community. It is not a guarantee of fit, availability, or outcomes, but it does mean they are part of a relationship-based network built around connection, collaboration, and thoughtful referrals.</p></div>
       </div>
       <div className="band-inner directory-search-panel">
         <span className="filter-label">Search</span>
-        <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, specialty, concern..." /></label>
+        <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, specialty, area of support..." /></label>
         <div className="directory-filter-grid">
           <DirectorySelect label="Provider type" value={filters.type} onChange={setFilter("type")} options={choices.type} placeholder="All provider types" />
           <DirectorySelect label="Service" value={filters.service} onChange={setFilter("service")} options={choices.service} placeholder="All services" />
-          <DirectorySelect label="Concern" value={filters.concern} onChange={setFilter("concern")} options={choices.concern} placeholder="All concerns" />
+          <DirectorySelect label="Areas of Support" value={filters.support} onChange={setFilter("support")} options={choices.support} placeholder="All areas of support" />
           <DirectorySelect label="Population" value={filters.population} onChange={setFilter("population")} options={choices.population} placeholder="All people" />
           <DirectorySelect label="Location" value={filters.location} onChange={setFilter("location")} options={choices.location} placeholder="All locations" />
           <DirectorySelect label="Payment" value={filters.payment} onChange={setFilter("payment")} options={choices.payment} placeholder="All payment" />
@@ -248,6 +249,7 @@ function EventCount({ value, label }) { return <div className="event-count"><str
 function EventInfo({ icon, label, value }) { if (!value) return null; return <div className="event-info">{React.cloneElement(icon, { size: 19 })}<span><small>{label}</small><strong>{value}</strong></span></div>; }
 function State({ label }) { return <div className="state"><HeartHandshake /><h2>{label}</h2></div>; }
 function go(path) { window.location.assign(path); }
+function optionChoices(options = [], fallback = []) { return unique([...(options || []), ...(fallback || [])]).sort(); }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function truncate(value, max) { const text = String(value || "").replace(/\s+/g, " ").trim(); return text.length > max ? `${text.slice(0, max - 1)}...` : text; }
 function href(value) { return /^(https?:|mailto:|tel:)/i.test(String(value || "")) ? value : `https://${value}`; }
