@@ -8,5 +8,6 @@ import "./referral-manager.css";
 import "./screenshot-theme.css";
 import "./dashboard-admin-theme.css";
 import "./auth-signup-overrides.css";
+import "./current-fixes.css";
 
 createRoot(document.getElementById("root")).render(<Root />);
