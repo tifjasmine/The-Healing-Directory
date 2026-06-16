@@ -23,7 +23,7 @@ const FIELDS = {
     profession: ["Professional Title", "Profession", "Credentials", "Service Type"],
     pronouns: ["Pronouns"], type: ["Service Type", "Provider Type", "Provider Types"],
     services: ["Additional Services", "Services Offered", "Services"],
-    support: ["Areas of Support", "Specialties", "Concerns"],
+    support: ["Areas of Support", "Support Areas", "Areas of Care", "Specialties", "Concerns"],
     population: ["Populations Served", "Who I Serve", "Population"],
     location: ["State", "Location", "Virtual/In Person", "Neighborhood"],
     payment: ["Payment", "Pay Type", "Insurance", "Additional Payment"],
@@ -77,7 +77,7 @@ export default async function handler(request) {
 }
 
 async function bootstrap(user) {
-  const [providerRecords, eventRecords] = await Promise.all([list("directory"), list("events")]);
+  const [providerRecords, eventRecords, directoryOptions] = await Promise.all([list("directory"), list("events"), getDirectoryOptions()]);
   const providers = providerRecords.map(normalizeProvider).filter((item) => item.isPublic);
   const events = eventRecords.map(normalizeEvent).filter((item) => item.isPublic);
   let savedProviderIds = [];
@@ -89,7 +89,7 @@ async function bootstrap(user) {
     savedEventIds = eventSaves.filter((r) => belongsTo(r, user.email) && activeRecord(r)).flatMap(eventIds);
   }
 
-  return { configured: true, user: publicUser(user), providers, events, savedProviderIds: unique(savedProviderIds), savedEventIds: unique(savedEventIds) };
+  return { configured: true, user: publicUser(user), providers, events, directoryOptions, savedProviderIds: unique(savedProviderIds), savedEventIds: unique(savedEventIds) };
 }
 
 async function getProvider(id) {
@@ -254,6 +254,31 @@ async function list(key) {
 async function get(key, id) { return airtable(key, id); }
 async function create(key, fields) { return airtable(key, "", { method: "POST", body: { records: [{ fields }], typecast: true } }).then((p) => p.records[0]); }
 async function update(key, id, fields) { return airtable(key, id, { method: "PATCH", body: { fields, typecast: true } }); }
+
+async function getDirectoryOptions() {
+  return { support: await selectOptions("directory", FIELDS.provider.support) };
+}
+
+async function selectOptions(key, fieldNames) {
+  try {
+    const table = await metadataTable(key);
+    const field = table?.fields?.find((item) => fieldNames.includes(item.name));
+    const choices = field?.options?.choices || [];
+    return unique(choices.map((choice) => clean(choice.name)));
+  } catch {
+    return [];
+  }
+}
+
+async function metadataTable(key) {
+  const tableNameOrId = TABLES[key];
+  const response = await fetch(`https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables`, {
+    headers: { Authorization: `Bearer ${TOKEN()}`, "Content-Type": "application/json" }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw httpError(response.status, payload.error?.message || `Airtable metadata request failed (${response.status}).`);
+  return (payload.tables || []).find((table) => table.id === tableNameOrId || table.name === tableNameOrId);
+}
 
 async function airtable(key, id = "", options = {}) {
   const table = TABLES[key];
