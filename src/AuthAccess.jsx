@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  acceptInvite,
   getUser,
   login,
   requestPasswordRecovery,
@@ -16,13 +17,16 @@ export default function AuthAccess({ path }) {
   const [form, setForm] = React.useState({ name: "", email: "", password: "", confirm: "", accountType: "client", phone: "", website: "", professionalTitle: "", message: "" });
   const [notice, setNotice] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+  const inviteFlow = mode === "reset-password" && new URLSearchParams(window.location.search).get("flow") === "invite";
   const signingUp = mode === "signup";
   const providerSignup = mode === "provider-signup";
-  const title = providerSignup ? "Apply as a provider" : signingUp ? "Create your client account" : mode === "forgot-password" ? "Reset your password" : mode === "reset-password" ? "Choose a new password" : "Welcome back";
+  const title = providerSignup ? "Apply as a provider" : signingUp ? "Create your client account" : mode === "forgot-password" ? "Reset your password" : inviteFlow ? "Create your password" : mode === "reset-password" ? "Choose a new password" : "Welcome back";
   const intro = signingUp || providerSignup
     ? providerSignup
       ? "Provider applications are reviewed before access is granted."
       : "Client accounts get access right away to save providers and events."
+    : inviteFlow
+      ? "Create a password to finish accepting your provider invitation."
     : "Log in to save providers, manage events, and return to your dashboard.";
 
   async function submit(event) {
@@ -54,7 +58,14 @@ export default function AuthAccess({ path }) {
       }
       if (mode === "reset-password") {
         if (form.password !== form.confirm) throw new Error("Passwords do not match.");
-        await updateUser({ password: form.password });
+        const inviteToken = sessionStorage.getItem("thd_invite_token");
+        if (inviteFlow) {
+          if (!inviteToken) throw new Error("This invite link is missing or expired. Please use the newest invite email.");
+          await acceptInvite(inviteToken, form.password);
+          sessionStorage.removeItem("thd_invite_token");
+        } else {
+          await updateUser({ password: form.password });
+        }
         window.location.assign("/dashboard");
         return;
       }

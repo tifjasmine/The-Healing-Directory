@@ -1,5 +1,5 @@
 import React from "react";
-import { getUser } from "@netlify/identity";
+import { getUser, handleAuthCallback } from "@netlify/identity";
 import { X } from "lucide-react";
 import App from "./App.jsx";
 import EventWorkspace from "./EventWorkspace.jsx";
@@ -26,6 +26,25 @@ export default function Root() {
   const [user, setUser] = React.useState(null);
   const [ready, setReady] = React.useState(!REFERRAL_ROUTES.has(path));
   const [notice, setNotice] = React.useState("");
+
+  React.useEffect(() => {
+    const hash = window.location.hash || "";
+    if (!/^#(confirmation_token|recovery_token|invite_token|email_change_token|access_token)=/.test(hash)) return;
+    handleAuthCallback().then((callback) => {
+      if (callback?.type === "invite" && callback.token) {
+        sessionStorage.setItem("thd_invite_token", callback.token);
+        window.location.replace("/reset-password?flow=invite");
+        return;
+      }
+      if (callback?.type === "recovery") {
+        window.location.replace("/reset-password");
+        return;
+      }
+      window.location.replace("/dashboard");
+    }).catch(() => {
+      window.location.replace("/login?auth=error");
+    });
+  }, []);
 
   React.useEffect(() => {
     if (!REFERRAL_ROUTES.has(path)) return;
