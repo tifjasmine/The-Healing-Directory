@@ -1,4 +1,5 @@
 import React from "react";
+import { getUser, refreshSession } from "@netlify/identity";
 import {
   ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, CalendarDays, CheckCircle2,
   ChevronDown, CircleUserRound, Clock, ExternalLink, HeartHandshake, LockKeyhole,
@@ -12,6 +13,7 @@ export default function PublicShowcase({ path }) {
   const [data, setData] = React.useState({ providers: [], events: [], savedProviderIds: [], savedEventIds: [], directoryOptions: {} });
   const [loading, setLoading] = React.useState(true);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [notice, setNotice] = React.useState("");
 
   React.useEffect(() => {
     api("bootstrap").then((payload) => setData({
@@ -24,7 +26,13 @@ export default function PublicShowcase({ path }) {
   }, []);
 
   async function toggleSave(kind, id, active) {
+    const currentUser = await getUser();
+    if (!currentUser) {
+      go(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      return;
+    }
     try {
+      await refreshSession().catch(() => null);
       await api(kind === "provider" ? "toggle-provider" : "toggle-event", {
         method: "POST",
         body: { [kind === "provider" ? "providerId" : "eventId"]: id, active },
@@ -34,8 +42,9 @@ export default function PublicShowcase({ path }) {
         ...current,
         [key]: active ? unique([id, ...current[key]]) : current[key].filter((value) => value !== id),
       }));
-    } catch {
-      go(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      setNotice(active ? `Saved ${kind === "provider" ? "provider" : "workshop"}.` : `Removed saved ${kind === "provider" ? "provider" : "workshop"}.`);
+    } catch (error) {
+      setNotice(error.message || "That save did not go through. Please try again.");
     }
   }
 
@@ -52,6 +61,7 @@ export default function PublicShowcase({ path }) {
       </nav>
       <div className="account-actions"><button className="button compact" onClick={() => go("/login")}><LogIn size={16} /> Log in</button></div>
     </header>
+    {notice ? <div className="global-notice save-notice"><span>{notice}</span><button type="button" onClick={() => setNotice("")}>Dismiss</button></div> : null}
   {path === "/provider-details"
       ? <ProviderDetails data={data} loading={loading} toggleSave={toggleSave} />
       : path === "/event-details"
@@ -329,7 +339,7 @@ function EventInfo({ icon, label, value }) { if (!value) return null; return <di
 function ViewMoreList({ shown, total, onMore, label = "items" }) { if (!total || shown >= total) return null; return <div className="view-more-row"><button type="button" className="button tertiary" onClick={onMore}>View more</button><span>Showing {shown} of {total} {label}</span></div>; }
 function State({ label }) { return <div className="state"><HeartHandshake /><h2>{label}</h2></div>; }
 function go(path) { window.location.assign(path); }
-function optionChoices(options = [], fallback = []) { return (options?.length ? unique(options) : unique(fallback || [])).sort(); }
+function optionChoices(options = [], fallback = []) { return (options?.length ? unique(options) : unique(fallback || [])).filter((value) => String(value).trim().toLowerCase() !== "all").sort(); }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function truncate(value, max) { const text = String(value || "").replace(/\s+/g, " ").trim(); return text.length > max ? `${text.slice(0, max - 1)}...` : text; }
 function href(value) { return /^(https?:|mailto:|tel:)/i.test(String(value || "")) ? value : `https://${value}`; }

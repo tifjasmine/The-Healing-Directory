@@ -43,12 +43,7 @@ export default function AuthAccess({ path }) {
         if (form.password !== form.confirm) throw new Error("Passwords do not match.");
         await signup(form.email, form.password, { full_name: form.name, account_type: "client" });
         await api("signup-profile", { method: "POST", body: { name: form.name, email: form.email, accountType: "client" } }).catch(() => null);
-        try {
-          await login(form.email, form.password);
-          window.location.assign("/client-dashboard");
-        } catch {
-          setNotice("Your client account was created. Please log in to continue.");
-        }
+        setNotice("Account created. Please check your email to verify your account before logging in.");
         return;
       }
       if (mode === "forgot-password") {

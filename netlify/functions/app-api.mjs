@@ -197,8 +197,12 @@ async function toggleEvent(user, body) {
   const saves = await list("savedEvents");
   const existing = saves.find((r) => belongsTo(r, user.email) && eventIds(r).includes(body.eventId));
   const active = body.active !== false;
-  const fields = { "Name": `${user.email} saved ${event.name}`, "Saver Email": user.email, "Saved Workshop": [body.eventId], "Active": active };
-  const record = existing ? await update("savedEvents", existing.id, fields) : await create("savedEvents", fields);
+  const savedEventField = await fieldName("savedEvents", ["Saved Workshop", "Saved Event", "Saved Events", "Event", "Events", "Workshop"]);
+  const saverEmailField = await fieldName("savedEvents", ["Saver Email", "Saver Email Text", "Email", "User Email"]);
+  const fields = { "Name": `${user.email} saved ${event.name}`, "Active": active };
+  fields[saverEmailField || "Saver Email"] = user.email;
+  fields[savedEventField || "Saved Workshop"] = [body.eventId];
+  const record = existing ? await updateSafe("savedEvents", existing.id, fields) : await createSafe("savedEvents", fields);
   return { ok: true, active, recordId: record.id };
 }
 
@@ -450,6 +454,15 @@ async function metadataTable(key) {
   return (payload.tables || []).find((table) => table.id === tableNameOrId || table.name === tableNameOrId);
 }
 
+async function fieldName(key, names) {
+  try {
+    const table = await metadataTable(key);
+    return table?.fields?.find((field) => names.includes(field.name))?.name || "";
+  } catch {
+    return "";
+  }
+}
+
 async function findDirectoryByEmail(email) {
   const records = await list("directory");
   return records.find((record) => lower(text(pick(record.fields || {}, FIELDS.provider.email))) === lower(email));
@@ -538,7 +551,7 @@ function publicUser(user) { return user ? { id: user.id, email: user.email, name
 function belongsTo(record, email) { return lower(text(pick(record.fields || {}, ["Saver Email Text", "Saver Email", "Email", "User Email"]))) === lower(email); }
 function activeRecord(record) { const value = pick(record.fields || {}, ["Active"]); return value === undefined || truthy(value); }
 function providerIds(record) { return linkedIds(pick(record.fields || {}, ["Saved Provider", "Directory Grid View", "Provider"])); }
-function eventIds(record) { return linkedIds(pick(record.fields || {}, ["Saved Workshop", "Event", "Events"])); }
+function eventIds(record) { return linkedIds(pick(record.fields || {}, ["Saved Workshop", "Saved Event", "Saved Events", "Event", "Events", "Workshop"])); }
 function linkedIds(value) { return arrayRaw(value).map((v) => typeof v === "object" ? clean(v.id || v.recordId || v.value) : clean(v)).filter((v) => v.startsWith("rec")); }
 function pick(fields, names) { for (const name of names) if (Object.prototype.hasOwnProperty.call(fields, name)) return fields[name]; return undefined; }
 function text(value) { if (value == null) return ""; if (Array.isArray(value)) return value.map(text).filter(Boolean).join(", "); if (typeof value === "object") return text(value.name ?? value.label ?? value.value ?? value.text ?? value.url ?? ""); return clean(value); }
