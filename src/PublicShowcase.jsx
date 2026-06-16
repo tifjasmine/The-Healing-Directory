@@ -52,15 +52,28 @@ export default function PublicShowcase({ path }) {
       </nav>
       <div className="account-actions"><button className="button compact" onClick={() => go("/login")}><LogIn size={16} /> Log in</button></div>
     </header>
-    {path === "/provider-details"
+  {path === "/provider-details"
       ? <ProviderDetails data={data} loading={loading} toggleSave={toggleSave} />
       : path === "/event-details"
         ? <EventDetails data={data} loading={loading} toggleSave={toggleSave} />
       : path === "/events"
         ? <EventsPage data={data} loading={loading} toggleSave={toggleSave} />
         : <DirectoryPage data={data} loading={loading} toggleSave={toggleSave} />}
-    <footer className="site-footer"><div><strong>The Healing Directory</strong><p>Thoughtful connections for healing, wellness, and trusted referrals.</p></div><nav><button onClick={() => go("/")}>Directory</button><button onClick={() => go("/events")}>Events</button><button onClick={() => go("/terms")}>Terms</button><button onClick={() => go("/privacy")}>Privacy</button></nav></footer>
+    <footer className="site-footer"><div><strong>The Healing Directory</strong><p>Thoughtful connections for healing, wellness, and trusted referrals.</p></div><nav><button onClick={() => go("/terms")}>Terms and Conditions</button><button onClick={() => go("/privacy")}>Privacy Policy</button></nav></footer>
   </div>;
+}
+
+function DirectoryLogoStrip() {
+  return <section className="directory-logo-strip">
+    <img
+      src="/directory-logo-strip.png"
+      alt="The Healing Directory"
+      loading="eager"
+      onError={(event) => {
+        event.currentTarget.src = "/healing-directory-logo.svg";
+      }}
+    />
+  </section>;
 }
 
 function DirectoryPage({ data, loading, toggleSave }) {
@@ -69,12 +82,12 @@ function DirectoryPage({ data, loading, toggleSave }) {
   const [filters, setFilters] = React.useState({ type: "", service: "", support: "", population: "", location: "", payment: "" });
   const [visibleCount, setVisibleCount] = React.useState(LIST_PAGE_SIZE);
   const choices = {
-    type: unique(data.providers.flatMap((item) => item.providerType || [])).sort(),
+    type: optionChoices(data.directoryOptions?.providerType, data.providers.flatMap((item) => item.providerType || [])),
     service: unique(data.providers.flatMap((item) => item.services || [])).sort(),
     support: optionChoices(data.directoryOptions?.support, data.providers.flatMap((item) => item.support || [])),
     population: unique(data.providers.flatMap((item) => item.populations || [])).sort(),
     location: unique(data.providers.flatMap((item) => item.location || [])).sort(),
-    payment: unique(data.providers.flatMap((item) => item.payment || [])).sort(),
+    payment: optionChoices(data.directoryOptions?.payment, data.providers.flatMap((item) => item.payment || [])),
   };
   const providers = data.providers.filter((item) => {
     const text = [item.name, item.profession, item.bio, ...(item.providerType || []), ...(item.services || []), ...(item.support || []), ...(item.location || [])].join(" ").toLowerCase();
@@ -93,6 +106,7 @@ function DirectoryPage({ data, loading, toggleSave }) {
   const visibleProviders = providers.slice(0, visibleCount);
 
   return <main>
+    <DirectoryLogoStrip />
     <section className="directory-intro page-band dark-band">
       <div className="band-inner directory-heading">
         <p className="eyebrow">The Healing Directory</p>
@@ -111,11 +125,11 @@ function DirectoryPage({ data, loading, toggleSave }) {
           <DirectorySelect label="Location" value={filters.location} onChange={setFilter("location")} options={choices.location} placeholder="All locations" />
           <DirectorySelect label="Payment" value={filters.payment} onChange={setFilter("payment")} options={choices.payment} placeholder="All payment" />
         </div>
-        <label className="check-control"><input type="checkbox" checked={verified} onChange={(event) => setVerified(event.target.checked)} /><CheckCircle2 size={16} /> Verified only</label>
+        <label className="check-control circle-check-control"><input aria-label="Show verified providers only" type="checkbox" checked={verified} onChange={(event) => setVerified(event.target.checked)} /><span className="circle-toggle" aria-hidden="true" /><span>Verified only</span></label>
       </div>
     </section>
     <section className="content-shell">
-      <div className="provider-invite"><div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div><button className="button warm" onClick={() => go("/signup")}>Become a Provider <ArrowRight size={17} /></button></div>
+      <div className="provider-invite"><div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div><button className="button warm" onClick={() => go("/provider-signup")}>Become a Provider <ArrowRight size={17} /></button></div>
       <div className="results-count"><strong>{providers.length}</strong> providers shown</div>
       {loading ? <State label="Loading providers" /> : providers.length ? <><div className="provider-list">{visibleProviders.map((provider) => <ProviderCard key={provider.id} provider={provider} saved={data.savedProviderIds.includes(provider.id)} onSave={() => toggleSave("provider", provider.id, !data.savedProviderIds.includes(provider.id))} />)}</div><ViewMoreList shown={visibleProviders.length} total={providers.length} label="providers" onMore={() => setVisibleCount((value) => value + LIST_PAGE_SIZE)} /></> : <State label="No providers match that search" />}
     </section>

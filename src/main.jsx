@@ -9,5 +9,6 @@ import "./screenshot-theme.css";
 import "./dashboard-admin-theme.css";
 import "./auth-signup-overrides.css";
 import "./current-fixes.css";
+import "./current-runtime-fixes.js";
 
 createRoot(document.getElementById("root")).render(<Root />);

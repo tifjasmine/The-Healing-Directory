@@ -24,12 +24,14 @@ const FIELDS = {
     profession: ["Professional Title", "Profession", "Credentials", "Service Type"],
     license: ["License / Certification", "License # / Certification", "License", "Credentials"],
     identity: ["Racial / Ethnic Identity", "Identity"],
-    pronouns: ["Pronouns"], type: ["Service Type", "Provider Type", "Provider Types"],
+    pronouns: ["Pronouns"],
+    type: ["Provider Type", "Provider Types", "Service Type"],
+    order: ["Order #", "Order", "Display Order", "Sort Order"],
     services: ["Additional Services", "Services Offered", "Services"],
     support: ["Areas of Support"],
     population: ["Populations Served", "Who I Serve", "Population"],
     location: ["State", "Location", "Virtual/In Person", "Neighborhood"],
-    payment: ["Payment", "Pay Type", "Insurance", "Additional Payment"],
+    payment: ["Pay Type/Insurance", "Pay Type", "Insurance", "Payment", "Additional Payment"],
     availability: ["Availability"],
     price: ["Price", "Pricing"],
     physicalLocations: ["Physical Locations", "Physical Location"],
@@ -107,7 +109,7 @@ export default async function handler(request) {
 
 async function bootstrap(user) {
   const [providerRecords, eventRecords, directoryOptions] = await Promise.all([list("directory"), list("events"), getDirectoryOptions()]);
-  const providers = providerRecords.map(normalizeProvider).filter((item) => item.isPublic);
+  const providers = providerRecords.map(normalizeProvider).filter((item) => item.isPublic).sort(providerSort);
   const events = eventRecords.map(normalizeEvent).filter((item) => item.isPublic);
   let savedProviderIds = [];
   let savedEventIds = [];
@@ -344,6 +346,7 @@ function normalizeProvider(record) {
   return {
     id: record.id, name: text(pick(f, FIELDS.provider.name)) || "Provider",
     accountType,
+    order: numberValue(pick(f, FIELDS.provider.order)),
     email: text(pick(f, FIELDS.provider.email)), phone: text(pick(f, FIELDS.provider.phone)),
     photo: attachment(pick(f, FIELDS.provider.photo)), bio: text(pick(f, FIELDS.provider.bio)),
     profession: text(pick(f, FIELDS.provider.profession)), pronouns: text(pick(f, FIELDS.provider.pronouns)),
@@ -419,7 +422,11 @@ async function create(key, fields) { return airtable(key, "", { method: "POST", 
 async function update(key, id, fields) { return airtable(key, id, { method: "PATCH", body: { fields, typecast: true } }); }
 
 async function getDirectoryOptions() {
-  return { support: await selectOptions("directory", FIELDS.provider.support) };
+  return {
+    support: await selectOptions("directory", FIELDS.provider.support),
+    providerType: await selectOptions("directory", FIELDS.provider.type),
+    payment: await selectOptions("directory", FIELDS.provider.payment),
+  };
 }
 
 async function selectOptions(key, fieldNames) {
@@ -546,5 +553,13 @@ function required(value, label) { const cleanValue = clean(value); if (!cleanVal
 function removeEmpty(fields, keepEmpty = false) { Object.keys(fields).forEach((key) => { if (fields[key] == null || (!keepEmpty && typeof fields[key] === "string" && !fields[key].trim())) delete fields[key]; }); }
 function dateValue(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) ? 0 : time; }
 function statusKey(value) { const status = lower(value); if (status.includes("pending") || status.includes("review")) return "pending"; if (status.includes("approved") || status.includes("published")) return "approved"; if (status.includes("declined") || status.includes("rejected")) return "declined"; return "other"; }
+function providerSort(a, b) {
+  if (a.order !== b.order) return a.order - b.order;
+  return (a.name || "").localeCompare(b.name || "", "en", { sensitivity: "base" });
+}
+function numberValue(value) {
+  const valueOrNumber = Number(String(value || "").replace(/[^0-9.\-]/g, ""));
+  return Number.isFinite(valueOrNumber) ? valueOrNumber : Infinity;
+}
 function httpError(status, message) { const error = new Error(message); error.status = status; return error; }
 function reply(payload, status = 200) { return new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } }); }

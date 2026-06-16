@@ -16,7 +16,72 @@
   flex: 0 0 18px;
 }
 
-.event-facts span:nth-child(3),
-.event-quick-card .event-info:nth-of-type(3) {
-  display: none !important;
+.event-host-runtime-link {
+  color: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.event-host-runtime-link:hover {
+  color: #2d5749;
+}
+
+.directory-logo-strip {
+  width: 100%;
+  background: #fff;
+  border-bottom: 1px solid var(--line, #dbe1dd);
+  padding: clamp(16px, 2.5vw, 28px);
+  display: grid;
+  place-items: center;
+}
+
+.directory-logo-strip img {
+  width: min(860px, 94vw);
+  max-height: 140px;
+  object-fit: contain;
+}
+
+.circle-check-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  position: relative;
+  cursor: pointer;
+}
+
+.circle-check-control input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.circle-check-control .circle-toggle {
+  --size: 18px;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  border: 2px solid var(--green, #214f40);
+  display: inline-grid;
+  place-items: center;
+  position: relative;
+  flex: 0 0 var(--size);
+}
+
+.circle-check-control .circle-toggle::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green, #214f40);
+  opacity: 0;
+  transform: scale(0.25);
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.circle-check-control input:checked + .circle-toggle::after {
+  opacity: 1;
+  transform: scale(1);
 }

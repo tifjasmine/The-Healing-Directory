@@ -43,7 +43,7 @@
 
 .events-page .event-grid {
   display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 320px)) !important;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 280px)) !important;
   justify-content: start !important;
   align-items: start !important;
   gap: 16px !important;
@@ -51,7 +51,7 @@
 
 .events-page .event-card {
   width: 100% !important;
-  max-width: 320px !important;
+  max-width: 280px !important;
   min-height: 0 !important;
   border-radius: 14px !important;
   box-shadow: 0 10px 22px rgba(75,49,31,.05) !important;
@@ -86,7 +86,7 @@
 
 .events-page .event-body h3 {
   margin: 6px 0 8px;
-  font-size: 21px !important;
+  font-size: 19px !important;
   line-height: 1.15 !important;
 }
 
@@ -168,14 +168,14 @@
 .event-showcase-copy h1,
 .event-detail-copy h1 {
   margin: 18px 0 !important;
-  font-size: clamp(32px, 3.3vw, 48px) !important;
+  font-size: clamp(28px, 3.2vw, 42px) !important;
   line-height: 1.06 !important;
   letter-spacing: 0;
 }
 
 .event-facts {
   gap: 8px;
-  font-size: 14px !important;
+  font-size: 13px !important;
 }
 
 .event-facts span {
@@ -209,12 +209,12 @@
 
 .event-description-card h2,
 .event-quick-card h2 {
-  font-size: 30px !important;
+  font-size: 26px !important;
   line-height: 1.05 !important;
 }
 
 .event-description-card > p:last-child {
-  font-size: 15px !important;
+  font-size: 14px !important;
   line-height: 1.6 !important;
 }
 
