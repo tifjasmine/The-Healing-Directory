@@ -18,19 +18,43 @@ const FIELDS = {
   provider: {
     name: ["Provider / Practice Name", "Provider Name", "Name", "Full Name"],
     email: ["Email", "Provider Email"], phone: ["Phone", "Phone Number"],
+    accountType: ["Account Type", "User Type", "Member Type", "Role"],
     photo: ["Profile Photo", "Photo", "Headshot", "Image"],
     bio: ["Provider Bio", "Bio", "About", "Description"],
     profession: ["Professional Title", "Profession", "Credentials", "Service Type"],
+    license: ["License / Certification", "License # / Certification", "License", "Credentials"],
+    identity: ["Racial / Ethnic Identity", "Identity"],
     pronouns: ["Pronouns"], type: ["Service Type", "Provider Type", "Provider Types"],
     services: ["Additional Services", "Services Offered", "Services"],
     support: ["Areas of Support"],
     population: ["Populations Served", "Who I Serve", "Population"],
     location: ["State", "Location", "Virtual/In Person", "Neighborhood"],
     payment: ["Payment", "Pay Type", "Insurance", "Additional Payment"],
+    availability: ["Availability"],
+    price: ["Price", "Pricing"],
+    physicalLocations: ["Physical Locations", "Physical Location"],
+    availabilitySpecifics: ["Availability Specifics", "Current Availability"],
     website: ["Website", "Web Site"], consult: ["Consultation Link", "Booking Link", "Schedule Link"],
     approved: ["Approved", "Published", "Show in Directory", "Public"],
     verified: ["Verified", "Verified Member", "Referral Room"],
-    human: ["The Human Side", "Human Side"], collaboration: ["Collaboration", "Collaboration Interests"]
+    responseTime: ["Typical Response Time", "Response Time"],
+    referralMethod: ["Preferred Referral Method"],
+    referralInstructions: ["Referral Instructions"],
+    collaboration: ["Collaboration", "Collaboration Interests"],
+    collaborationInterests: ["Collaboration Interests"],
+    collaborationDetails: ["Collaboration Details", "Provider Discount Details"],
+    providerNotes: ["Provider-to-Provider Notes", "Provider Notes"],
+    infoOptIn: ["Directory Updates Opt In", "Info Opt In", "Newsletter"],
+    human: ["The Human Side", "Human Side"],
+    styleWords: ["My Style In Three Words", "Style In Three Words"],
+    clientDescriptors: ["Clients Describe Me As", "Clients Describe Me"],
+    groundingRitual: ["My Grounding Ritual", "Grounding Ritual"],
+    outsideSessions: ["Outside Sessions", "Outside of Sessions"],
+    guidingBelief: ["Guiding Belief", "A Belief That Guides My Work"],
+    healingWish: ["What I Wish People Knew About Healing", "Healing Wish"],
+    comfortPractice: ["Favorite Comfort Practice", "Comfort Practice"],
+    funFact: ["Fun Fact"],
+    vibe: ["Vibe"]
   },
   event: {
     name: ["Event Name", "Name"], hostName: ["Host Name"], hostEmail: ["Host Email"],
@@ -52,22 +76,27 @@ export default async function handler(request) {
 
     if (request.method === "GET") {
       if (action === "bootstrap") return reply(await bootstrap(user));
-      if (action === "provider") return reply(await getProvider(url.searchParams.get("id")));
+      if (action === "provider") return reply(await getProvider(url.searchParams.get("id"), user));
       if (action === "event") return reply(await getEvent(url.searchParams.get("id"), user));
       if (action === "me") return reply({ user: publicUser(user) });
       if (action === "dashboard") return reply(await dashboard(requireUser(user)));
       if (action === "my-events") return reply(await myEvents(requireUser(user)));
       if (action === "saved-providers") return reply(await savedProviders(requireUser(user)));
       if (action === "admin-events") return reply(await adminEvents(requireAdmin(user)));
+      if (action === "account-settings") return reply(await accountSettings(requireUser(user)));
+      if (action === "my-profile") return reply(await myProfile(requireUser(user)));
       return reply({ error: "Unknown action." }, 404);
     }
 
     if (request.method !== "POST") return reply({ error: "Method not allowed." }, 405);
     const body = await request.json().catch(() => ({}));
 
+    if (action === "signup-profile") return reply(await signupProfile(body));
     if (action === "toggle-provider") return reply(await toggleProvider(requireUser(user), body));
     if (action === "toggle-event") return reply(await toggleEvent(requireUser(user), body));
     if (action === "save-event") return reply(await saveEvent(requireUser(user), body));
+    if (action === "save-account") return reply(await saveAccount(requireUser(user), body));
+    if (action === "save-profile") return reply(await saveProfile(requireUser(user), body));
     if (action === "admin-event") return reply(await updateAdminEvent(requireAdmin(user), body));
     return reply({ error: "Unknown action." }, 404);
   } catch (error) {
@@ -92,9 +121,18 @@ async function bootstrap(user) {
   return { configured: true, user: publicUser(user), providers, events, directoryOptions, savedProviderIds: unique(savedProviderIds), savedEventIds: unique(savedEventIds) };
 }
 
-async function getProvider(id) {
+async function getProvider(id, user) {
   if (!id) throw httpError(400, "Missing provider ID.");
-  return { provider: normalizeProvider(await get("directory", id)) };
+  const profile = normalizeProfile(await get("directory", id));
+  const canSeeProviderConnection = hasProviderAccess(user);
+  if (!canSeeProviderConnection) {
+    delete profile.referralMethod;
+    delete profile.referralInstructions;
+    delete profile.collaborationInterests;
+    delete profile.collaborationDetails;
+    delete profile.providerNotes;
+  }
+  return { provider: { ...profile, providerConnectionVisible: canSeeProviderConnection } };
 }
 
 async function getEvent(id, user) {
@@ -205,11 +243,107 @@ async function updateAdminEvent(user, body) {
   return { ok: true, event: normalizeEvent(record), admin: user.email };
 }
 
+async function accountSettings(user) {
+  const account = await ensureDirectoryAccount({
+    email: user.email,
+    name: publicUser(user)?.name || user.email.split("@")[0],
+    accountType: "client"
+  });
+  return { account: accountFromRecord(user, account) };
+}
+
+async function signupProfile(body) {
+  const email = requiredEmail(body.email);
+  const accountType = clean(body.accountType) || "client";
+  const name = required(body.name || email.split("@")[0], "Name");
+  const account = await ensureDirectoryAccount({ email, name, accountType });
+  return { ok: true, account: accountFromRecord({ email, user_metadata: { full_name: name, account_type: accountType } }, account) };
+}
+
+async function saveAccount(user, body) {
+  const account = await ensureDirectoryAccount({
+    email: user.email,
+    name: body.name || publicUser(user)?.name || user.email.split("@")[0],
+    accountType: body.accountType || "client"
+  });
+  const fields = {};
+  setAlias(fields, FIELDS.provider.name, body.name);
+  setAlias(fields, FIELDS.provider.accountType, body.accountType);
+  const saved = Object.keys(fields).length ? await updateSafe("directory", account.id, fields) : account;
+  return { ok: true, account: accountFromRecord(user, saved) };
+}
+
+async function myProfile(user) {
+  const profile = await ensureDirectoryAccount({
+    email: user.email,
+    name: publicUser(user)?.name || user.email.split("@")[0],
+    accountType: "provider"
+  });
+  return { profile: normalizeProfile(profile) };
+}
+
+async function saveProfile(user, body) {
+  const profile = await ensureDirectoryAccount({
+    email: user.email,
+    name: body.name || publicUser(user)?.name || user.email.split("@")[0],
+    accountType: "provider"
+  });
+  const fields = {};
+  setAlias(fields, FIELDS.provider.name, body.name);
+  setAlias(fields, FIELDS.provider.pronouns, body.pronouns);
+  setAlias(fields, FIELDS.provider.profession, body.profession);
+  setAlias(fields, FIELDS.provider.license, body.license);
+  setAlias(fields, FIELDS.provider.identity, body.identity);
+  setAlias(fields, FIELDS.provider.email, user.email);
+  setAlias(fields, FIELDS.provider.phone, body.phone);
+  setAlias(fields, FIELDS.provider.website, body.website);
+  setAlias(fields, FIELDS.provider.consult, body.consultationLink);
+  setAlias(fields, FIELDS.provider.bio, body.bio);
+  setAlias(fields, FIELDS.provider.accountType, "provider");
+  setAlias(fields, FIELDS.provider.type, body.providerType);
+  setAlias(fields, FIELDS.provider.services, body.services);
+  setAlias(fields, FIELDS.provider.support, body.support);
+  setAlias(fields, FIELDS.provider.population, body.populations);
+  setAlias(fields, FIELDS.provider.location, body.location);
+  setAlias(fields, FIELDS.provider.payment, body.payment);
+  setAlias(fields, FIELDS.provider.availability, body.availability);
+  setAlias(fields, FIELDS.provider.price, body.price);
+  setAlias(fields, FIELDS.provider.physicalLocations, body.physicalLocations);
+  setAlias(fields, FIELDS.provider.availabilitySpecifics, body.availabilitySpecifics);
+  setAlias(fields, FIELDS.provider.responseTime, body.responseTime);
+  setAlias(fields, FIELDS.provider.referralMethod, body.referralMethod);
+  setAlias(fields, FIELDS.provider.referralInstructions, body.referralInstructions);
+  setAlias(fields, FIELDS.provider.collaborationInterests, body.collaborationInterests);
+  setAlias(fields, FIELDS.provider.collaborationDetails, body.collaborationDetails);
+  setAlias(fields, FIELDS.provider.providerNotes, body.providerNotes);
+  if (body.infoOptIn !== undefined) setAlias(fields, FIELDS.provider.infoOptIn, body.infoOptIn ? "Yes" : "No");
+  setAlias(fields, FIELDS.provider.styleWords, body.styleWords);
+  setAlias(fields, FIELDS.provider.clientDescriptors, body.clientDescriptors);
+  setAlias(fields, FIELDS.provider.groundingRitual, body.groundingRitual);
+  setAlias(fields, FIELDS.provider.outsideSessions, body.outsideSessions);
+  setAlias(fields, FIELDS.provider.guidingBelief, body.guidingBelief);
+  setAlias(fields, FIELDS.provider.healingWish, body.healingWish);
+  setAlias(fields, FIELDS.provider.comfortPractice, body.comfortPractice);
+  setAlias(fields, FIELDS.provider.funFact, body.funFact);
+  setAlias(fields, FIELDS.provider.vibe, body.vibe);
+  const saved = await updateSafe("directory", profile.id, fields);
+  return { ok: true, profile: normalizeProfile(saved) };
+}
+
 function normalizeProvider(record) {
   const f = record.fields || {};
   const approvalValue = pick(f, FIELDS.provider.approved);
+  const accountType = lower(text(pick(f, FIELDS.provider.accountType)));
+  const providerSignals = Boolean(
+    text(pick(f, FIELDS.provider.profession)) ||
+    text(pick(f, FIELDS.provider.bio)) ||
+    text(pick(f, FIELDS.provider.website)) ||
+    array(pick(f, FIELDS.provider.type)).length
+  );
+  const clientAccount = ["client", "community", "community member", "member"].includes(accountType);
   return {
     id: record.id, name: text(pick(f, FIELDS.provider.name)) || "Provider",
+    accountType,
     email: text(pick(f, FIELDS.provider.email)), phone: text(pick(f, FIELDS.provider.phone)),
     photo: attachment(pick(f, FIELDS.provider.photo)), bio: text(pick(f, FIELDS.provider.bio)),
     profession: text(pick(f, FIELDS.provider.profession)), pronouns: text(pick(f, FIELDS.provider.pronouns)),
@@ -219,7 +353,36 @@ function normalizeProvider(record) {
     website: text(pick(f, FIELDS.provider.website)), consultationLink: text(pick(f, FIELDS.provider.consult)),
     humanSide: text(pick(f, FIELDS.provider.human)), collaboration: text(pick(f, FIELDS.provider.collaboration)),
     verified: truthy(pick(f, FIELDS.provider.verified)), approved: truthy(approvalValue),
-    isPublic: approvalValue === undefined || truthy(approvalValue)
+    isPublic: !clientAccount && (approvalValue === undefined ? providerSignals : truthy(approvalValue))
+  };
+}
+
+function normalizeProfile(record) {
+  const f = record.fields || {};
+  return {
+    ...normalizeProvider(record),
+    license: text(pick(f, FIELDS.provider.license)),
+    identity: text(pick(f, FIELDS.provider.identity)),
+    availability: array(pick(f, FIELDS.provider.availability)),
+    price: text(pick(f, FIELDS.provider.price)),
+    physicalLocations: text(pick(f, FIELDS.provider.physicalLocations)),
+    availabilitySpecifics: text(pick(f, FIELDS.provider.availabilitySpecifics)),
+    responseTime: text(pick(f, FIELDS.provider.responseTime)),
+    referralMethod: text(pick(f, FIELDS.provider.referralMethod)),
+    referralInstructions: text(pick(f, FIELDS.provider.referralInstructions)),
+    collaborationInterests: array(pick(f, FIELDS.provider.collaborationInterests)),
+    collaborationDetails: text(pick(f, FIELDS.provider.collaborationDetails)),
+    providerNotes: text(pick(f, FIELDS.provider.providerNotes)),
+    infoOptIn: truthy(pick(f, FIELDS.provider.infoOptIn)),
+    styleWords: text(pick(f, FIELDS.provider.styleWords)),
+    clientDescriptors: text(pick(f, FIELDS.provider.clientDescriptors)),
+    groundingRitual: text(pick(f, FIELDS.provider.groundingRitual)),
+    outsideSessions: text(pick(f, FIELDS.provider.outsideSessions)),
+    guidingBelief: text(pick(f, FIELDS.provider.guidingBelief)),
+    healingWish: text(pick(f, FIELDS.provider.healingWish)),
+    comfortPractice: text(pick(f, FIELDS.provider.comfortPractice)),
+    funFact: text(pick(f, FIELDS.provider.funFact)),
+    vibe: array(pick(f, FIELDS.provider.vibe))
   };
 }
 
@@ -280,6 +443,71 @@ async function metadataTable(key) {
   return (payload.tables || []).find((table) => table.id === tableNameOrId || table.name === tableNameOrId);
 }
 
+async function findDirectoryByEmail(email) {
+  const records = await list("directory");
+  return records.find((record) => lower(text(pick(record.fields || {}, FIELDS.provider.email))) === lower(email));
+}
+
+async function ensureDirectoryAccount({ email, name, accountType }) {
+  const cleanEmail = requiredEmail(email);
+  const existing = await findDirectoryByEmail(cleanEmail);
+  if (existing) return existing;
+  const fields = {};
+  setAlias(fields, FIELDS.provider.email, cleanEmail);
+  setAlias(fields, FIELDS.provider.name, name || cleanEmail);
+  setAlias(fields, FIELDS.provider.accountType, accountType || "client");
+  if (lower(accountType) === "provider") setAlias(fields, FIELDS.provider.approved, "Pending Review");
+  return createSafe("directory", fields);
+}
+
+function accountFromRecord(user, record) {
+  const f = record.fields || {};
+  return {
+    id: record.id,
+    email: text(pick(f, FIELDS.provider.email)) || user.email || "",
+    name: text(pick(f, FIELDS.provider.name)) || publicUser(user)?.name || "",
+    accountType: text(pick(f, FIELDS.provider.accountType)) || user.user_metadata?.account_type || user.userMetadata?.account_type || "client"
+  };
+}
+
+function setAlias(fields, names, value) {
+  const nextValue = Array.isArray(value) ? listText(value) : typeof value === "boolean" ? value : clean(value);
+  if (nextValue === "" || nextValue === undefined || nextValue === null) return;
+  fields[names[0]] = nextValue;
+}
+
+function listText(value) {
+  return arrayRaw(value).flatMap((item) => String(item || "").split(/[,;\n]+/)).map(clean).filter(Boolean).join(", ");
+}
+
+function requiredEmail(value) {
+  const email = lower(value);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw httpError(400, "A valid email is required.");
+  return email;
+}
+
+async function createSafe(key, fields) { return mutateSafe(() => create(key, fields), fields); }
+async function updateSafe(key, id, fields) { return mutateSafe(() => update(key, id, fields), fields); }
+
+async function mutateSafe(operation, fields) {
+  try {
+    return await operation();
+  } catch (error) {
+    const badField = unknownFieldName(error.message);
+    if (badField && Object.prototype.hasOwnProperty.call(fields, badField)) {
+      delete fields[badField];
+      if (!Object.keys(fields).length) throw error;
+      return mutateSafe(operation, fields);
+    }
+    throw error;
+  }
+}
+
+function unknownFieldName(message) {
+  const match = String(message || "").match(/Unknown field name: "([^"]+)"/i);
+  return match?.[1] || "";
+}
+
 async function airtable(key, id = "", options = {}) {
   const table = TABLES[key];
   if (!table) throw httpError(500, `Missing Airtable table configuration: ${key}`);
@@ -298,7 +526,8 @@ async function airtable(key, id = "", options = {}) {
 function requireUser(user) { if (!user?.email) throw httpError(401, "Please log in."); return user; }
 function requireAdmin(user) { requireUser(user); if (!isAdmin(user)) throw httpError(403, "Administrator access is required."); return user; }
 function isAdmin(user) { return (user?.roles || user?.app_metadata?.roles || []).includes("admin"); }
-function publicUser(user) { return user ? { id: user.id, email: user.email, name: user.user_metadata?.full_name || user.userMetadata?.full_name || "", roles: user.roles || user.app_metadata?.roles || [] } : null; }
+function hasProviderAccess(user) { const roles = user?.roles || user?.app_metadata?.roles || []; const type = lower(user?.user_metadata?.account_type || user?.userMetadata?.account_type || user?.user_metadata?.accountType || user?.userMetadata?.accountType); return roles.includes("admin") || roles.includes("provider") || type === "provider"; }
+function publicUser(user) { return user ? { id: user.id, email: user.email, name: user.user_metadata?.full_name || user.userMetadata?.full_name || "", roles: user.roles || user.app_metadata?.roles || [], accountType: user.user_metadata?.account_type || user.userMetadata?.account_type || user.user_metadata?.accountType || user.userMetadata?.accountType || "" } : null; }
 function belongsTo(record, email) { return lower(text(pick(record.fields || {}, ["Saver Email Text", "Saver Email", "Email", "User Email"]))) === lower(email); }
 function activeRecord(record) { const value = pick(record.fields || {}, ["Active"]); return value === undefined || truthy(value); }
 function providerIds(record) { return linkedIds(pick(record.fields || {}, ["Saved Provider", "Directory Grid View", "Provider"])); }
