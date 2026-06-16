@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 const API = "/.netlify/functions/app-api";
+const LIST_PAGE_SIZE = 10;
 
 export default function PublicShowcase({ path }) {
   const [data, setData] = React.useState({ providers: [], events: [], savedProviderIds: [], savedEventIds: [], directoryOptions: {} });
@@ -42,7 +43,6 @@ export default function PublicShowcase({ path }) {
   return <div className="app-shell">
     <header className={warm ? "site-header warm-header" : "site-header"}>
       <button className="brand" onClick={() => go("/")}>
-        <img src="/healing-directory-logo.svg" alt="" />
         <span><strong>The Healing Directory</strong><small>Relationship-based care</small></span>
       </button>
       <button className="menu-toggle icon-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X /> : <Menu />}</button>
@@ -67,6 +67,7 @@ function DirectoryPage({ data, loading, toggleSave }) {
   const [query, setQuery] = React.useState("");
   const [verified, setVerified] = React.useState(false);
   const [filters, setFilters] = React.useState({ type: "", service: "", support: "", population: "", location: "", payment: "" });
+  const [visibleCount, setVisibleCount] = React.useState(LIST_PAGE_SIZE);
   const choices = {
     type: unique(data.providers.flatMap((item) => item.providerType || [])).sort(),
     service: unique(data.providers.flatMap((item) => item.services || [])).sort(),
@@ -86,6 +87,10 @@ function DirectoryPage({ data, loading, toggleSave }) {
       (!filters.payment || item.payment?.includes(filters.payment));
   });
   const setFilter = (key) => (event) => setFilters((current) => ({ ...current, [key]: event.target.value }));
+  React.useEffect(() => {
+    setVisibleCount(LIST_PAGE_SIZE);
+  }, [query, verified, filters.type, filters.service, filters.support, filters.population, filters.location, filters.payment, data.providers.length]);
+  const visibleProviders = providers.slice(0, visibleCount);
 
   return <main>
     <section className="directory-intro page-band dark-band">
@@ -112,7 +117,7 @@ function DirectoryPage({ data, loading, toggleSave }) {
     <section className="content-shell">
       <div className="provider-invite"><div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div><button className="button warm" onClick={() => go("/signup")}>Become a Provider <ArrowRight size={17} /></button></div>
       <div className="results-count"><strong>{providers.length}</strong> providers shown</div>
-      {loading ? <State label="Loading providers" /> : providers.length ? <div className="provider-list">{providers.map((provider) => <ProviderCard key={provider.id} provider={provider} saved={data.savedProviderIds.includes(provider.id)} onSave={() => toggleSave("provider", provider.id, !data.savedProviderIds.includes(provider.id))} />)}</div> : <State label="No providers match that search" />}
+      {loading ? <State label="Loading providers" /> : providers.length ? <><div className="provider-list">{visibleProviders.map((provider) => <ProviderCard key={provider.id} provider={provider} saved={data.savedProviderIds.includes(provider.id)} onSave={() => toggleSave("provider", provider.id, !data.savedProviderIds.includes(provider.id))} />)}</div><ViewMoreList shown={visibleProviders.length} total={providers.length} label="providers" onMore={() => setVisibleCount((value) => value + LIST_PAGE_SIZE)} /></> : <State label="No providers match that search" />}
     </section>
   </main>;
 }
@@ -139,8 +144,25 @@ function ProviderCard({ provider, saved, onSave }) {
 
 function ProviderDetails({ data, loading, toggleSave }) {
   const id = new URLSearchParams(window.location.search).get("id") || new URLSearchParams(window.location.search).get("recordId");
-  const provider = data.providers.find((item) => item.id === id);
-  if (loading) return <State label="Loading provider profile" />;
+  const listedProvider = data.providers.find((item) => item.id === id);
+  const [profile, setProfile] = React.useState(null);
+  const [checkingProfile, setCheckingProfile] = React.useState(Boolean(id));
+  React.useEffect(() => {
+    let active = true;
+    if (!id) {
+      setCheckingProfile(false);
+      return () => { active = false; };
+    }
+    setCheckingProfile(true);
+    setProfile(null);
+    api("provider", { query: { id } })
+      .then((payload) => { if (active) setProfile(payload.provider || null); })
+      .catch(() => { if (active) setProfile(null); })
+      .finally(() => { if (active) setCheckingProfile(false); });
+    return () => { active = false; };
+  }, [id]);
+  const provider = profile || listedProvider;
+  if (loading || (checkingProfile && !listedProvider)) return <State label="Loading provider profile" />;
   if (!provider) return <State label="Provider not found" />;
   const saved = data.savedProviderIds.includes(provider.id);
   return <main className="provider-detail-page">
@@ -152,11 +174,12 @@ function ProviderDetails({ data, loading, toggleSave }) {
       <div className="detail-main">
         <ContentSection kicker="About" title={`A little about ${firstName(provider.name)}`}><p>{provider.bio || "Profile details are being completed."}</p></ContentSection>
         <ContentSection kicker="Specialties & support" title="Areas of care"><p>These selections highlight the provider's main areas of focus. They are not necessarily an exhaustive list of everyone this provider supports.</p><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>
-        {provider.humanSide ? <ContentSection kicker="Get to know your provider" title="The human side"><p>{provider.humanSide}</p></ContentSection> : null}
+        <HumanSideSection provider={provider} />
+        <ProviderConnectionSection provider={provider} />
       </div>
       <aside className="profile-sidebar">
         <div className="contact-panel"><h2>Connect</h2><p>Reach out directly to learn more about availability, fit, and next steps.</p>{provider.consultationLink ? <a className="button full" href={href(provider.consultationLink)} target="_blank" rel="noreferrer">Book consultation <ArrowRight size={16} /></a> : provider.website ? <a className="button full" href={href(provider.website)} target="_blank" rel="noreferrer">Visit website <ArrowRight size={16} /></a> : null}{provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}{provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}{provider.website ? <a href={href(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>{provider.website}</span></a> : null}</div>
-        <div className="contact-panel access-panel"><h2>Access &amp;<br />Availability</h2><Info icon={<Star />} label="Pay type / insurance" value={provider.payment?.join(", ")} /><Info icon={<MapPin />} label="Location" value={provider.location?.join(", ")} /></div>
+        <div className="contact-panel access-panel"><h2>Access &amp; Availability</h2><Info icon={<Star />} label="Pay type / insurance" value={provider.payment?.join(", ")} /><Info icon={<Clock />} label="Availability" value={provider.availability?.join(", ")} /><Info icon={<Clock />} label="Current availability" value={provider.availabilitySpecifics} /><Info icon={<CheckCircle2 />} label="Response time" value={provider.responseTime} /><Info icon={<Tag />} label="Pricing" value={provider.price} /><Info icon={<MapPin />} label="Location" value={provider.location?.join(", ")} /><Info icon={<MapPin />} label="Physical locations" value={provider.physicalLocations} /></div>
       </aside>
     </section>
   </main>;
@@ -167,6 +190,7 @@ function EventsPage({ data, loading, toggleSave }) {
   const [query, setQuery] = React.useState("");
   const [category, setCategory] = React.useState("");
   const [locationType, setLocationType] = React.useState("");
+  const [visibleCount, setVisibleCount] = React.useState(LIST_PAGE_SIZE);
   const categories = unique(data.events.map((event) => event.category)).sort();
   const locations = unique(data.events.map((event) => event.locationType)).sort();
   const events = data.events.filter((event) => {
@@ -177,6 +201,10 @@ function EventsPage({ data, loading, toggleSave }) {
     return matchesTab && (!query || text.includes(query.toLowerCase())) && (!category || event.category === category) && (!locationType || event.locationType === locationType);
   });
   const community = data.events.filter((event) => !String(event.audience || "").toLowerCase().includes("provider")).length;
+  React.useEffect(() => {
+    setVisibleCount(LIST_PAGE_SIZE);
+  }, [tab, query, category, locationType, data.events.length]);
+  const visibleEvents = events.slice(0, visibleCount);
   return <main className="events-page">
     <section className="events-hero"><div className="band-inner events-hero-grid">
       <div><p className="event-kicker"><span /> Events</p><h1>Workshops, circles, trainings, and healing community events.</h1><p className="lede">Browse upcoming events from The Healing Directory community.</p><div className="action-row"><button className="button event-primary" onClick={() => go("/add-event")}><Plus size={16} /> Add an Event</button><button className="button event-secondary" onClick={() => setTab("community")}><HeartHandshake size={16} /> Community Events</button><button className="button event-secondary" onClick={() => setTab("provider")}><LockKeyhole size={16} /> Provider Events</button></div></div>
@@ -185,7 +213,7 @@ function EventsPage({ data, loading, toggleSave }) {
     <section className="content-shell">
       <div className="event-filter-panel"><div className="segmented">{["all", "community", "provider", "saved"].map((key) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{key === "provider" ? <LockKeyhole size={14} /> : key === "saved" ? <Bookmark size={14} /> : <Users size={14} />}{capitalize(key)}</button>)}</div><div className="event-filter-grid"><label className="search-control pale"><span className="filter-label">Search</span><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search event, host, topic, description..." /></label><label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Location type</span><select value={locationType} onChange={(event) => setLocationType(event.target.value)}><option value="">All location types</option>{locations.map((value) => <option key={value}>{value}</option>)}</select></label></div></div>
       <div className="results-count"><strong>{events.length}</strong> events shown</div>
-      {loading ? <State label="Loading events" /> : events.length ? <div className="event-grid">{events.map((event) => <EventCard key={event.id} event={event} saved={data.savedEventIds.includes(event.id)} onSave={() => toggleSave("event", event.id, !data.savedEventIds.includes(event.id))} />)}</div> : <State label="No events in this view" />}
+      {loading ? <State label="Loading events" /> : events.length ? <><div className="event-grid">{visibleEvents.map((event) => <EventCard key={event.id} event={event} saved={data.savedEventIds.includes(event.id)} onSave={() => toggleSave("event", event.id, !data.savedEventIds.includes(event.id))} />)}</div><ViewMoreList shown={visibleEvents.length} total={events.length} label="events" onMore={() => setVisibleCount((value) => value + LIST_PAGE_SIZE)} /></> : <State label="No events in this view" />}
     </section>
   </main>;
 }
@@ -245,8 +273,46 @@ function ProfileTags({ label, values = [], warm }) { if (!values.length) return 
 function CareGroup({ label, values = [], warm, neutral }) { return <div className={`care-group${warm ? " warm" : ""}${neutral ? " neutral" : ""}`}><strong>{label}</strong><div className="tag-row large-tags">{values.length ? values.map((value) => <span key={value}>{value}</span>) : <span>Not listed</span>}</div></div>; }
 function ContentSection({ kicker, title, children }) { return <section className="content-section"><p className="eyebrow ink">{kicker}</p><h2>{title}</h2>{children}</section>; }
 function Info({ icon, label, value }) { if (!value) return null; return <div className="info-line">{React.cloneElement(icon, { size: 17 })}<span><small>{label}</small>{value}</span></div>; }
+function HumanSideSection({ provider }) {
+  const prompts = [
+    { label: "My style in three words", value: provider.styleWords, icon: <SparkIcon /> },
+    { label: "Clients describe me as", value: provider.clientDescriptors, icon: <SmileIcon /> },
+    { label: "My grounding ritual", value: provider.groundingRitual, icon: <LeafIcon /> },
+    { label: "Outside sessions", value: provider.outsideSessions, icon: <MugIcon /> },
+    { label: "Guiding belief", value: provider.guidingBelief, icon: <SparkIcon /> },
+    { label: "What I wish people knew about healing", value: provider.healingWish, icon: <HeartHandshake size={20} /> },
+    { label: "Favorite comfort practice", value: provider.comfortPractice, icon: <LeafIcon /> },
+  ].filter((item) => item.value);
+  if (!provider.humanSide && !provider.funFact && !provider.vibe?.length && !prompts.length) return null;
+  return <ContentSection kicker="Get to know your provider" title="The human side">
+    {provider.humanSide ? <p>{provider.humanSide}</p> : null}
+    {prompts.length ? <div className="human-grid">{prompts.map((item) => <DetailPrompt key={item.label} {...item} />)}</div> : null}
+    {provider.vibe?.length ? <div className="detail-chip-block"><strong>Vibe</strong><div className="tag-row large-tags">{provider.vibe.map((value) => <span key={value}>{value}</span>)}</div></div> : null}
+    {provider.funFact ? <div className="long-note"><strong>Fun facts</strong><p>{provider.funFact}</p></div> : null}
+  </ContentSection>;
+}
+function ProviderConnectionSection({ provider }) {
+  const hasConnection = provider.referralMethod || provider.referralInstructions || provider.providerNotes || provider.collaborationDetails || provider.collaborationInterests?.length;
+  if (!hasConnection) return null;
+  return <ContentSection kicker="Provider-only" title="Provider connection details">
+    <p>A quick look at how this provider likes to connect, collaborate, consult, and receive aligned referrals from other providers.</p>
+    <div className="connection-grid">
+      <DetailPrompt label="Best way to connect" value={provider.referralMethod} icon={<Phone size={20} />} />
+      <DetailPrompt label="Connection / referral notes" value={provider.referralInstructions} icon={<Mail size={20} />} />
+      <DetailPrompt label="Provider-to-provider notes" value={provider.providerNotes} icon={<HeartHandshake size={20} />} wide />
+      <DetailPrompt label="Collaboration details" value={provider.collaborationDetails || provider.collaboration} icon={<CheckCircle2 size={20} />} wide />
+      {provider.collaborationInterests?.length ? <div className="detail-prompt wide"><HeartHandshake size={20} /><div><strong>Collaboration interests</strong><div className="tag-row large-tags neutral-tags">{provider.collaborationInterests.map((value) => <span key={value}>{value}</span>)}</div></div></div> : null}
+    </div>
+  </ContentSection>;
+}
+function DetailPrompt({ label, value, icon, wide }) { if (!value) return null; return <div className={wide ? "detail-prompt wide" : "detail-prompt"}>{icon}<div><strong>{label}</strong><p>{value}</p></div></div>; }
+function SparkIcon() { return <Star size={20} />; }
+function SmileIcon() { return <CircleUserRound size={20} />; }
+function LeafIcon() { return <HeartHandshake size={20} />; }
+function MugIcon() { return <Clock size={20} />; }
 function EventCount({ value, label }) { return <div className="event-count"><strong>{value}</strong><span>{label}</span></div>; }
 function EventInfo({ icon, label, value }) { if (!value) return null; return <div className="event-info">{React.cloneElement(icon, { size: 19 })}<span><small>{label}</small><strong>{value}</strong></span></div>; }
+function ViewMoreList({ shown, total, onMore, label = "items" }) { if (!total || shown >= total) return null; return <div className="view-more-row"><button type="button" className="button tertiary" onClick={onMore}>View more</button><span>Showing {shown} of {total} {label}</span></div>; }
 function State({ label }) { return <div className="state"><HeartHandshake /><h2>{label}</h2></div>; }
 function go(path) { window.location.assign(path); }
 function optionChoices(options = [], fallback = []) { return (options?.length ? unique(options) : unique(fallback || [])).sort(); }
