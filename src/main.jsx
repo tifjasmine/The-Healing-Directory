@@ -7,5 +7,6 @@ import "./referral-room.css";
 import "./referral-manager.css";
 import "./screenshot-theme.css";
 import "./dashboard-admin-theme.css";
+import "./auth-signup-overrides.css";
 
 createRoot(document.getElementById("root")).render(<Root />);
