@@ -7,7 +7,7 @@ import {
 } from "@netlify/identity";
 import { HeartHandshake, LogIn, Users } from "lucide-react";
 
-const SIGNUP_API = "/.netlify/functions/app-api?action=signup-request";
+const SIGNUP_API = "https://zpgvztndfkochixhuvaf.functions.supabase.co/signup-request";
 
 export default function AuthAccess({ path }) {
   const mode = path.replace("/", "") || "login";
