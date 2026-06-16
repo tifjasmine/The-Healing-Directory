@@ -7,6 +7,7 @@ import {
 } from "@netlify/identity";
 import { HeartHandshake, LogIn, Users } from "lucide-react";
 
+// Public request intake; account approval still happens after review.
 const SIGNUP_API = "https://zpgvztndfkochixhuvaf.functions.supabase.co/signup-request";
 
 export default function AuthAccess({ path }) {
