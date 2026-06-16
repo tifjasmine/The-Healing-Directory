@@ -3,12 +3,11 @@ import {
   getUser,
   login,
   requestPasswordRecovery,
-  signup,
   updateUser,
 } from "@netlify/identity";
 import { HeartHandshake, LogIn, Users } from "lucide-react";
 
-const API = "/.netlify/functions/signup-request";
+const SIGNUP_API = "/.netlify/functions/app-api?action=signup-request";
 
 export default function AuthAccess({ path }) {
   const mode = path.replace("/", "") || "login";
@@ -17,11 +16,11 @@ export default function AuthAccess({ path }) {
   const [busy, setBusy] = React.useState(false);
   const signingUp = mode === "signup";
   const providerSignup = signingUp && form.accountType === "provider";
-  const title = signingUp ? (providerSignup ? "Apply as a provider" : "Create your client account") : mode === "forgot-password" ? "Reset your password" : mode === "reset-password" ? "Choose a new password" : "Welcome back";
+  const title = signingUp ? (providerSignup ? "Apply as a provider" : "Request client access") : mode === "forgot-password" ? "Reset your password" : mode === "reset-password" ? "Choose a new password" : "Welcome back";
   const intro = signingUp
     ? providerSignup
       ? "Provider applications are reviewed before access is granted."
-      : "Create a client account to save providers and return to your shortlist."
+      : "Client accounts are reviewed so the community stays intentional."
     : "Log in to save providers, manage events, and return to your dashboard.";
 
   async function submit(event) {
@@ -29,18 +28,9 @@ export default function AuthAccess({ path }) {
     setBusy(true);
     setNotice("");
     try {
-      if (providerSignup) {
-        await api({ method: "POST", body: form });
-        setNotice("Your provider application was received. You will hear back after review.");
-        return;
-      }
       if (signingUp) {
-        if (form.password !== form.confirm) throw new Error("Passwords do not match.");
-        const result = await signup(form.email, form.password, { full_name: form.name, account_type: "client" });
-        await api({ method: "POST", body: { ...form, accountType: "client" } });
-        setNotice(result.confirmedAt ? "Your account is ready." : "Check your email to confirm your account.");
-        const current = await getUser();
-        window.location.assign(current ? "/dashboard" : "/login");
+        const result = await api({ method: "POST", body: form });
+        setNotice(result.status === "approved" ? "Your request was received. You will hear back with access details." : "Your application was received. You will hear back after review.");
         return;
       }
       if (mode === "forgot-password") {
@@ -82,9 +72,9 @@ export default function AuthAccess({ path }) {
         {signingUp ? <Field label="Full name" value={form.name} onChange={set("name")} required /> : null}
         {mode !== "reset-password" ? <Field label="Email" type="email" value={form.email} onChange={set("email")} required /> : null}
         {providerSignup ? <><Field label="Phone" value={form.phone} onChange={set("phone")} /><Field label="Website or profile link" value={form.website} onChange={set("website")} /><Field label="Professional title" value={form.professionalTitle} onChange={set("professionalTitle")} required /><Field label="Tell us about your work" textarea value={form.message} onChange={set("message")} required /></> : null}
-        {!mode.includes("forgot") && !providerSignup ? <Field label="Password" type="password" value={form.password} onChange={set("password")} required /> : null}
-        {(signingUp && !providerSignup) || mode === "reset-password" ? <Field label="Confirm password" type="password" value={form.confirm} onChange={set("confirm")} required /> : null}
-        <button className="button full" disabled={busy}>{busy ? "Working..." : providerSignup ? "Submit provider application" : signingUp ? "Create client account" : mode.includes("password") ? "Continue" : "Log in"}</button>
+        {!mode.includes("forgot") && !signingUp ? <Field label="Password" type="password" value={form.password} onChange={set("password")} required /> : null}
+        {mode === "reset-password" ? <Field label="Confirm password" type="password" value={form.confirm} onChange={set("confirm")} required /> : null}
+        <button className="button full" disabled={busy}>{busy ? "Working..." : providerSignup ? "Submit provider application" : signingUp ? "Request access" : mode.includes("password") ? "Continue" : "Log in"}</button>
         <div className="auth-links">{mode === "login" ? <><a href="/forgot-password">Forgot password?</a><a href="/signup">Create an account</a></> : <a href="/login">Back to login</a>}</div>
       </form>
     </section></main>
@@ -96,7 +86,7 @@ function Field({ label, textarea, ...props }) {
 }
 
 async function api(options = {}) {
-  const response = await fetch(API, { method: options.method || "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: options.body ? JSON.stringify(options.body) : undefined });
+  const response = await fetch(SIGNUP_API, { method: options.method || "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: options.body ? JSON.stringify(options.body) : undefined });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || "Request failed.");
   return payload;
