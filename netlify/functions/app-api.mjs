@@ -23,7 +23,7 @@ const FIELDS = {
     profession: ["Professional Title", "Profession", "Credentials", "Service Type"],
     pronouns: ["Pronouns"], type: ["Service Type", "Provider Type", "Provider Types"],
     services: ["Additional Services", "Services Offered", "Services"],
-    support: ["Areas of Support", "Support Areas", "Areas of Care", "Specialties", "Concerns"],
+    support: ["Areas of Support"],
     population: ["Populations Served", "Who I Serve", "Population"],
     location: ["State", "Location", "Virtual/In Person", "Neighborhood"],
     payment: ["Payment", "Pay Type", "Insurance", "Additional Payment"],

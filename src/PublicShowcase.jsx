@@ -249,7 +249,7 @@ function EventCount({ value, label }) { return <div className="event-count"><str
 function EventInfo({ icon, label, value }) { if (!value) return null; return <div className="event-info">{React.cloneElement(icon, { size: 19 })}<span><small>{label}</small><strong>{value}</strong></span></div>; }
 function State({ label }) { return <div className="state"><HeartHandshake /><h2>{label}</h2></div>; }
 function go(path) { window.location.assign(path); }
-function optionChoices(options = [], fallback = []) { return unique([...(options || []), ...(fallback || [])]).sort(); }
+function optionChoices(options = [], fallback = []) { return (options?.length ? unique(options) : unique(fallback || [])).sort(); }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function truncate(value, max) { const text = String(value || "").replace(/\s+/g, " ").trim(); return text.length > max ? `${text.slice(0, max - 1)}...` : text; }
 function href(value) { return /^(https?:|mailto:|tel:)/i.test(String(value || "")) ? value : `https://${value}`; }
