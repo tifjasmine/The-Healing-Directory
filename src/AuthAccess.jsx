@@ -10,7 +10,6 @@ import {
 import { HeartHandshake, LogIn, Users } from "lucide-react";
 
 const APP_API = "/.netlify/functions/app-api";
-const REQUEST_API = "https://zpgvztndfkochixhuvaf.functions.supabase.co/signup-request";
 
 export default function AuthAccess({ path }) {
   const mode = path.replace("/", "") || "login";
@@ -35,7 +34,18 @@ export default function AuthAccess({ path }) {
     setNotice("");
     try {
       if (providerSignup) {
-        await requestSignup({ ...form, accountType: "provider" });
+        await api("signup-profile", {
+          method: "POST",
+          body: {
+            name: form.name,
+            email: form.email,
+            accountType: "provider",
+            phone: form.phone,
+            website: form.website,
+            professionalTitle: form.professionalTitle,
+            message: form.message
+          }
+        });
         setNotice("Your provider application was received. You will hear back after review.");
         return;
       }
@@ -110,13 +120,6 @@ async function api(action, options = {}) {
   const url = new URL(APP_API, window.location.origin);
   url.searchParams.set("action", action);
   const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: options.body ? JSON.stringify(options.body) : undefined });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "Request failed.");
-  return payload;
-}
-
-async function requestSignup(body) {
-  const response = await fetch(REQUEST_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || "Request failed.");
   return payload;

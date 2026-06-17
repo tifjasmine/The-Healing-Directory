@@ -32,6 +32,23 @@ Optional overrides:
 AIRTABLE_DIRECTORY_BASE_ID=appJbWRXBOpmfNcUQ
 AIRTABLE_DIRECTORY_TABLE_ID=tblOgiBFqw5iftDAE
 AIRTABLE_DIRECTORY_VIEW_ID=viwd0UGAiaOGCprXo
+AIRTABLE_EVENTS_TABLE_ID=Events
+AIRTABLE_SAVED_EVENTS_TABLE_ID="Saved Events"
+AIRTABLE_SAVED_PROVIDERS_TABLE_ID="Saved Providers"
+AIRTABLE_PENDING_PROVIDER_TABLE_ID="Pending Providers"
+AIRTABLE_CLIENTS_TABLE_ID="tblGJKhK59EgQRI6V"
+AIRTABLE_MEMBERS_TABLE_ID="tblGJKhK59EgQRI6V"
+AIRTABLE_AUTO_CREATE_TABLES=true
+```
+
+Supabase overrides (for signup sync):
+
+```txt
+SUPABASE_URL=https://zpgvztndfkochixhuvaf.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_PROVIDER_SIGNUPS_TABLE=providers
+SUPABASE_CLIENTS_TABLE=clients
+SUPABASE_SIGNUP_REQUESTS_TABLE=signup_requests
 ```
 
 If your Airtable columns have custom names, add field overrides such as:

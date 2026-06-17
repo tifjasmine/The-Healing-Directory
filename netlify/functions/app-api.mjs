@@ -2,17 +2,84 @@ import { getUser } from "@netlify/identity";
 
 const BASE_ID = process.env.AIRTABLE_BASE_ID || process.env.AIRTABLE_DIRECTORY_BASE_ID || "appACV3Zz7ngug6yt";
 const TOKEN = () => process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "";
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://zpgvztndfkochixhuvaf.supabase.co";
+const SUPABASE_SERVICE_ROLE_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+const AIRTABLE_AUTO_CREATE_TABLES = lower(process.env.AIRTABLE_AUTO_CREATE_TABLES || "true") !== "false";
+
+const SUPABASE_SIGNUP_TABLES = {
+  provider: process.env.SUPABASE_PROVIDER_SIGNUPS_TABLE || "providers",
+  client: process.env.SUPABASE_CLIENTS_TABLE || "clients",
+  fallback: process.env.SUPABASE_SIGNUP_REQUESTS_TABLE || "signup_requests"
+};
 
 const TABLES = {
   directory: process.env.AIRTABLE_DIRECTORY_TABLE_ID || "tblOgiBFqw5iftDAE",
   events: process.env.AIRTABLE_EVENTS_TABLE_ID || "Events",
   savedEvents: process.env.AIRTABLE_SAVED_EVENTS_TABLE_ID || "Saved Events",
   savedProviders: process.env.AIRTABLE_SAVED_PROVIDERS_TABLE_ID || "Saved Providers",
+  providerSignups: process.env.AIRTABLE_PENDING_PROVIDER_TABLE_ID || process.env.AIRTABLE_PROVIDER_SIGNUPS_TABLE_ID || "Pending Providers",
+  clients: process.env.AIRTABLE_CLIENTS_TABLE_ID || process.env.AIRTABLE_MEMBERS_TABLE_ID || "tblGJKhK59EgQRI6V",
   referralRoom: process.env.AIRTABLE_REFERRAL_ROOM_TABLE_ID || "The Referral Room",
   attendance: process.env.AIRTABLE_ATTENDANCE_TABLE_ID || "The Referral Room Attendance",
   seatRules: process.env.AIRTABLE_SEAT_RULES_TABLE_ID || "Referral Room Seat Rules",
   connections: process.env.AIRTABLE_CONNECTIONS_TABLE_ID || "Provider Connections"
 };
+
+const TABLE_ALIASES = {
+  providerSignups: [
+    process.env.AIRTABLE_PENDING_PROVIDER_TABLE_ID,
+    process.env.AIRTABLE_PROVIDER_SIGNUPS_TABLE_ID,
+    "Pending Providers",
+    "Provider Signups",
+    "Pending Provider Signups",
+    "Provider Applications"
+  ],
+  clients: [
+    process.env.AIRTABLE_CLIENTS_TABLE_ID,
+    process.env.AIRTABLE_MEMBERS_TABLE_ID,
+    "tblGJKhK59EgQRI6V",
+    "Clients",
+    "Client",
+    "Members",
+    "Members/Clients",
+    "Client Members",
+    "User Members"
+  ]
+};
+
+const AIRTABLE_BOOTSTRAP_SCHEMAS = {
+  providerSignups: {
+    name: "Pending Providers",
+    fields: [
+      { name: "Name", type: "singleLineText" },
+      { name: "Email", type: "singleLineText" },
+      { name: "Phone", type: "singleLineText" },
+      { name: "Website", type: "singleLineText" },
+      { name: "Professional Title", type: "singleLineText" },
+      { name: "Message", type: "multilineText" },
+      { name: "Status", type: "singleLineText" },
+      { name: "Account Type", type: "singleLineText" },
+      { name: "Source", type: "singleLineText" }
+    ]
+  },
+  clients: {
+    name: "Members",
+    fields: [
+      { name: "Name", type: "singleLineText" },
+      { name: "Email", type: "singleLineText" },
+      { name: "Phone", type: "singleLineText" },
+      { name: "Website", type: "singleLineText" },
+      { name: "Professional Title", type: "singleLineText" },
+      { name: "Message", type: "multilineText" },
+      { name: "Status", type: "singleLineText" },
+      { name: "Account Type", type: "singleLineText" },
+      { name: "Source", type: "singleLineText" }
+    ]
+  }
+};
+
+const TABLE_LOOKUP = new Map();
+const TABLE_META_CACHE = new Map();
 
 const FIELDS = {
   provider: {
@@ -67,6 +134,40 @@ const FIELDS = {
     status: ["Status"], created: ["Created At", "Created"]
   }
 };
+
+const SAVE_FIELD_SETS = {
+  providerSave: {
+    name: ["Name", "Saved Provider Name", "Record Name"],
+    saverEmail: ["Saver Email Text", "Saver Email", "Email", "Email Address", "User Email", "Saved By", "Saved By Email", "Client Email", "User's Email"],
+    savedProvider: ["Saved Provider", "Directory", "Directory Record", "Directory Grid View", "Provider", "Provider Link", "Provider Record", "Providers"],
+    notes: ["Notes", "Note", "Saved Provider Notes"],
+    active: ["Active", "Saved", "Is Active", "Visible"]
+  },
+  eventSave: {
+    name: ["Name", "Saved Event Name", "Record Name"],
+    saverEmail: ["Saver Email", "Saver Email Text", "Email", "Email Address", "User Email", "Saved By", "Saved By Email", "Client Email", "User's Email"],
+    savedEvent: ["Saved Workshop", "Saved Event", "Saved Events", "Event", "Events", "Workshop", "Workshop Events", "Hosted Event", "Event Record", "Event Link"],
+    notes: ["Notes", "Note", "Saved Event Notes"],
+    active: ["Active", "Saved", "Is Active", "Visible"]
+  },
+  providerSignup: {
+    name: ["Name", "Full Name", "Provider Name"],
+    email: ["Email"],
+    phone: ["Phone", "Phone Number", "Mobile"],
+    status: ["Status", "Request Status", "Approval Status"],
+    accountType: ["Account Type", "Type", "Role", "User Type"],
+    source: ["Source", "Referral Source", "Channel", "Signup Source"]
+  },
+  clientSignup: {
+    name: ["Name", "Full Name", "Client Name"],
+    email: ["Email"],
+    status: ["Status", "Account Status", "Request Status", "Approval Status"],
+    accountType: ["Account Type", "Type", "Role", "User Type"],
+    source: ["Source", "Referral Source", "Channel", "Signup Source"]
+  }
+};
+
+const FIELD_NAME_CACHE = new Map();
 
 export default async function handler(request) {
   try {
@@ -172,9 +273,13 @@ async function myEvents(user) {
 async function savedProviders(user) {
   const [providers, saves] = await Promise.all([list("directory"), list("savedProviders")]);
   const providerMap = new Map(providers.map((r) => [r.id, normalizeProvider(r)]));
+  const mapped = await mappedFields("providerSave");
   const items = saves.filter((r) => belongsTo(r, user.email)).map((record) => {
     const id = providerIds(record)[0];
-    return { id: record.id, active: activeRecord(record), notes: text(pick(record.fields, ["Notes"])), savedAt: text(pick(record.fields, ["Saved At", "Created"])), provider: providerMap.get(id) };
+    return {
+      id: record.id, active: activeRecord(record), notes: mapped.notes ? text(pick(record.fields || {}, [mapped.notes])) : "",
+      savedAt: text(pick(record.fields || {}, ["Saved At", "Created", "Created At", "Created Date", "Date"])), provider: providerMap.get(id)
+    };
   }).filter((item) => item.provider);
   return { items };
 }
@@ -183,11 +288,20 @@ async function toggleProvider(user, body) {
   if (!body.providerId) throw httpError(400, "Missing provider ID.");
   const provider = normalizeProvider(await get("directory", body.providerId));
   const saves = await list("savedProviders");
+  const mapped = await mappedFields("providerSave");
   const existing = saves.find((r) => belongsTo(r, user.email) && providerIds(r).includes(body.providerId));
+  const existingByLinkedField = mapped.savedProvider ? saves.find((r) => providerIds(r).includes(body.providerId) && belongsTo(r, user.email)) : null;
   const active = body.active !== false;
-  const fields = { "Name": `${user.email} saved ${provider.name}`, "Saver Email Text": user.email, "Saved Provider": [body.providerId], "Active": active };
-  if (body.notes !== undefined) fields.Notes = String(body.notes || "");
-  const record = existing ? await update("savedProviders", existing.id, fields) : await create("savedProviders", fields);
+  const fields = {
+    [mapped.name]: `${user.email} saved ${provider.name}`,
+    [mapped.saverEmail]: user.email,
+    [mapped.savedProvider]: [body.providerId],
+    [mapped.active]: active
+  };
+  if (body.notes !== undefined && mapped.notes) fields[mapped.notes] = String(body.notes || "");
+
+  const current = existing || existingByLinkedField;
+  const record = current ? await updateSafe("savedProviders", current.id, fields) : await createSafe("savedProviders", fields);
   return { ok: true, active, recordId: record.id };
 }
 
@@ -195,14 +309,19 @@ async function toggleEvent(user, body) {
   if (!body.eventId) throw httpError(400, "Missing event ID.");
   const event = normalizeEvent(await get("events", body.eventId));
   const saves = await list("savedEvents");
+  const mapped = await mappedFields("eventSave");
   const existing = saves.find((r) => belongsTo(r, user.email) && eventIds(r).includes(body.eventId));
+  const existingByLinkedField = mapped.savedEvent ? saves.find((r) => eventIds(r).includes(body.eventId) && belongsTo(r, user.email)) : null;
   const active = body.active !== false;
-  const savedEventField = await fieldName("savedEvents", ["Saved Workshop", "Saved Event", "Saved Events", "Event", "Events", "Workshop"]);
-  const saverEmailField = await fieldName("savedEvents", ["Saver Email", "Saver Email Text", "Email", "User Email"]);
-  const fields = { "Name": `${user.email} saved ${event.name}`, "Active": active };
-  fields[saverEmailField || "Saver Email"] = user.email;
-  fields[savedEventField || "Saved Workshop"] = [body.eventId];
-  const record = existing ? await updateSafe("savedEvents", existing.id, fields) : await createSafe("savedEvents", fields);
+  const fields = {
+    [mapped.name]: `${user.email} saved ${event.name}`,
+    [mapped.saverEmail]: user.email,
+    [mapped.savedEvent]: [body.eventId],
+    [mapped.active]: active
+  };
+  if (body.notes !== undefined && mapped.notes) fields[mapped.notes] = String(body.notes || "");
+  const current = existing || existingByLinkedField;
+  const record = current ? await updateSafe("savedEvents", current.id, fields) : await createSafe("savedEvents", fields);
   return { ok: true, active, recordId: record.id };
 }
 
@@ -262,8 +381,39 @@ async function signupProfile(body) {
   const email = requiredEmail(body.email);
   const accountType = clean(body.accountType) || "client";
   const name = required(body.name || email.split("@")[0], "Name");
-  const account = await ensureDirectoryAccount({ email, name, accountType });
-  return { ok: true, account: accountFromRecord({ email, user_metadata: { full_name: name, account_type: accountType } }, account) };
+  const normalizedType = lower(accountType) === "provider" ? "provider" : "client";
+  const status = normalizedType === "provider" ? "Pending Review" : "Approved";
+  const syncPayload = {
+    name,
+    email,
+    status,
+    accountType: normalizedType,
+    phone: body.phone,
+    website: body.website,
+    professionalTitle: body.professionalTitle,
+    message: body.message
+  };
+  const signup = await recordSignup(normalizedType, syncPayload);
+  const supabaseSync = await syncSignupToSupabase(normalizedType, syncPayload);
+  const mapped = await mappedFields(normalizedType === "provider" ? "providerSignup" : "clientSignup");
+
+  const account = await ensureDirectoryAccount({
+    email,
+    name,
+    accountType: normalizedType
+  });
+
+  return {
+    ok: true,
+    signup: {
+      id: signup.id,
+      status: text(signup.fields?.[mapped.status] || status),
+      table: signup.table || signupTableForType(normalizedType),
+      warning: signup.syncWarning
+    },
+    supabaseSync,
+    account: accountFromRecord({ email, user_metadata: { full_name: name, account_type: normalizedType } }, account)
+  };
 }
 
 async function saveAccount(user, body) {
@@ -445,7 +595,7 @@ async function selectOptions(key, fieldNames) {
 }
 
 async function metadataTable(key) {
-  const tableNameOrId = TABLES[key];
+  const tableNameOrId = await resolveAirtableTableName(key);
   const response = await fetch(`https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables`, {
     headers: { Authorization: `Bearer ${TOKEN()}`, "Content-Type": "application/json" }
   });
@@ -454,18 +604,296 @@ async function metadataTable(key) {
   return (payload.tables || []).find((table) => table.id === tableNameOrId || table.name === tableNameOrId);
 }
 
-async function fieldName(key, names) {
+async function resolveAirtableTableName(key) {
+  if (TABLE_LOOKUP.has(key)) return TABLE_LOOKUP.get(key);
+  const candidates = resolveTableCandidates(key);
+  const tables = await getAirtableTables();
+
+  const match = tables.find((table) => candidates.some((candidate) => table.id === candidate || lower(table.name) === lower(candidate)));
+  if (match) {
+    const resolved = match.name || match.id;
+    TABLE_LOOKUP.set(key, resolved);
+    return resolved;
+  }
+
+  const created = await ensureAirtableTable(key, candidates);
+  if (created) {
+    TABLE_LOOKUP.set(key, created);
+    return created;
+  }
+
+  const fallback = candidates[0] || TABLES[key];
+  if (!fallback) throw httpError(500, `Missing Airtable table configuration: ${key}`);
+  TABLE_LOOKUP.set(key, fallback);
+  return fallback;
+}
+
+function resolveTableCandidates(key) {
+  const base = TABLES[key];
+  if (key === "providerSignups" || key === "clients") {
+    return unique([base, ...TABLE_ALIASES[key]]);
+  }
+  return [base].filter(Boolean);
+}
+
+async function ensureAirtableTable(key, candidates = []) {
+  if (!AIRTABLE_AUTO_CREATE_TABLES) return null;
+  const schema = AIRTABLE_BOOTSTRAP_SCHEMAS[key];
+  if (!schema) return null;
+  const desiredName = getPreferredTableName(key, candidates);
+  const response = await createAirtableTable({
+    ...schema,
+    name: desiredName
+  });
+  if (!response) return null;
+  TABLE_META_CACHE.clear();
+  return response;
+}
+
+function getPreferredTableName(key, candidates = []) {
+  return (candidates || []).find((candidate) => candidate && !/^rec/.test(candidate)) || (AIRTABLE_BOOTSTRAP_SCHEMAS[key]?.name || key);
+}
+
+async function createAirtableTable(definition) {
   try {
-    const table = await metadataTable(key);
-    return table?.fields?.find((field) => names.includes(field.name))?.name || "";
+    const response = await fetch(`https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${TOKEN()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: definition.name, fields: definition.fields })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) return null;
+    return payload?.name || definition?.name || null;
   } catch {
-    return "";
+    return null;
+  }
+}
+
+async function getAirtableTables() {
+  if (TABLE_META_CACHE.has("tables")) return TABLE_META_CACHE.get("tables");
+
+  const response = await fetch(`https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables`, {
+    headers: { Authorization: `Bearer ${TOKEN()}`, "Content-Type": "application/json" }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw httpError(response.status, payload.error?.message || `Airtable metadata request failed (${response.status}).`);
+
+  const tables = payload.tables || [];
+  TABLE_META_CACHE.set("tables", tables);
+  return tables;
+}
+
+async function mappedFields(key) {
+  const set = SAVE_FIELD_SETS[key];
+  if (!set) return {};
+  const cached = FIELD_NAME_CACHE.get(key);
+  if (cached) return cached;
+
+  const tableName = key === "providerSignup" ? "providerSignups" : key === "clientSignup" ? "clients" : key.startsWith("provider") ? "savedProviders" : "savedEvents";
+  const table = await metadataTable(tableName);
+  const fields = {};
+  for (const [alias, names] of Object.entries(set)) {
+    fields[alias] = findField(table, names);
+  }
+  FIELD_NAME_CACHE.set(key, fields);
+  return fields;
+}
+
+function findField(table, names) {
+  const matches = new Set(
+    names.map((name) => lower(name))
+  );
+  const found = table?.fields?.find((field) => matches.has(lower(field.name)));
+  return found?.name || names[0];
+}
+
+function signupTableForType(accountType) {
+  return lower(accountType) === "provider" ? "providerSignups" : "clients";
+}
+
+async function recordSignup(accountType, body) {
+  const table = signupTableForType(accountType);
+  const result = await safeAirtableSignup(table, accountType, body);
+  if (result) return result;
+  const fallbackTable = "directory";
+  const fields = buildSignupFallbackFields(accountType, body);
+  const fallbackRecord = await createSafe(fallbackTable, fields);
+  return {
+    id: fallbackRecord.id,
+    fields: fallbackRecord.fields,
+    table: fallbackTable,
+    syncWarning: accountType === "provider" ? "Provider signup table was not found in Airtable; your signup was stored in Directory as a fallback." : "Clients table was not found in Airtable; your signup was stored in Directory as a fallback."
+  };
+}
+
+async function safeAirtableSignup(table, accountType, body) {
+  const set = accountType === "provider" ? SAVE_FIELD_SETS.providerSignup : SAVE_FIELD_SETS.clientSignup;
+  const fields = {};
+  if (!set) throw httpError(500, "Unknown signup table configuration.");
+
+  const mapped = await mappedFields(accountType === "provider" ? "providerSignup" : "clientSignup");
+
+  setAlias(fields, [mapped.name].filter(Boolean), body.name);
+  setAlias(fields, [mapped.email].filter(Boolean), body.email);
+  setAlias(fields, [mapped.accountType].filter(Boolean), body.accountType);
+  setAlias(fields, [mapped.status].filter(Boolean), body.status);
+  setOptional(fields, mapped.phone, body.phone);
+  setOptional(fields, mapped.website, body.website);
+  setOptional(fields, mapped.professionalTitle, body.professionalTitle);
+  setOptional(fields, mapped.message, body.message);
+  setOptional(fields, mapped.source, "app");
+
+  const records = await list(table);
+  const existing = records.find((record) => {
+    const existingEmail = firstEmail(pick(record.fields || {}, [mapped.email]));
+    return existingEmail && lower(existingEmail) === lower(body.email);
+  });
+  if (existing) {
+    const nextFields = { ...fields };
+    nextFields[mapped.status] = body.status;
+    try {
+      return updateSafe(table, existing.id, nextFields);
+    } catch (error) {
+      if (!isMissingAirtableTable(error.message)) throw error;
+      return null;
+    }
+  }
+
+  try {
+    return createSafe(table, fields);
+  } catch (error) {
+    if (!isMissingAirtableTable(error.message)) throw error;
+    return null;
+  }
+}
+
+function buildSignupFallbackFields(accountType, body) {
+  const mapped = accountType === "provider" ? {
+    email: "Email",
+    accountType: "Account Type",
+    status: "Status",
+    name: "Name",
+    notes: "Notes"
+  } : {
+    email: "Email",
+    accountType: "Account Type",
+    status: "Status",
+    name: "Name"
+  };
+  const output = {
+    [mapped.email]: body.email,
+    [mapped.accountType]: accountType,
+    [mapped.status]: body.status,
+    [mapped.name]: body.name
+  };
+  if (body.phone) output.Phone = body.phone;
+  if (body.website) output.Website = body.website;
+  if (body.professionalTitle) output["Professional Title"] = body.professionalTitle;
+  if (body.message) output[mapped.notes || "Message"] = body.message;
+  return output;
+}
+
+function isMissingAirtableTable(message) {
+  const textMessage = String(message || "");
+  return textMessage.includes("Could not find table") || textMessage.includes("Unknown table") || textMessage.includes("does not exist");
+}
+
+async function syncSignupToSupabase(accountType, body) {
+  const syncTargets = [
+    accountType === "provider" ? SUPABASE_SIGNUP_TABLES.provider : SUPABASE_SIGNUP_TABLES.client,
+    SUPABASE_SIGNUP_TABLES.fallback
+  ].filter(Boolean);
+
+  const payload = {
+    email: body.email,
+    full_name: body.name,
+    account_type: accountType,
+    status: lower(accountType) === "provider" ? "pending" : "approved",
+    phone: clean(body.phone),
+    website: clean(body.website),
+    professional_title: clean(body.professionalTitle),
+    message: clean(body.message),
+    source: "app"
+  };
+  removeEmpty(payload);
+
+  if (!SUPABASE_SERVICE_ROLE_KEY()) {
+    return { synced: false, reason: "SUPABASE_SERVICE_ROLE_KEY is not configured." };
+  }
+
+  const attempted = [];
+  const errors = [];
+
+  for (const tableName of syncTargets) {
+    attempted.push(tableName);
+    const outcome = await upsertSupabaseRow(tableName, payload, "email");
+    if (outcome.ok) return { synced: true, table: tableName, recordId: outcome.recordId, attempted, note: outcome.note };
+    errors.push(outcome.message);
+    const notFound = /Could not find the table/i.test(outcome.message || "") || /does not exist/i.test(outcome.message || "") || /not found/i.test(outcome.message || "");
+    if (!notFound) break;
+  }
+
+  return { synced: false, table: syncTargets[0], attempted, reason: errors[0] || "Signup sync to Supabase failed." };
+}
+
+async function upsertSupabaseRow(tableName, record, onConflictField = "email") {
+  try {
+    const endpoint = `${SUPABASE_URL}/rest/v1/${encodeURIComponent(tableName)}?on_conflict=${encodeURIComponent(onConflictField)}`;
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY(),
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY()}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation,resolution=merge-duplicates"
+      },
+      body: JSON.stringify([record])
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok) {
+      const row = Array.isArray(payload) && payload[0] ? payload[0] : null;
+      return { ok: true, recordId: row?.id || row?.record_id || row?.uid || "", note: row ? "upserted" : "recorded" };
+    }
+
+    if (response.status === 409 || payload.code === "23505" || /duplicate|conflict/i.test(payload.message || "")) {
+      const existing = await lookupSupabaseByEmail(tableName, record.email);
+      if (existing) return { ok: true, recordId: existing.id || existing.record_id || existing.uid || "", note: "existing" };
+    }
+
+    const message = payload.error?.message || payload.message || response.statusText || `Supabase upsert failed (${response.status}).`;
+    return { ok: false, status: response.status, message };
+  } catch (error) {
+    return { ok: false, message: error.message || "Supabase request could not be completed." };
+  }
+}
+
+async function lookupSupabaseByEmail(tableName, email) {
+  try {
+    const endpoint = `${SUPABASE_URL}/rest/v1/${encodeURIComponent(tableName)}?select=id,email&email=eq.${encodeURIComponent(email)}&limit=1`;
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY(),
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY()}`,
+        "Content-Type": "application/json"
+      }
+    });
+    if (!response.ok) return null;
+    const payload = await response.json().catch(() => ([]));
+    return Array.isArray(payload) ? payload[0] || null : null;
+  } catch {
+    return null;
   }
 }
 
 async function findDirectoryByEmail(email) {
   const records = await list("directory");
   return records.find((record) => lower(text(pick(record.fields || {}, FIELDS.provider.email))) === lower(email));
+}
+
+function setOptional(fields, fieldName, value) {
+  if (!fieldName) return;
+  setAlias(fields, [fieldName], value);
 }
 
 async function ensureDirectoryAccount({ email, name, accountType }) {
@@ -491,6 +919,7 @@ function accountFromRecord(user, record) {
 }
 
 function setAlias(fields, names, value) {
+  if (!names?.length) return;
   const nextValue = Array.isArray(value) ? listText(value) : typeof value === "boolean" ? value : clean(value);
   if (nextValue === "" || nextValue === undefined || nextValue === null) return;
   fields[names[0]] = nextValue;
@@ -529,7 +958,7 @@ function unknownFieldName(message) {
 }
 
 async function airtable(key, id = "", options = {}) {
-  const table = TABLES[key];
+  const table = await resolveAirtableTableName(key);
   if (!table) throw httpError(500, `Missing Airtable table configuration: ${key}`);
   const query = options.params ? `?${options.params}` : "";
   const endpoint = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}${id ? `/${encodeURIComponent(id)}` : ""}${query}`;
@@ -548,11 +977,69 @@ function requireAdmin(user) { requireUser(user); if (!isAdmin(user)) throw httpE
 function isAdmin(user) { return (user?.roles || user?.app_metadata?.roles || []).includes("admin"); }
 function hasProviderAccess(user) { const roles = user?.roles || user?.app_metadata?.roles || []; const type = lower(user?.user_metadata?.account_type || user?.userMetadata?.account_type || user?.user_metadata?.accountType || user?.userMetadata?.accountType); return roles.includes("admin") || roles.includes("provider") || type === "provider"; }
 function publicUser(user) { return user ? { id: user.id, email: user.email, name: user.user_metadata?.full_name || user.userMetadata?.full_name || "", roles: user.roles || user.app_metadata?.roles || [], accountType: user.user_metadata?.account_type || user.userMetadata?.account_type || user.user_metadata?.accountType || user.userMetadata?.accountType || "" } : null; }
-function belongsTo(record, email) { return lower(text(pick(record.fields || {}, ["Saver Email Text", "Saver Email", "Email", "User Email"]))) === lower(email); }
-function activeRecord(record) { const value = pick(record.fields || {}, ["Active"]); return value === undefined || truthy(value); }
-function providerIds(record) { return linkedIds(pick(record.fields || {}, ["Saved Provider", "Directory Grid View", "Provider"])); }
-function eventIds(record) { return linkedIds(pick(record.fields || {}, ["Saved Workshop", "Saved Event", "Saved Events", "Event", "Events", "Workshop"])); }
+function belongsTo(record, email) {
+  const fields = record.fields || {};
+  const candidates = [
+    "Saver Email Text", "Saver Email", "Email", "User Email", "User's Email", "Saved By", "Saved By Email",
+    "Client Email", "Owner Email", "Member Email", "Creator", "Host Email", "Invite Email", "User Email Address"
+  ];
+  const fieldEmailValues = candidates.flatMap((name) => collectEmailsFromValue(fields[name]));
+  const allFieldValues = Object.values(fields).flatMap((value) => collectEmailsFromValue(value));
+  const allValues = [...fieldEmailValues, ...allFieldValues];
+  return allValues.some((value) => lower(firstEmail(value)) === lower(email));
+}
+function activeRecord(record) {
+  const value = pick(record.fields || {}, ["Active", "Saved", "Is Active", "Visible"]);
+  return value === undefined || truthy(value);
+}
+function providerIds(record) {
+  const values = pick(record.fields || {}, ["Saved Provider", "Directory", "Directory Record", "Directory Grid View", "Provider", "Saved Providers", "Providers", "Provider Record"]);
+  const listed = linkedIds(values);
+  if (listed.length) return listed;
+  return extractRecordIds(record.fields || {});
+}
+
+function eventIds(record) {
+  const values = pick(record.fields || {}, ["Saved Workshop", "Saved Event", "Saved Events", "Event", "Events", "Workshop", "Saved Workshops", "Workshop Events", "Event Record", "Event Link"]);
+  const listed = linkedIds(values);
+  if (listed.length) return listed;
+  return extractRecordIds(record.fields || {});
+}
 function linkedIds(value) { return arrayRaw(value).map((v) => typeof v === "object" ? clean(v.id || v.recordId || v.value) : clean(v)).filter((v) => v.startsWith("rec")); }
+
+function extractRecordIds(fields) {
+  return Object.values(fields)
+    .flatMap((value) => arrayRaw(value))
+    .map((value) => {
+      if (value == null) return "";
+      if (typeof value === "string") return value;
+      if (typeof value === "object") return clean(value.id || value.recordId || value.value || value.url || value.text || value.name);
+      return "";
+    })
+    .filter((value) => /^rec[a-zA-Z0-9]{14}$/.test(value));
+}
+function collectEmailsFromValue(value) {
+  const emails = [];
+  for (const item of arrayRaw(value)) {
+    if (item == null) continue;
+    if (typeof item === "object") {
+      const candidate = firstEmail(item.email || item.value || item.text || item.name || item.label || item.url);
+      if (candidate) emails.push(candidate);
+      continue;
+    }
+    if (typeof item === "string") emails.push(item);
+  }
+  return emails;
+}
+function firstEmail(value) {
+  if (value == null) return "";
+  if (typeof value === "string") {
+    const match = value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    return match ? match[0] : value;
+  }
+  if (typeof value === "object") return firstEmail(value.email || value.value || value.text || value.name || value.label || "");
+  return String(value);
+}
 function pick(fields, names) { for (const name of names) if (Object.prototype.hasOwnProperty.call(fields, name)) return fields[name]; return undefined; }
 function text(value) { if (value == null) return ""; if (Array.isArray(value)) return value.map(text).filter(Boolean).join(", "); if (typeof value === "object") return text(value.name ?? value.label ?? value.value ?? value.text ?? value.url ?? ""); return clean(value); }
 function array(value) { return arrayRaw(value).map(text).flatMap((v) => v.split(/[,;\n]+/)).map(clean).filter(Boolean); }
