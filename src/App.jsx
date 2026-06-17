@@ -14,6 +14,10 @@ import {
   LayoutDashboard, LockKeyhole, LogIn, LogOut, Mail, MapPin, Menu, Pencil, Phone,
   Plus, RefreshCw, Save, Search, Settings, ShieldCheck, Sparkles, Star, Tag, Users, X
 } from "lucide-react";
+import AccountSettings from "./AccountSettings.jsx";
+import MembershipPage from "./MembershipPage.jsx";
+import EditProfilePage from "./EditProfilePage.jsx";
+import PwaInstallButton from "./PwaInstallButton.jsx";
 
 const API = "/.netlify/functions/app-api";
 const EVENT_STATUSES = ["Pending Review", "Approved", "Declined", "Draft", "Cancelled"];
@@ -51,6 +55,18 @@ export default function App() {
     }
   }, []);
 
+  const hydrateAuth = React.useCallback(async () => {
+    try {
+      const current = await getUser();
+      const nextUser = current ? normalizeUser(current) : null;
+      setUser(nextUser);
+      return nextUser;
+    } catch (error) {
+      setUser(null);
+      return null;
+    }
+  }, []);
+
   React.useEffect(() => {
     const pop = () => setRoute(readRoute());
     window.addEventListener("popstate", pop);
@@ -72,20 +88,30 @@ export default function App() {
       } catch (error) {
         setNotice(error.message || "That account link could not be completed.");
       }
-      const current = await getUser();
+      await hydrateAuth();
       if (live) {
-        setUser(current ? normalizeUser(current) : null);
         setAuthReady(true);
       }
     }
     start();
     return () => { live = false; };
-  }, []);
+  }, [hydrateAuth]);
 
   React.useEffect(() => { if (authReady) refresh(); }, [authReady, refresh]);
 
+  React.useEffect(() => {
+    const refreshSession = () => void hydrateAuth();
+    window.addEventListener("focus", refreshSession);
+    window.addEventListener("visibilitychange", refreshSession);
+    return () => {
+      window.removeEventListener("focus", refreshSession);
+      window.removeEventListener("visibilitychange", refreshSession);
+    };
+  }, [hydrateAuth]);
+
   async function toggleSave(kind, id, nextActive = true) {
-    if (!user) {
+    const userIsReady = user || (await hydrateAuth());
+    if (!userIsReady) {
       navigate(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
@@ -108,11 +134,11 @@ export default function App() {
     navigate("/");
   }
 
-  const pageProps = { route, navigate, user, data, loading, notice, setNotice, refresh, toggleSave, setUser };
+  const pageProps = { route, navigate, user, authReady, data, loading, notice, setNotice, refresh, toggleSave, setUser };
 
   return (
     <div className="app-shell">
-      <SiteHeader user={user} navigate={navigate} onLogout={signOut} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
+      <SiteHeader route={route} user={user} authReady={authReady} navigate={navigate} onLogout={signOut} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
       {notice ? <div className="global-notice"><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss"><X size={16} /></button></div> : null}
       <Page {...pageProps} />
       <SiteFooter navigate={navigate} />
@@ -122,12 +148,16 @@ export default function App() {
 
 function Page(props) {
   const path = props.route.path;
+  if (path === "/providers") return <DirectoryPage {...props} />;
   if (["/login", "/signup", "/forgot-password", "/reset-password"].includes(path)) return <AuthPage {...props} mode={path.slice(1)} />;
   if (path === "/provider-details") return <ProviderDetails {...props} />;
   if (path === "/events") return <EventsPage {...props} />;
   if (path === "/event-details") return <EventDetails {...props} />;
   if (path === "/my-events") return <RequireAuth {...props}><MyEvents {...props} /></RequireAuth>;
   if (path === "/saved-providers") return <RequireAuth {...props}><SavedProviders {...props} /></RequireAuth>;
+  if (path === "/account-settings") return <RequireAuth {...props}><AccountSettings {...props} /></RequireAuth>;
+  if (path === "/membership" || path === "/edit-membership") return <RequireAuth {...props}><MembershipPage {...props} /></RequireAuth>;
+  if (path === "/edit-profile") return <RequireAuth {...props}><EditProfilePage {...props} /></RequireAuth>;
   if (path === "/dashboard" || path === "/client-dashboard" || path === "/provider-dashboard") return <RequireAuth {...props}><Dashboard {...props} /></RequireAuth>;
   if (path === "/add-event") return <RequireAuth {...props}><EventForm {...props} /></RequireAuth>;
   if (path === "/edit-event") return <RequireAuth {...props}><EventForm {...props} editing /></RequireAuth>;
@@ -137,25 +167,31 @@ function Page(props) {
   return <DirectoryPage {...props} />;
 }
 
-function SiteHeader({ user, navigate, onLogout, menuOpen, setMenuOpen }) {
+function SiteHeader({ route, user, authReady, navigate, onLogout, menuOpen, setMenuOpen }) {
   const admin = user?.roles?.includes("admin");
+  const dashboardPath = user ? defaultDashboardPath(user) : "/client-dashboard";
+  const warm = ["/events", "/event-details", "/provider-details", "/add-event", "/edit-event"].includes(route.path);
   return (
-    <header className="site-header">
+    <header className={warm ? "site-header warm-header" : "site-header"}>
       <button className="brand" onClick={() => navigate("/")}>
-        <img src="/healing-directory-logo.svg" alt="" />
         <span><strong>The Healing Directory</strong><small>Relationship-based care</small></span>
       </button>
       <button className="menu-toggle icon-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X /> : <Menu />}</button>
       <nav className={menuOpen ? "site-nav open" : "site-nav"}>
         <button onClick={() => navigate("/")}>Providers</button>
         <button onClick={() => navigate("/events")}>Events</button>
-        {user ? <button onClick={() => navigate("/dashboard")}>Dashboard</button> : null}
+        {user ? <button onClick={() => navigate(dashboardPath)}>Dashboard</button> : null}
         {user ? <button onClick={() => navigate("/my-events")}>My Events</button> : null}
+        {user ? <button onClick={() => navigate("/account-settings")}>Account</button> : null}
+        <button onClick={() => navigate("/terms")}>Terms</button>
+        <button onClick={() => navigate("/privacy")}>Privacy</button>
         {admin ? <button onClick={() => navigate("/admin/events")}><ShieldCheck size={15} /> Admin</button> : null}
       </nav>
       <div className="account-actions">
-        {user ? (
-          <><button className="account-chip" onClick={() => navigate("/dashboard")}><CircleUserRound size={17} /><span>{firstName(user.name || user.email)}</span></button><button className="icon-button" onClick={onLogout} title="Log out"><LogOut size={18} /></button></>
+        {!authReady ? (
+          <button className="button compact" disabled><RefreshCw size={16} className="spin" /> Checking</button>
+        ) : user ? (
+          <><button className="account-chip" onClick={() => navigate("/account-settings")}><CircleUserRound size={17} /><span>{firstName(user.name || user.email)}</span></button><button className="icon-button" onClick={onLogout} title="Log out"><LogOut size={18} /></button></>
         ) : <button className="button compact" onClick={() => navigate("/login")}><LogIn size={16} /> Log in</button>}
       </div>
     </header>
@@ -163,33 +199,55 @@ function SiteHeader({ user, navigate, onLogout, menuOpen, setMenuOpen }) {
 }
 
 function SiteFooter({ navigate }) {
-  return <footer className="site-footer"><div><strong>The Healing Directory</strong><p>Thoughtful connections for healing, wellness, and trusted referrals.</p></div><nav><button onClick={() => navigate("/")}>Directory</button><button onClick={() => navigate("/events")}>Events</button><button onClick={() => navigate("/terms")}>Terms</button><button onClick={() => navigate("/privacy")}>Privacy</button></nav></footer>;
+  return <footer className="site-footer"><div><strong>The Healing Directory</strong><p>Thoughtful connections for healing, wellness, and trusted referrals.</p></div><nav><button onClick={() => navigate("/")}>Directory</button><button onClick={() => navigate("/events")}>Events</button><button onClick={() => navigate("/account-settings")}>Account</button><button onClick={() => navigate("/terms")}>Terms</button><button onClick={() => navigate("/privacy")}>Privacy</button><PwaInstallButton /></nav></footer>;
 }
 
 function DirectoryPage({ data, loading, navigate, toggleSave }) {
   const [query, setQuery] = React.useState("");
   const [verified, setVerified] = React.useState(false);
-  const [type, setType] = React.useState("");
+  const [filters, setFilters] = React.useState({ type: "", service: "", support: "", population: "", location: "", payment: "" });
   const types = unique(data.providers.flatMap((item) => item.providerType || [])).sort();
+  const services = unique(data.providers.flatMap((item) => item.services || [])).sort();
+  const supportAreas = unique(data.providers.flatMap((item) => item.support || [])).sort();
+  const populations = unique(data.providers.flatMap((item) => item.populations || [])).sort();
+  const locations = unique(data.providers.flatMap((item) => item.location || [])).sort();
+  const payments = unique(data.providers.flatMap((item) => item.payment || [])).sort();
   const providers = data.providers.filter((item) => {
     const haystack = [item.name, item.profession, item.bio, ...(item.providerType || []), ...(item.services || []), ...(item.support || []), ...(item.location || [])].join(" ").toLowerCase();
-    return (!query || haystack.includes(query.toLowerCase())) && (!verified || item.verified) && (!type || item.providerType?.includes(type));
+    return (!query || haystack.includes(query.toLowerCase())) &&
+      (!verified || item.verified) &&
+      (!filters.type || item.providerType?.includes(filters.type)) &&
+      (!filters.service || item.services?.includes(filters.service)) &&
+      (!filters.support || item.support?.includes(filters.support)) &&
+      (!filters.population || item.populations?.includes(filters.population)) &&
+      (!filters.location || item.location?.includes(filters.location)) &&
+      (!filters.payment || item.payment?.includes(filters.payment));
   });
+  const setFilter = (key) => (event) => setFilters((current) => ({ ...current, [key]: event.target.value }));
 
   return <main>
     <section className="directory-intro page-band dark-band">
-      <div className="band-inner intro-grid">
-        <div><p className="eyebrow">The Healing Directory</p><h1>Find support that feels human.</h1><p className="lede">Explore a curated network of therapists, body-based practitioners, educators, and wellness professionals.</p></div>
-        <div className="trust-panel"><CheckCircle2 size={24} /><strong>Verified Member</strong><p>A relationship signal from participation in our referral community, not a guarantee of fit or outcomes.</p></div>
+      <div className="band-inner directory-heading">
+        <p className="eyebrow">The Healing Directory</p><h1>Find the right support.</h1><p className="lede">Browse trusted therapists, wellness professionals, and healing providers by specialty, services, and areas of support.</p>
+        <div className="trust-panel"><CheckCircle2 size={24} /><p><strong>Verified Member</strong> means this provider has been personally introduced within our trusted referral community. It is not a guarantee of fit, availability, or outcomes, but it does mean they are part of a relationship-based network built around connection, collaboration, and thoughtful referrals.</p></div>
       </div>
-      <div className="band-inner search-panel">
-        <label className="search-control"><Search size={18} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, specialty, concern, or location" /></label>
-        <label className="select-control"><Filter size={17} /><select value={type} onChange={(e) => setType(e.target.value)}><option value="">All provider types</option>{types.map((value) => <option key={value}>{value}</option>)}</select><ChevronDown size={16} /></label>
+      <div className="band-inner directory-search-panel">
+        <span className="filter-label">Search</span>
+        <label className="search-control"><Search size={18} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, specialty, area of support, or location" /></label>
+        <div className="directory-filter-grid">
+          <DirectorySelect label="Provider type" value={filters.type} onChange={setFilter("type")} options={types} placeholder="All provider types" />
+          <DirectorySelect label="Service" value={filters.service} onChange={setFilter("service")} options={services} placeholder="All services" />
+          <DirectorySelect label="Areas of Support" value={filters.support} onChange={setFilter("support")} options={supportAreas} placeholder="All areas of support" />
+          <DirectorySelect label="Population" value={filters.population} onChange={setFilter("population")} options={populations} placeholder="All people" />
+          <DirectorySelect label="Location" value={filters.location} onChange={setFilter("location")} options={locations} placeholder="All locations" />
+          <DirectorySelect label="Payment" value={filters.payment} onChange={setFilter("payment")} options={payments} placeholder="All payment" />
+        </div>
         <label className="check-control"><input type="checkbox" checked={verified} onChange={(e) => setVerified(e.target.checked)} /><CheckCircle2 size={16} /> Verified only</label>
       </div>
     </section>
     <section className="content-shell">
-      <div className="section-heading"><div><p className="eyebrow ink">Provider directory</p><h2>{providers.length} thoughtful connection{providers.length === 1 ? "" : "s"}</h2></div><button className="button secondary" onClick={() => navigate("/signup")}><Plus size={16} /> Join as a provider</button></div>
+      <div className="provider-invite"><div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div><button className="button warm" onClick={() => navigate("/signup")}>Become a Provider <ArrowRight size={17} /></button></div>
+      <div className="results-count"><strong>{providers.length}</strong> providers shown</div>
       {loading ? <LoadingState label="Loading providers" /> : providers.length ? <div className="provider-list">{providers.map((provider) => <ProviderCard key={provider.id} provider={provider} saved={data.savedProviderIds.includes(provider.id)} onSave={() => toggleSave("provider", provider.id, !data.savedProviderIds.includes(provider.id))} onOpen={() => navigate(`/provider-details?id=${provider.id}`)} />)}</div> : <EmptyState title="No providers match that search" text="Try a broader phrase or clear one of the filters." />}
     </section>
   </main>;
@@ -199,36 +257,67 @@ function ProviderCard({ provider, saved, onSave, onOpen }) {
   return <article className="provider-row">
     <Avatar item={provider} />
     <div className="provider-copy"><div className="title-line"><button className="text-link title-link" onClick={onOpen}>{provider.name}</button>{provider.verified ? <span className="status good"><Check size={12} /> Verified</span> : null}</div><p className="profession">{provider.profession || provider.providerType?.join(", ")}</p>{provider.location?.length ? <p className="meta"><MapPin size={14} /> {provider.location.join(", ")}</p> : null}<p className="summary">{truncate(provider.bio, 210) || "View this provider's profile, approach, services, and contact options."}</p><div className="tag-row">{[...(provider.providerType || []), ...(provider.support || [])].slice(0, 5).map((tag) => <span key={tag}>{tag}</span>)}</div></div>
-    <div className="row-actions"><button className={saved ? "icon-button saved" : "icon-button"} onClick={onSave} title={saved ? "Remove saved provider" : "Save provider"}>{saved ? <BookmarkCheck /> : <Bookmark />}</button><button className="button" onClick={onOpen}>View profile <ArrowRight size={15} /></button>{provider.email ? <a className="button tertiary" href={`mailto:${provider.email}`}><Mail size={15} /> Email</a> : null}</div>
+    <div className="provider-contact"><div className="provider-contact-title">Contact<button className={saved ? "icon-button saved" : "icon-button"} onClick={onSave} title={saved ? "Remove saved provider" : "Save provider"}>{saved ? <Star fill="currentColor" /> : <Star />}</button></div>{provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}{provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}{provider.website ? <a href={toHref(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>Website</span></a> : null}<button className="button full" onClick={onOpen}>View profile <ArrowRight size={15} /></button></div>
   </article>;
 }
 
-function ProviderDetails({ route, data, loading, navigate, toggleSave }) {
+function ProviderDetails({ route, data, loading, navigate, toggleSave, user }) {
   const id = route.query.get("id") || route.query.get("recordId");
   const [remote, setRemote] = React.useState(null);
   const provider = data.providers.find((item) => item.id === id) || remote;
+  const showProviderOnlySection = shouldShowProviderOnlySection(user, provider);
   React.useEffect(() => { if (id && !provider) api("provider", { query: { id } }).then((p) => setRemote(p.provider)).catch(() => {}); }, [id]);
   if (loading && !provider) return <LoadingState label="Loading provider profile" />;
   if (!provider) return <EmptyState title="Provider not found" text="This profile may be unavailable or awaiting approval." action="Back to directory" onAction={() => navigate("/")} />;
   const saved = data.savedProviderIds.includes(provider.id);
-  return <main className="detail-page"><section className="profile-band page-band"><div className="band-inner"><button className="back-link" onClick={() => navigate("/")}><ArrowLeft size={16} /> Directory</button><div className="profile-hero"><Avatar item={provider} large /><div><div className="title-line"><h1>{provider.name}</h1>{provider.verified ? <span className="status good"><Check size={12} /> Verified</span> : null}</div><p className="profile-title">{provider.profession || provider.providerType?.join(", ")}</p><div className="meta-row">{provider.location?.length ? <span><MapPin size={15} />{provider.location.join(", ")}</span> : null}{provider.pronouns ? <span><CircleUserRound size={15} />{provider.pronouns}</span> : null}</div><div className="action-row"><button className="button" onClick={() => toggleSave("provider", provider.id, !saved)}>{saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}{saved ? "Saved" : "Save provider"}</button>{provider.consultationLink ? <a className="button secondary" href={toHref(provider.consultationLink)} target="_blank" rel="noreferrer">Book a consultation <ExternalLink size={15} /></a> : null}</div></div></div></div></section>
-    <section className="content-shell detail-grid"><div className="detail-main"><ContentSection kicker="About" title="Meet the provider"><p>{provider.bio || "Profile details are being completed."}</p></ContentSection>{provider.humanSide ? <ContentSection kicker="The human side" title="Beyond the credentials"><p>{provider.humanSide}</p></ContentSection> : null}<ContentSection kicker="Care focus" title="Services and specialties"><TagGroup values={[...(provider.providerType || []), ...(provider.services || []), ...(provider.support || []), ...(provider.populations || [])]} /></ContentSection>{provider.collaboration ? <ContentSection kicker="Provider connections" title="Collaboration and referrals"><p>{provider.collaboration}</p></ContentSection> : null}</div><aside className="contact-panel"><p className="eyebrow ink">Connect</p><h2>Contact details</h2>{provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span><small>Email</small>{provider.email}</span></a> : null}{provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span><small>Phone</small>{provider.phone}</span></a> : null}{provider.website ? <a href={toHref(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span><small>Website</small>{provider.website}</span></a> : null}</aside></section>
+  return <main className="provider-detail-page"><section className="profile-band"><div className="band-inner"><div className="profile-actions"><button className="back-link" onClick={() => navigate("/")}><ArrowLeft size={16} /> Back to directory</button><button className={saved ? "button saved-profile" : "button outline-light"} onClick={() => toggleSave("provider", provider.id, !saved)}>{saved ? <CheckCircle2 size={16} /> : <Bookmark size={16} />}{saved ? "Saved provider" : "Save provider"}</button></div><div className="profile-hero"><Avatar item={provider} large /><div><p className="eyebrow">The Healing Directory</p><div className="title-line"><h1>{provider.name}</h1>{provider.pronouns ? <span className="pronouns">({provider.pronouns})</span> : null}{provider.verified ? <span className="status verified-dark"><CheckCircle2 size={13} /> Verified</span> : null}</div><p className="profile-title">{provider.profession || provider.providerType?.join(", ")}</p><div className="meta-row">{provider.location?.length ? <span><MapPin size={17} />{provider.location.join(", ")}</span> : null}{provider.providerType?.length ? <span><HeartHandshake size={17} />{provider.providerType.join(", ")}</span> : null}</div><ProfileTags label="Provider type" values={provider.providerType} /><ProfileTags label="Areas of support" values={provider.support} warm /></div></div></div></section>
+    <section className="content-shell detail-grid profile-content-grid"><div className="detail-main"><ContentSection kicker="About" title={`A little about ${firstName(provider.name)}`}><p>{provider.bio || "Profile details are being completed."}</p></ContentSection><ContentSection kicker="Specialties & support" title="Areas of care"><p>These selections highlight the provider's main areas of focus. They are not necessarily an exhaustive list of everyone this provider supports.</p><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>{provider.humanSide ? <ContentSection kicker="Get to know your provider" title="The human side"><p>{provider.humanSide}</p></ContentSection> : null}{showProviderOnlySection ? <ProviderOnlySection provider={provider} /> : null}</div><aside className="profile-sidebar"><div className="contact-panel"><h2>Connect</h2><p>Reach out directly to learn more about availability, fit, and next steps.</p>{provider.consultationLink ? <a className="button full" href={toHref(provider.consultationLink)} target="_blank" rel="noreferrer">Book consultation <ArrowRight size={16} /></a> : provider.website ? <a className="button full" href={toHref(provider.website)} target="_blank" rel="noreferrer">Visit website <ArrowRight size={16} /></a> : null}{provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}{provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}{provider.website ? <a href={toHref(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>{provider.website}</span></a> : null}</div><div className="contact-panel access-panel"><h2>Access &amp;<br />Availability</h2><InfoLine icon={<Tag />} label="Pay type / insurance" value={provider.payment?.join(", ")} /><InfoLine icon={<MapPin />} label="Location" value={provider.location?.join(", ")} /></div></aside></section>
   </main>;
+}
+
+function ProviderOnlySection({ provider }) {
+  const rows = [
+    { label: "Referral method", value: provider.referralMethod },
+    { label: "Referral notes", value: provider.referralInstructions },
+    { label: "Collaboration notes", value: provider.collaborationDetails || provider.providerNotes || provider.collaboration },
+  ].filter((row) => row.value);
+  const interests = provider.collaborationInterests || provider.collaborationInterestsList || [];
+  return (
+    <ContentSection kicker="For providers only" title="Provider connection details">
+      {rows.length ? (
+        <div className="provider-connection-detail-list">
+          {rows.map((row) => <p key={row.label}><strong>{row.label}:</strong> {String(row.value)}</p>)}
+        </div>
+      ) : (
+        <p>This provider has not added provider-only details.</p>
+      )}
+      {interests.length ? (
+        <div className="provider-connection-tags">
+          <strong>Collaboration interests</strong>
+          <div className="tag-row large-tags">{interests.map((value) => <span key={value}>{value}</span>)}</div>
+        </div>
+      ) : null}
+    </ContentSection>
+  );
 }
 
 function EventsPage({ data, loading, navigate, toggleSave }) {
   const [tab, setTab] = React.useState("all");
   const [query, setQuery] = React.useState("");
   const [category, setCategory] = React.useState("");
+  const [locationType, setLocationType] = React.useState("");
   const categories = unique(data.events.map((e) => e.category)).filter(Boolean).sort();
+  const locationTypes = unique(data.events.map((e) => e.locationType)).filter(Boolean).sort();
   const events = data.events.filter((event) => {
     const saved = data.savedEventIds.includes(event.id);
     const audience = lower(event.audience);
     const tabMatch = tab === "all" || (tab === "saved" && saved) || (tab === "community" && !audience.includes("provider")) || (tab === "provider" && audience.includes("provider"));
     const text = [event.name, event.description, event.category, event.eventType, event.hostName].join(" ").toLowerCase();
-    return tabMatch && (!query || text.includes(query.toLowerCase())) && (!category || event.category === category);
+    return tabMatch && (!query || text.includes(query.toLowerCase())) && (!category || event.category === category) && (!locationType || event.locationType === locationType);
   }).sort((a, b) => dateValue(a.start) - dateValue(b.start));
-  return <main><section className="page-band events-band"><div className="band-inner"><p className="eyebrow">Events and gatherings</p><h1>Come learn, connect, and heal.</h1><p className="lede">Community workshops and provider gatherings from The Healing Directory network.</p><div className="action-row"><button className="button light" onClick={() => navigate("/add-event")}><Plus size={16} /> Add an event</button><button className="button outline-light" onClick={() => navigate("/my-events")}>My events</button></div></div></section><section className="content-shell"><div className="toolbar"><div className="segmented">{["all", "community", "provider", "saved"].map((key) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{key === "provider" ? <LockKeyhole size={14} /> : key === "saved" ? <Bookmark size={14} /> : <Users size={14} />}{capitalize(key)}</button>)}</div><label className="search-control pale"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search events" /></label><select className="plain-select" value={category} onChange={(e) => setCategory(e.target.value)}><option value="">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select></div>{loading ? <LoadingState label="Loading events" /> : events.length ? <div className="event-grid">{events.map((event) => <EventCard key={event.id} event={event} saved={data.savedEventIds.includes(event.id)} onSave={() => toggleSave("event", event.id, !data.savedEventIds.includes(event.id))} onOpen={() => navigate(`/event-details?id=${event.id}`)} />)}</div> : <EmptyState title="No events in this view" text="Try another audience tab or clear your search." />}</section></main>;
+  const communityCount = data.events.filter((event) => !lower(event.audience).includes("provider")).length;
+  const providerCount = data.events.filter((event) => lower(event.audience).includes("provider")).length;
+  return <main className="events-page"><section className="events-hero"><div className="band-inner events-hero-grid"><div><p className="event-kicker"><span /> Events</p><h1>Workshops, circles, trainings, and healing community events.</h1><p className="lede">Browse upcoming events from The Healing Directory community.</p><div className="action-row"><button className="button event-primary" onClick={() => navigate("/add-event")}><Plus size={16} /> Add an Event</button><button className="button event-secondary" onClick={() => setTab("community")}><HeartHandshake size={16} /> Community Events</button><button className="button event-secondary" onClick={() => setTab("provider")}><LockKeyhole size={16} /> Provider Events</button></div></div><aside className="event-summary-panel"><CalendarDays size={30} /><h2>Explore what's coming up.</h2><p>Find healing-centered spaces, local gatherings, professional trainings, and community events all in one place.</p><div><EventCount value={data.events.length} label="Events" /><EventCount value={communityCount} label="Community" /><EventCount value={providerCount} label="Providers" /></div></aside></div></section><section className="content-shell"><div className="event-filter-panel"><div className="segmented">{["all", "community", "provider", "saved"].map((key) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{key === "provider" ? <LockKeyhole size={14} /> : key === "saved" ? <Bookmark size={14} /> : <Users size={14} />}{capitalize(key)}</button>)}</div><div className="event-filter-grid"><label className="search-control pale"><span className="filter-label">Search</span><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search event, host, topic, description..." /></label><label className="field"><span>Category</span><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Location type</span><select value={locationType} onChange={(e) => setLocationType(e.target.value)}><option value="">All location types</option>{locationTypes.map((value) => <option key={value}>{value}</option>)}</select></label></div></div><div className="results-count"><strong>{events.length}</strong> events shown</div>{loading ? <LoadingState label="Loading events" /> : events.length ? <div className="event-grid">{events.map((event) => <EventCard key={event.id} event={event} saved={data.savedEventIds.includes(event.id)} onSave={() => toggleSave("event", event.id, !data.savedEventIds.includes(event.id))} onOpen={() => navigate(`/event-details?id=${event.id}`)} />)}</div> : <EmptyState title="No events in this view" text="Try another audience tab or clear your search." />}</section></main>;
 }
 
 function EventCard({ event, saved, onSave, onOpen, editable }) {
@@ -268,9 +357,100 @@ function SavedProviders({ navigate, toggleSave }) {
 
 function Dashboard({ user, navigate }) {
   const [payload, setPayload] = React.useState(null);
+  const [tab, setTab] = React.useState("events");
   React.useEffect(() => { api("dashboard").then(setPayload).catch(() => setPayload({ counts: {}, savedProviders: [], savedEvents: [] })); }, []);
-  const provider = user?.roles?.includes("provider") || user?.userMetadata?.account_type === "provider";
-  return <main><PageTitle eyebrow={provider ? "Provider Dashboard" : "Client Dashboard"} title={`Welcome back, ${firstName(user?.name || user?.email)}.`} text={provider ? "Manage your profile, hosted events, referral relationships, and professional community." : "Your saved support, upcoming events, and provider shortlist live here."} /><section className="content-shell">{!payload ? <LoadingState label="Loading dashboard" /> : <><div className="stats-grid"><Stat label="Saved providers" value={payload.counts?.savedProviders || 0} icon={<HeartHandshake />} /><Stat label="Saved events" value={payload.counts?.savedEvents || 0} icon={<Bookmark />} /><Stat label="Upcoming events" value={payload.counts?.upcomingEvents || 0} icon={<CalendarDays />} /></div><div className="dashboard-grid"><DashboardAction icon={<Users />} title="Saved Providers" text="Return to your private referral and care shortlist." onClick={() => navigate("/saved-providers")} /><DashboardAction icon={<CalendarDays />} title="My Events" text="Hosted and saved events in one place." onClick={() => navigate("/my-events")} />{provider ? <><DashboardAction icon={<Plus />} title="Add an Event" text="Submit a new event for review." onClick={() => navigate("/add-event")} /><DashboardAction icon={<HeartHandshake />} title="Referral Room" text="Request a seat and view your RSVPs." onClick={() => navigate("/referral-room")} /></> : <DashboardAction icon={<Search />} title="Browse Directory" text="Find support by specialty, concern, and location." onClick={() => navigate("/")} />}{user?.roles?.includes("admin") ? <DashboardAction icon={<ShieldCheck />} title="Event Approvals" text="Review and publish event submissions." onClick={() => navigate("/admin/events")} /> : null}</div></>}</section></main>;
+  const provider = isProviderUser(user);
+  if (!provider) {
+    const savedEvents = payload?.savedEvents || [];
+    const savedProviders = payload?.savedProviders || [];
+    return <main className="client-dashboard-page">
+      <section className="client-dashboard-hero">
+        <p className="client-dashboard-kicker">Client Dashboard</p>
+        <h1>Welcome back, {firstName(user?.name || user?.email)}.</h1>
+        <p>Your saved healing support lives here - workshops you want to return to and providers who feel aligned for your next step.</p>
+        <div className="client-dashboard-actions"><button className="button client-primary" onClick={() => navigate("/events")}>Browse Workshops</button><button className="button client-secondary" onClick={() => navigate("/")}>Find Providers</button></div>
+      </section>
+      <section className="client-dashboard-stats">
+        <ClientStat label="Saved Workshops" value={payload?.counts?.savedEvents || 0} />
+        <ClientStat label="Upcoming Workshops" value={payload?.counts?.upcomingEvents || 0} />
+        <ClientStat label="Saved Providers" value={payload?.counts?.savedProviders || 0} />
+      </section>
+      <section className="client-dashboard-content">
+        <div className="client-saved-panel">
+          <div className="client-tabs"><button className={tab === "events" ? "active" : ""} onClick={() => setTab("events")}>Saved Workshops</button><button className={tab === "providers" ? "active" : ""} onClick={() => setTab("providers")}>Saved Providers</button></div>
+          {!payload ? <LoadingState label="Loading dashboard" /> : tab === "events" ? <ClientSavedList items={savedEvents} kind="event" navigate={navigate} /> : <ClientSavedList items={savedProviders} kind="provider" navigate={navigate} />}
+        </div>
+        <aside className="client-dashboard-aside">
+          <section><h2>Not sure where to begin?</h2><p>Start with what your system needs most right now: grounding, therapy, body-based healing, community, motherhood support, or care.</p><button className="button client-side-button" onClick={() => navigate("/")}>Explore Providers</button></section>
+          <section><h2>Your private shortlist</h2><p>Save anything that feels aligned now, then return when you have more space to take the next step.</p></section>
+        </aside>
+      </section>
+    </main>;
+  }
+
+  const savedEvents = payload?.savedEvents || [];
+  const savedProviders = payload?.savedProviders || [];
+
+  return <main className="provider-dashboard-page">
+    <section className="provider-dashboard-hero">
+      <p className="provider-dashboard-kicker">Provider Dashboard</p>
+      <h1>Welcome back, {firstName(user?.name || user?.email)}.</h1>
+      <p>Keep your referral list and workshop flow organized from one focused space.</p>
+      <div className="provider-dashboard-actions">
+        <button className="button provider-dashboard-primary" onClick={() => navigate("/events")}>Browse workshops</button>
+        <button className="button provider-dashboard-secondary" onClick={() => navigate("/saved-providers")}>Saved providers</button>
+        <button className="button provider-dashboard-secondary" onClick={() => navigate("/my-events")}>My events</button>
+      </div>
+    </section>
+    <section className="provider-dashboard-stats">
+      <ProviderStat label="Saved Workshops" value={payload?.counts?.savedEvents || 0} />
+      <ProviderStat label="Upcoming Workshops" value={payload?.counts?.upcomingEvents || 0} />
+      <ProviderStat label="Saved Providers" value={payload?.counts?.savedProviders || 0} />
+    </section>
+    <section className="provider-dashboard-content">
+      <div className="provider-dashboard-panel">
+        <div className="provider-dashboard-tabs"><button className={tab === "events" ? "active" : ""} onClick={() => setTab("events")}>Saved Workshops</button><button className={tab === "providers" ? "active" : ""} onClick={() => setTab("providers")}>Saved Providers</button></div>
+        {!payload ? <LoadingState label="Loading dashboard" /> : tab === "events" ? <ProviderSavedList items={savedEvents} kind="event" navigate={navigate} /> : <ProviderSavedList items={savedProviders} kind="provider" navigate={navigate} />}
+      </div>
+      <aside className="provider-dashboard-aside">
+        <section>
+          <h2>Professional workflow</h2>
+          <p>Your account is designed for quick references, saved providers, and workshop follow-through.</p>
+          <button className="button" onClick={() => navigate("/add-event")}>Add an event</button>
+        </section>
+        <section>
+          <h2>Provider connections</h2>
+          <p>Connections on provider pages stay private to peers and support aligned collaboration.</p>
+          <button className="button" onClick={() => navigate("/referral-room")}>Referral room</button>
+        </section>
+      </aside>
+    </section>
+  </main>;
+}
+
+function ProviderStat({ label, value }) { return <div className="provider-stat"><span>{label}</span><strong>{Number(value || 0)}</strong></div>; }
+
+function ProviderSavedList({ items, kind, navigate }) {
+  if (!items.length) return <div className="provider-empty"><h2>No saved {kind === "event" ? "workshops" : "providers"} yet</h2><p>{kind === "event" ? "Save workshops you want to revisit for easier follow-up." : "Add providers you want to keep for future referrals."}</p><button className="button" onClick={() => navigate(kind === "event" ? "/events" : "/")}>{kind === "event" ? "Browse Workshops" : "Find Providers"}</button></div>;
+  return <div className="provider-saved-list">{items.slice(0, 5).map((item, index) => {
+    const record = item.event || item.provider || item;
+    const title = record.name || record.title || (kind === "event" ? "Saved Workshop" : "Saved Provider");
+    return <button key={record.id || item.id || index} className="provider-saved-row" onClick={() => navigate(kind === "event" ? `/event-details?id=${record.id}` : `/provider-details?id=${record.id}`)}>
+      <span className="provider-saved-mark">{kind === "event" ? <CalendarDays size={19} /> : <HeartHandshake size={19} />}</span>
+      <span><strong>{title}</strong><small>{kind === "event" ? formatDate(record.start || record.date) : (record.profession || record.category || "Provider")}</small></span>
+      <ArrowRight size={18} />
+    </button>;
+  })}</div>;
+}
+
+function ClientStat({ label, value }) { return <div className="client-stat"><span>{label}</span><strong>{Number(value || 0)}</strong></div>; }
+function ClientSavedList({ items, kind, navigate }) {
+  if (!items.length) return <div className="client-empty"><h2>No saved {kind === "event" ? "workshops" : "providers"} yet</h2><p>{kind === "event" ? "When you save a workshop, circle, or healing experience, it will show up here." : "Providers you save will become your private healing shortlist."}</p><button className="button client-side-button" onClick={() => navigate(kind === "event" ? "/events" : "/")}>{kind === "event" ? "Browse Workshops" : "Find Providers"}</button></div>;
+  return <div className="client-saved-list">{items.slice(0, 5).map((item, index) => {
+    const record = item.event || item.provider || item;
+    const title = record.name || record.title || (kind === "event" ? "Saved Workshop" : "Saved Provider");
+    return <button key={record.id || item.id || index} className="client-saved-row" onClick={() => navigate(kind === "event" ? `/event-details?id=${record.id}` : `/provider-details?id=${record.id}`)}><span className="client-saved-mark">{kind === "event" ? <CalendarDays size={19} /> : <HeartHandshake size={19} />}</span><span><strong>{title}</strong><small>{kind === "event" ? formatDate(record.start || record.date) : record.title || record.category || "Provider"}</small></span><ArrowRight size={18} /></button>;
+  })}</div>;
 }
 
 function EventForm({ route, editing, navigate, setNotice, refresh }) {
@@ -300,28 +480,243 @@ function AdminEvents({ navigate, setNotice }) {
 function AuthPage({ mode, navigate, setUser, setNotice }) {
   const [form, setForm] = React.useState({ name: "", email: "", password: "", confirm: "", accountType: "client" });
   const [busy, setBusy] = React.useState(false);
-  const title = mode === "signup" ? "Create your account" : mode === "forgot-password" ? "Reset your password" : mode === "reset-password" ? "Choose a new password" : "Welcome back";
-  async function submit(event) { event.preventDefault(); setBusy(true); try {
-    if (mode === "signup") { if (form.password !== form.confirm) throw new Error("Passwords do not match."); const result = await signup(form.email, form.password, { full_name: form.name, account_type: form.accountType }); setNotice(result.confirmedAt ? "Your account is ready." : "Check your email to confirm your account."); const current = await getUser(); if (current) { setUser(normalizeUser(current)); navigate("/dashboard"); } else navigate("/login"); }
-    else if (mode === "forgot-password") { await requestPasswordRecovery(form.email); setNotice("Check your email for a secure password reset link."); navigate("/login"); }
-    else if (mode === "reset-password") { if (form.password !== form.confirm) throw new Error("Passwords do not match."); const current = await updateUser({ password: form.password }); setUser(normalizeUser(current)); setNotice("Your password has been updated."); navigate("/dashboard"); }
-    else { const current = await login(form.email, form.password); setUser(normalizeUser(current)); const next = new URLSearchParams(window.location.search).get("next") || "/dashboard"; navigate(next); }
-  } catch (error) { setNotice(error.message || "Authentication could not be completed."); } finally { setBusy(false); } }
-  return <main className="auth-page"><section className="auth-scene"><div className="auth-copy"><img src="/healing-directory-logo.svg" alt="The Healing Directory" /><p className="eyebrow">A place to return to</p><h1>Care, connection, and community.</h1><p>Save trusted providers, manage events, and participate in the relationship-based referral network.</p></div><form className="auth-form" onSubmit={submit}><p className="eyebrow ink">Account access</p><h2>{title}</h2>{mode === "signup" ? <><Field label="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /><SelectField label="I am joining as" value={form.accountType} onChange={(e) => setForm({ ...form, accountType: e.target.value })} options={[{ value: "client", label: "Community member / client" }, { value: "provider", label: "Provider" }]} /></> : null}{mode !== "reset-password" ? <Field label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /> : null}{!mode.includes("forgot") ? <Field label="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /> : null}{mode === "signup" || mode === "reset-password" ? <Field label="Confirm password" type="password" value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} required /> : null}<button className="button full" disabled={busy}>{busy ? "Working..." : mode === "signup" ? "Create account" : mode.includes("password") ? "Continue" : "Log in"}</button><div className="auth-links">{mode === "login" ? <><button type="button" onClick={() => navigate("/forgot-password")}>Forgot password?</button><button type="button" onClick={() => navigate("/signup")}>Create an account</button></> : <button type="button" onClick={() => navigate("/login")}>Back to login</button>}</div></form></section></main>;
+  const isSignup = mode === "signup";
+  const isForgot = mode === "forgot-password";
+  const isReset = mode === "reset-password";
+  const title = isSignup ? "Create your account" : isForgot ? "Reset your password" : isReset ? "Choose a new password" : "Welcome back";
+  const subtitle = isSignup
+    ? "Choose the account path that fits you. Providers can continue into membership and profile setup after account creation."
+    : isForgot
+      ? "Enter your email and we will send a secure password reset link."
+      : isReset
+        ? "Set a new password for your Healing Directory account."
+        : "Log in to save providers and events, manage your listings, or return to your dashboard.";
+
+  function update(key, value) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+    setBusy(true);
+
+    try {
+      if (isSignup) {
+        if (!form.name.trim()) throw new Error("Add your name before creating an account.");
+        if (form.password !== form.confirm) throw new Error("Passwords do not match.");
+
+        await signup(form.email, form.password, {
+          full_name: form.name,
+          account_type: form.accountType,
+        });
+
+        await api("signup-profile", {
+          method: "POST",
+          body: {
+            name: form.name,
+            email: form.email,
+            accountType: form.accountType,
+          },
+        });
+
+        const current = await getUser().catch(() => null);
+        if (current) {
+          const normalized = normalizeUser(current);
+          const nextUser = {
+            ...normalized,
+            name: form.name || normalized.name,
+            userMetadata: {
+              ...(normalized.userMetadata || {}),
+              account_type: form.accountType,
+            },
+          };
+          setUser(nextUser);
+          setNotice(form.accountType === "provider" ? "Your account is ready. Choose your provider membership next." : "Your account is ready. Welcome in.");
+          navigate(defaultDashboardPath(nextUser));
+        } else {
+          setNotice("Account created. Check your email to confirm your login, then come back to continue.");
+          navigate("/login");
+        }
+      } else if (isForgot) {
+        await requestPasswordRecovery(form.email);
+        setNotice("Check your email for a secure password reset link.");
+        navigate("/login");
+      } else if (isReset) {
+        if (form.password !== form.confirm) throw new Error("Passwords do not match.");
+        const current = await updateUser({ password: form.password });
+        const normalized = normalizeUser(current);
+        setUser(normalized);
+        setNotice("Your password has been updated.");
+        navigate(defaultDashboardPath(normalized));
+      } else {
+        const current = await login(form.email, form.password);
+        const normalized = normalizeUser(current);
+        setUser(normalized);
+        const next = new URLSearchParams(window.location.search).get("next") || defaultDashboardPath(normalized);
+        navigate(next);
+      }
+    } catch (error) {
+      setNotice(error.message || "Authentication could not be completed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="auth-redesign">
+      <section className="auth-redesign-shell">
+        <div className="auth-redesign-panel">
+          <p className="brand-pill">Account access</p>
+          <h1>Care, connection, and community.</h1>
+          <p>Save trusted providers, manage events, and participate in a relationship-based referral network.</p>
+          <div className="auth-paths">
+            <span>Community care</span>
+            <span>Provider membership</span>
+            <span>Referral Room</span>
+          </div>
+        </div>
+
+        <form className="auth-redesign-card" onSubmit={submit}>
+          <p className="eyebrow ink">The Healing Directory</p>
+          <h2>{title}</h2>
+          <p>{subtitle}</p>
+
+          {isSignup ? (
+            <>
+              <label className="profile-field">
+                <span>Full name</span>
+                <input value={form.name} onChange={(event) => update("name", event.target.value)} required />
+              </label>
+              <div className="account-type-grid">
+                <button type="button" className={form.accountType === "client" ? "active" : ""} onClick={() => update("accountType", "client")}>
+                  <strong>Community member / client</strong>
+                  <span>Save providers, workshops, and support you want to return to.</span>
+                </button>
+                <button type="button" className={form.accountType === "provider" ? "active" : ""} onClick={() => update("accountType", "provider")}>
+                  <strong>Provider</strong>
+                  <span>Create a professional profile, add events, and join referral tools.</span>
+                </button>
+              </div>
+            </>
+          ) : null}
+
+          {!isReset ? (
+            <label className="profile-field">
+              <span>Email</span>
+              <input type="email" value={form.email} onChange={(event) => update("email", event.target.value)} required />
+            </label>
+          ) : null}
+
+          {!isForgot ? (
+            <label className="profile-field">
+              <span>Password</span>
+              <input type="password" value={form.password} onChange={(event) => update("password", event.target.value)} required />
+            </label>
+          ) : null}
+
+          {isSignup || isReset ? (
+            <label className="profile-field">
+              <span>Confirm password</span>
+              <input type="password" value={form.confirm} onChange={(event) => update("confirm", event.target.value)} required />
+            </label>
+          ) : null}
+
+          <button className="button full auth-submit" disabled={busy}>
+            {busy ? "Working..." : isSignup ? "Create account" : isForgot || isReset ? "Continue" : "Log in"}
+            <ArrowRight size={17} />
+          </button>
+
+          <div className="auth-links">
+            {mode === "login" ? (
+              <>
+                <button type="button" onClick={() => navigate("/forgot-password")}>Forgot password?</button>
+                <button type="button" onClick={() => navigate("/signup")}>Create an account</button>
+              </>
+            ) : (
+              <button type="button" onClick={() => navigate("/login")}>Back to login</button>
+            )}
+          </div>
+        </form>
+      </section>
+    </main>
+  );
 }
 
-function LegalPage({ route }) { const privacy = route.path === "/privacy"; return <main><PageTitle eyebrow="The Healing Directory" title={privacy ? "Privacy Policy" : "Terms and Conditions"} text={privacy ? "How account, directory, event, and communication data is handled." : "The expectations that keep this directory useful, respectful, and transparent."} /><section className="content-shell narrow legal-copy"><h2>{privacy ? "Your privacy" : "Using this directory"}</h2><p>{privacy ? "We collect the information needed to operate accounts, saved lists, provider profiles, event listings, and Referral Room participation. Private account information is not displayed publicly unless you intentionally publish it in a provider or event listing." : "The Healing Directory is a connection and discovery platform. Listings, verification markers, and Referral Room participation do not guarantee availability, suitability, credentials, outcomes, or a therapeutic relationship."}</p><h3>Account responsibility</h3><p>Keep your login secure and provide accurate information. Providers are responsible for maintaining their own professional licenses, insurance, scope of practice, and listing details.</p><h3>Respectful use</h3><p>Do not scrape, resell, harass, impersonate, or misuse provider and member information. Administrative access may be suspended when use threatens the safety or integrity of the community.</p><h3>Questions</h3><p>Contact jointhehealingdirectory@gmail.com with privacy, account, or policy questions.</p></section></main>; }
+function LegalPage({ route }) {
+  const privacy = route.path === "/privacy";
+  const termsSections = [
+    ["Use of the Directory", "The Healing Directory is a relationship-based directory and community resource. It helps people discover providers, events, workshops, Referral Room opportunities, and related offerings. It is not a medical, mental health, legal, financial, emergency, or crisis service."],
+    ["No Guarantee of Fit or Outcomes", "Listings, saved providers, saved events, verification language, or participation in The Referral Room do not guarantee fit, availability, credentials, pricing, outcomes, quality of care, or a therapeutic relationship. Clients and community members are responsible for deciding whether a provider or event is appropriate for them."],
+    ["Provider Responsibility", "Providers are responsible for the accuracy of their public profile, professional credentials, license status, insurance, availability, pricing, scope of practice, event details, and all direct communications with clients or colleagues."],
+    ["Events and Referral Room", "Events and Referral Room sessions may be reviewed, approved, edited, waitlisted, declined, cancelled, or removed at the discretion of The Healing Directory. Hosts are responsible for their own event delivery, registration links, payment collection, refunds, participant communication, and safety practices."],
+    ["Accounts and Access", "You agree to provide accurate account information, keep your login secure, and use the directory respectfully. Access may be limited or removed if an account is used to harass, scrape, impersonate, spam, misrepresent services, or otherwise harm the community."],
+    ["Payments and Membership", "Provider membership, subscriptions, and billing are handled through Stripe or another payment processor when enabled. Payment terms, cancellation timing, refunds, and plan changes may depend on the payment provider and the membership plan selected."],
+    ["Content and Communications", "By submitting profile, event, or account content, you confirm that you have the right to share it and that it is accurate to the best of your knowledge. You remain responsible for messages you send through the directory or after making a connection through it."],
+    ["Changes to the Service", "The Healing Directory may update features, pages, eligibility requirements, event approval processes, Referral Room workflows, pricing, or these terms as the community and platform evolve."],
+    ["Contact", "Questions about these terms can be sent to jointhehealingdirectory@gmail.com."],
+  ];
+  const privacySections = [
+    ["Information We Collect", "We collect information needed to operate accounts, saved lists, provider profiles, event listings, Referral Room participation, account settings, membership status, and administrative review workflows. This may include names, email addresses, profile details, provider categories, services, support areas, availability, event details, saved providers, saved events, RSVP status, and related notes."],
+    ["How We Use Information", "We use this information to create accounts, display public provider and event listings, connect saved providers and saved events to the correct user, support provider dashboards, manage event approvals, process Referral Room requests, send status updates, improve the directory, and keep the community organized."],
+    ["Public Profile and Event Content", "Provider profiles and approved event listings may be visible to other users or the public depending on page settings. Do not include private information in profile or event fields unless you are comfortable with it being shown in the directory experience."],
+    ["Private Account Information", "Login credentials, account settings, saved lists, administrative notes, and private Referral Room details are intended for account or administrative use. We aim to show only the information needed for the relevant workflow."],
+    ["Third-Party Services", "The directory may use services such as Netlify Identity, Airtable, Stripe, Google Apps Script, Softr, email tools, analytics, or hosting providers. Those services may process information according to their own policies and technical requirements."],
+    ["Cookies and Local Storage", "The site may use cookies, local storage, or similar browser technologies to keep you signed in, remember preferences, and support app-like behavior such as PWA installation."],
+    ["Data Accuracy and Updates", "You can update account settings, provider profile information, membership details, and event content through the available pages. If something looks incorrect or you need help changing information, contact The Healing Directory."],
+    ["Data Retention", "Information may be retained as long as needed to operate the directory, maintain records, resolve disputes, enforce community standards, support billing or administrative needs, and comply with legal obligations."],
+    ["Security", "We use reasonable technical and administrative safeguards, but no online service can promise perfect security. Keep your login private and contact us if you believe your account has been accessed without permission."],
+    ["Contact", "Privacy questions or requests can be sent to jointhehealingdirectory@gmail.com."],
+  ];
+  const sections = privacy ? privacySections : termsSections;
+
+  return (
+    <main>
+      <PageTitle
+        eyebrow="The Healing Directory"
+        title={privacy ? "Privacy Policy" : "Terms and Conditions"}
+        text={privacy ? "How account, directory, event, and communication data is handled." : "The expectations that keep this directory useful, respectful, and transparent."}
+      />
+      <section className="content-shell narrow legal-copy">
+        {sections.map(([title, text]) => (
+          <section key={title}>
+            <h2>{title}</h2>
+            <p>{text}</p>
+          </section>
+        ))}
+      </section>
+    </main>
+  );
+}
 
 function ComingNext({ route }) { const names = { "/referral-room": "Referral Room Dates", "/referral-room-admin": "Referral Room Admin", "/referral-room-manager": "Referral Room Manager", "/provider-connections": "Provider Connections" }; return <main><PageTitle eyebrow="Authenticated workspace" title={names[route.path] || "Coming next"} text="This workflow is being connected to the new shared Airtable and authentication foundation." /><section className="content-shell"><div className="progress-panel"><Sparkles size={28} /><h2>The foundation is ready.</h2><p>This area is the next build slice: live sessions, seat rules, RSVPs, manager decisions, attendance, verification, and provider connections.</p></div></section></main>; }
 
-function RequireAuth({ user, navigate, children }) { React.useEffect(() => { if (!user) navigate(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`); }, [user]); return user ? children : <LoadingState label="Checking account" />; }
-function RequireAdmin({ user, navigate, children }) { React.useEffect(() => { if (!user) navigate("/login?next=/admin/events"); else if (!user.roles?.includes("admin")) navigate("/dashboard"); }, [user]); return user?.roles?.includes("admin") ? children : <LoadingState label="Checking administrator access" />; }
+function RequireAuth({ user, authReady, navigate, children }) {
+  React.useEffect(() => {
+    if (!authReady) return;
+    if (!user) navigate(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+  }, [authReady, user, navigate]);
+  if (!authReady) return <LoadingState label="Checking account" />;
+  return user ? children : null;
+}
+function RequireAdmin({ user, authReady, navigate, children }) {
+  React.useEffect(() => {
+    if (!authReady) return;
+    if (!user) navigate("/login?next=/admin/events");
+    else if (!user.roles?.includes("admin")) navigate("/dashboard");
+  }, [authReady, user, navigate]);
+  if (!authReady) return <LoadingState label="Checking administrator access" />;
+  return user?.roles?.includes("admin") ? children : null;
+}
 
 function PageTitle({ eyebrow, title, text, actions }) { return <section className="page-title"><div className="content-shell title-inner"><div><p className="eyebrow ink">{eyebrow}</p><h1>{title}</h1><p>{text}</p></div>{actions ? <div>{actions}</div> : null}</div></section>; }
 function ContentSection({ kicker, title, children }) { return <section className="content-section"><p className="eyebrow ink">{kicker}</p><h2>{title}</h2>{children}</section>; }
 function InfoLine({ icon, label, value }) { if (!value) return null; return <div className="info-line">{React.cloneElement(icon, { size: 17 })}<span><small>{label}</small>{value}</span></div>; }
 function Avatar({ item, large }) { return <div className={large ? "avatar large" : "avatar"}>{item.photo ? <img src={item.photo} alt="" /> : <span>{initials(item.name)}</span>}</div>; }
 function TagGroup({ values }) { return <div className="tag-row large-tags">{unique(values.filter(Boolean)).map((value) => <span key={value}>{value}</span>)}</div>; }
+function DirectorySelect({ label, options, placeholder, ...props }) { return <label className="directory-select"><span>{label}</span><div><select {...props}><option value="">{placeholder}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><ChevronDown size={16} /></div></label>; }
+function ProfileTags({ label, values = [], warm = false }) { if (!values.length) return null; return <div className={warm ? "profile-tag-group warm" : "profile-tag-group"}><strong>{label}</strong><div>{values.map((value) => <span key={value}>{value}</span>)}</div></div>; }
+function CareGroup({ label, values = [], warm = false, neutral = false }) { return <div className={`care-group${warm ? " warm" : ""}${neutral ? " neutral" : ""}`}><strong>{label}</strong><div className="tag-row large-tags">{values.length ? values.map((value) => <span key={value}>{value}</span>) : <span>Not listed</span>}</div></div>; }
+function EventCount({ value, label }) { return <div className="event-count"><strong>{value}</strong><span>{label}</span></div>; }
 function Stat({ label, value, icon }) { return <div className="stat"><span className="stat-icon">{icon}</span><div><small>{label}</small><strong>{value}</strong></div></div>; }
 function DashboardAction({ icon, title, text, onClick }) { return <button className="dashboard-action" onClick={onClick}><span>{icon}</span><div><strong>{title}</strong><p>{text}</p></div><ArrowRight size={18} /></button>; }
 function LoadingState({ label }) { return <div className="state"><RefreshCw className="spin" /><h2>{label}...</h2></div>; }
@@ -340,7 +735,36 @@ async function api(action, options = {}) {
   return payload;
 }
 function readRoute() { return { path: window.location.pathname.replace(/\/$/, "") || "/", query: new URLSearchParams(window.location.search) }; }
-function normalizeUser(user) { return { id: user.id, email: user.email || "", name: user.name || user.userMetadata?.full_name || "", roles: user.roles || [], userMetadata: user.userMetadata || {} }; }
+function normalizeUser(user) {
+  const metadata = user?.user_metadata || user?.userMetadata || {};
+  const appMetadata = user?.app_metadata || user?.appMetadata || {};
+  return {
+    id: user?.id || "",
+    email: user?.email || metadata.email || "",
+    name: user?.name || metadata.full_name || metadata.name || "",
+    roles: user?.roles || appMetadata.roles || [],
+    userMetadata: metadata,
+  };
+}
+function isProviderUser(user) {
+  if (!user) return false;
+  const metadataType = lower(user?.userMetadata?.account_type || user?.userMetadata?.accountType);
+  const appType = lower(user?.account_type || user?.accountType);
+  return Boolean(user?.roles?.includes("admin") || user?.roles?.includes("provider") || metadataType === "provider" || appType === "provider");
+}
+function isCurrentProviderProfile(user, provider) {
+  if (!user?.email || !provider?.email) return false;
+  const userIds = [user.id, user.userMetadata?.provider_id, user.userMetadata?.providerId].filter(Boolean).map(lower);
+  const providerIds = [provider.id, provider.userId, provider.recordId].filter(Boolean).map(lower);
+  return Boolean(userIds.some((value) => providerIds.includes(value)) || lower(user.email) === lower(provider.email));
+}
+function shouldShowProviderOnlySection(user, provider) {
+  return isProviderUser(user) && !isCurrentProviderProfile(user, provider);
+}
+function defaultDashboardPath(user) {
+  if (isProviderUser(user)) return "/dashboard";
+  return "/client-dashboard";
+}
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function lower(value) { return String(value || "").trim().toLowerCase(); }
 function capitalize(value) { return String(value || "").replace(/-/g, " ").replace(/\b\w/g, (m) => m.toUpperCase()); }
