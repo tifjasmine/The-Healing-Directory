@@ -1,9 +1,9 @@
 import React from "react";
-import { getUser, refreshSession } from "@netlify/identity";
+import { getUser, logout, refreshSession } from "@netlify/identity";
 import {
   ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, CalendarDays, CheckCircle2,
   ChevronDown, CircleUserRound, Clock, ExternalLink, HeartHandshake, LockKeyhole,
-  LogIn, Mail, MapPin, Menu, Phone, Plus, Search, Star, Tag, Users, X,
+  LogIn, LogOut, Mail, MapPin, Menu, Phone, Plus, RefreshCw, Search, Star, Tag, Users, X,
 } from "lucide-react";
 
 const API = "/.netlify/functions/app-api";
@@ -14,19 +14,34 @@ export default function PublicShowcase({ path }) {
   const [loading, setLoading] = React.useState(true);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [notice, setNotice] = React.useState("");
+  const [user, setUser] = React.useState(null);
+  const [authReady, setAuthReady] = React.useState(false);
 
   React.useEffect(() => {
-    api("bootstrap").then((payload) => setData({
-      providers: payload.providers || [],
-      events: payload.events || [],
-      savedProviderIds: payload.savedProviderIds || [],
-      savedEventIds: payload.savedEventIds || [],
-      directoryOptions: payload.directoryOptions || {},
-    })).finally(() => setLoading(false));
+    let active = true;
+    Promise.all([
+      api("bootstrap"),
+      getUser().catch(() => null),
+    ]).then(([payload, currentUser]) => {
+      if (!active) return;
+      setData({
+        providers: payload.providers || [],
+        events: payload.events || [],
+        savedProviderIds: payload.savedProviderIds || [],
+        savedEventIds: payload.savedEventIds || [],
+        directoryOptions: payload.directoryOptions || {},
+      });
+      setUser(normalizeUser(payload.user) || normalizeUser(currentUser));
+    }).catch(() => {}).finally(() => {
+      if (!active) return;
+      setLoading(false);
+      setAuthReady(true);
+    });
+    return () => { active = false; };
   }, []);
 
   async function toggleSave(kind, id, active) {
-    const currentUser = await getUser();
+    const currentUser = user || normalizeUser(await getUser().catch(() => null));
     if (!currentUser) {
       go(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
@@ -48,7 +63,14 @@ export default function PublicShowcase({ path }) {
     }
   }
 
+  async function signOut() {
+    await logout().catch(() => null);
+    setUser(null);
+    go("/");
+  }
+
   const warm = path === "/events" || path === "/event-details" || path === "/provider-details";
+  const dashboardPath = user ? defaultDashboardPath(user) : "/client-dashboard";
   return <div className="app-shell">
     <header className={warm ? "site-header warm-header" : "site-header"}>
       <button className="brand" onClick={() => go("/")}>
@@ -58,8 +80,17 @@ export default function PublicShowcase({ path }) {
       <nav className={menuOpen ? "site-nav open" : "site-nav"}>
         <button onClick={() => go("/")}>Providers</button>
         <button onClick={() => go("/events")}>Events</button>
+        {user ? <button onClick={() => go(dashboardPath)}>Dashboard</button> : null}
+        {user ? <button onClick={() => go("/my-events")}>My Events</button> : null}
+        {user ? <button onClick={() => go("/account-settings")}>Account</button> : null}
       </nav>
-      <div className="account-actions"><button className="button compact" onClick={() => go("/login")}><LogIn size={16} /> Log in</button></div>
+      <div className="account-actions">
+        {!authReady ? (
+          <button className="button compact" disabled><RefreshCw className="spin" size={16} /> Checking</button>
+        ) : user ? (
+          <><button className="account-chip" onClick={() => go("/account-settings")}><CircleUserRound size={17} /><span>{firstName(user.name || user.email)}</span></button><button className="icon-button" onClick={signOut} title="Log out"><LogOut size={18} /></button></>
+        ) : <button className="button compact" onClick={() => go("/login")}><LogIn size={16} /> Log in</button>}
+      </div>
     </header>
     {notice ? <div className="global-notice save-notice"><span>{notice}</span><button type="button" onClick={() => setNotice("")}>Dismiss</button></div> : null}
   {path === "/provider-details"
@@ -339,6 +370,22 @@ function EventInfo({ icon, label, value }) { if (!value) return null; return <di
 function ViewMoreList({ shown, total, onMore, label = "items" }) { if (!total || shown >= total) return null; return <div className="view-more-row"><button type="button" className="button tertiary" onClick={onMore}>View more</button><span>Showing {shown} of {total} {label}</span></div>; }
 function State({ label }) { return <div className="state"><HeartHandshake /><h2>{label}</h2></div>; }
 function go(path) { window.location.assign(path); }
+function normalizeUser(current) {
+  if (!current) return null;
+  const metadata = current.user_metadata || current.userMetadata || {};
+  const appMetadata = current.app_metadata || current.appMetadata || {};
+  return {
+    id: current.id || "",
+    email: current.email || metadata.email || "",
+    name: current.name || metadata.full_name || metadata.name || "",
+    roles: current.roles || appMetadata.roles || [],
+    userMetadata: metadata,
+  };
+}
+function defaultDashboardPath(current) {
+  const accountType = String(current?.userMetadata?.account_type || current?.userMetadata?.accountType || "").toLowerCase();
+  return current?.roles?.includes("provider") || current?.roles?.includes("admin") || accountType === "provider" ? "/dashboard" : "/client-dashboard";
+}
 function optionChoices(options = [], fallback = []) { return (options?.length ? unique(options) : unique(fallback || [])).filter((value) => String(value).trim().toLowerCase() !== "all").sort(); }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function truncate(value, max) { const text = String(value || "").replace(/\s+/g, " ").trim(); return text.length > max ? `${text.slice(0, max - 1)}...` : text; }
