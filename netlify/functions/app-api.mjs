@@ -57,6 +57,7 @@ const AIRTABLE_BOOTSTRAP_SCHEMAS = {
       { name: "Website", type: "singleLineText" },
       { name: "Professional Title", type: "singleLineText" },
       { name: "Message", type: "multilineText" },
+      { name: "Area of Interest", type: "singleLineText" },
       { name: "Status", type: "singleLineText" },
       { name: "Account Type", type: "singleLineText" },
       { name: "Source", type: "singleLineText" }
@@ -87,6 +88,7 @@ const FIELDS = {
     email: ["Email", "Provider Email"], phone: ["Phone", "Phone Number"],
     accountType: ["Account Type", "User Type", "Member Type", "Role"],
     photo: ["Profile Photo", "Photo", "Headshot", "Image"],
+    photoUrl: ["Profile Photo URL", "Photo URL", "Headshot URL", "Image URL"],
     bio: ["Provider Bio", "Bio", "About", "Description"],
     profession: ["Professional Title", "Profession", "Credentials", "Service Type"],
     license: ["License / Certification", "License # / Certification", "License", "Credentials"],
@@ -106,6 +108,7 @@ const FIELDS = {
     website: ["Website", "Web Site"], consult: ["Consultation Link", "Booking Link", "Schedule Link"],
     approved: ["Approved", "Published", "Show in Directory", "Public"],
     verified: ["Verified", "Verified Member", "Referral Room"],
+    status: ["Status", "Approval Status", "Request Status"],
     responseTime: ["Typical Response Time", "Response Time"],
     referralMethod: ["Preferred Referral Method"],
     referralInstructions: ["Referral Instructions"],
@@ -131,6 +134,7 @@ const FIELDS = {
     start: ["Date", "Start Date", "Start Date + Time"], end: ["End Time", "End Date"],
     locationType: ["Location Type"], address: ["Address/Link", "Address or Link"],
     description: ["Description"], registration: ["Registration Link"], image: ["Image"],
+    imageUrl: ["Event Image URL", "Image URL", "Event Image", "Image Link", "Flyer URL"],
     status: ["Status"], created: ["Created At", "Created"]
   }
 };
@@ -138,13 +142,15 @@ const FIELDS = {
 const SAVE_FIELD_SETS = {
   providerSave: {
     name: ["Name", "Saved Provider Name", "Record Name"],
+    saverRecord: ["Saver Info", "Saver", "Member", "Client", "User", "Saved By"],
     saverEmail: ["Saver Email Text", "Saver Email", "Email", "Email Address", "User Email", "Saved By", "Saved By Email", "Client Email", "User's Email"],
-    savedProvider: ["Saved Provider", "Directory", "Directory Record", "Directory Grid View", "Provider", "Provider Link", "Provider Record", "Providers"],
+    savedProvider: ["Saved Provider Info", "Saved Provider", "Directory", "Directory Record", "Directory Grid View", "Provider", "Provider Link", "Provider Record", "Providers"],
     notes: ["Notes", "Note", "Saved Provider Notes"],
     active: ["Active", "Saved", "Is Active", "Visible"]
   },
   eventSave: {
     name: ["Name", "Saved Event Name", "Record Name"],
+    saverRecord: ["Saver Info", "Saver", "Member", "Client", "User", "Saved By"],
     saverEmail: ["Saver Email", "Saver Email Text", "Email", "Email Address", "User Email", "Saved By", "Saved By Email", "Client Email", "User's Email"],
     savedEvent: ["Saved Workshop", "Saved Event", "Saved Events", "Event", "Events", "Workshop", "Workshop Events", "Hosted Event", "Event Record", "Event Link"],
     notes: ["Notes", "Note", "Saved Event Notes"],
@@ -161,6 +167,7 @@ const SAVE_FIELD_SETS = {
   clientSignup: {
     name: ["Name", "Full Name", "Client Name"],
     email: ["Email"],
+    areaInterest: ["Area of Interest", "Provider Type Interest", "Interested Provider Type", "Interested In"],
     status: ["Status", "Account Status", "Request Status", "Approval Status"],
     accountType: ["Account Type", "Type", "Role", "User Type"],
     source: ["Source", "Referral Source", "Channel", "Signup Source"]
@@ -182,6 +189,8 @@ export default async function handler(request) {
       if (action === "provider") return reply(await getProvider(url.searchParams.get("id"), user));
       if (action === "event") return reply(await getEvent(url.searchParams.get("id"), user));
       if (action === "me") return reply({ user: publicUser(user) });
+      if (action === "directory-options") return reply({ directoryOptions: await getDirectoryOptions() });
+      if (action === "event-options") return reply({ eventOptions: await getEventOptions() });
       if (action === "dashboard") return reply(await dashboard(requireUser(user)));
       if (action === "my-events") return reply(await myEvents(requireUser(user)));
       if (action === "saved-providers") return reply(await savedProviders(requireUser(user)));
@@ -216,9 +225,10 @@ async function bootstrap(user) {
   let savedEventIds = [];
 
   if (user?.email) {
+    const account = await findDirectoryByEmail(user.email);
     const [providerSaves, eventSaves] = await Promise.all([list("savedProviders"), list("savedEvents")]);
-    savedProviderIds = providerSaves.filter((r) => belongsTo(r, user.email) && activeRecord(r)).flatMap(providerIds);
-    savedEventIds = eventSaves.filter((r) => belongsTo(r, user.email) && activeRecord(r)).flatMap(eventIds);
+    savedProviderIds = providerSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r)).flatMap(providerIds);
+    savedEventIds = eventSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r)).flatMap(eventIds);
   }
 
   return { configured: true, user: publicUser(user), providers, events, directoryOptions, savedProviderIds: unique(savedProviderIds), savedEventIds: unique(savedEventIds) };
@@ -248,11 +258,11 @@ async function getEvent(id, user) {
 }
 
 async function dashboard(user) {
-  const [providers, events, providerSaves, eventSaves] = await Promise.all([
-    list("directory"), list("events"), list("savedProviders"), list("savedEvents")
+  const [providers, events, providerSaves, eventSaves, account] = await Promise.all([
+    list("directory"), list("events"), list("savedProviders"), list("savedEvents"), findDirectoryByEmail(user.email)
   ]);
-  const myProviderSaves = providerSaves.filter((r) => belongsTo(r, user.email) && activeRecord(r));
-  const myEventSaves = eventSaves.filter((r) => belongsTo(r, user.email) && activeRecord(r));
+  const myProviderSaves = providerSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r));
+  const myEventSaves = eventSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r));
   const providerMap = new Map(providers.map((r) => [r.id, normalizeProvider(r)]));
   const eventMap = new Map(events.map((r) => [r.id, normalizeEvent(r)]));
   const savedProviders = unique(myProviderSaves.flatMap(providerIds)).map((id) => providerMap.get(id)).filter(Boolean);
@@ -262,19 +272,19 @@ async function dashboard(user) {
 }
 
 async function myEvents(user) {
-  const [events, saves] = await Promise.all([list("events"), list("savedEvents")]);
+  const [events, saves, account] = await Promise.all([list("events"), list("savedEvents"), findDirectoryByEmail(user.email)]);
   const normalized = events.map(normalizeEvent);
   const hosted = normalized.filter((event) => lower(event.hostEmail) === lower(user.email));
-  const ids = unique(saves.filter((r) => belongsTo(r, user.email) && activeRecord(r)).flatMap(eventIds));
+  const ids = unique(saves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r)).flatMap(eventIds));
   const saved = ids.map((id) => normalized.find((event) => event.id === id)).filter(Boolean);
   return { hosted, saved };
 }
 
 async function savedProviders(user) {
-  const [providers, saves] = await Promise.all([list("directory"), list("savedProviders")]);
+  const [providers, saves, account] = await Promise.all([list("directory"), list("savedProviders"), findDirectoryByEmail(user.email)]);
   const providerMap = new Map(providers.map((r) => [r.id, normalizeProvider(r)]));
   const mapped = await mappedFields("providerSave");
-  const items = saves.filter((r) => belongsTo(r, user.email)).map((record) => {
+  const items = saves.filter((r) => belongsTo(r, user.email, account?.id)).map((record) => {
     const id = providerIds(record)[0];
     return {
       id: record.id, active: activeRecord(record), notes: mapped.notes ? text(pick(record.fields || {}, [mapped.notes])) : "",
@@ -287,17 +297,23 @@ async function savedProviders(user) {
 async function toggleProvider(user, body) {
   if (!body.providerId) throw httpError(400, "Missing provider ID.");
   const provider = normalizeProvider(await get("directory", body.providerId));
+  const account = await ensureDirectoryAccount({
+    email: user.email,
+    name: publicUser(user)?.name || user.email.split("@")[0],
+    accountType: publicUser(user)?.accountType || "client"
+  });
   const saves = await list("savedProviders");
   const mapped = await mappedFields("providerSave");
-  const existing = saves.find((r) => belongsTo(r, user.email) && providerIds(r).includes(body.providerId));
-  const existingByLinkedField = mapped.savedProvider ? saves.find((r) => providerIds(r).includes(body.providerId) && belongsTo(r, user.email)) : null;
+  const existing = saves.find((r) => belongsTo(r, user.email, account.id) && providerIds(r).includes(body.providerId));
+  const existingByLinkedField = mapped.savedProvider ? saves.find((r) => providerIds(r).includes(body.providerId) && belongsTo(r, user.email, account.id)) : null;
   const active = body.active !== false;
   const fields = {
     [mapped.name]: `${user.email} saved ${provider.name}`,
-    [mapped.saverEmail]: user.email,
     [mapped.savedProvider]: [body.providerId],
     [mapped.active]: active
   };
+  if (mapped.saverRecord) fields[mapped.saverRecord] = [account.id];
+  if (mapped.saverEmail) fields[mapped.saverEmail] = user.email;
   if (body.notes !== undefined && mapped.notes) fields[mapped.notes] = String(body.notes || "");
 
   const current = existing || existingByLinkedField;
@@ -308,17 +324,23 @@ async function toggleProvider(user, body) {
 async function toggleEvent(user, body) {
   if (!body.eventId) throw httpError(400, "Missing event ID.");
   const event = normalizeEvent(await get("events", body.eventId));
+  const account = await ensureDirectoryAccount({
+    email: user.email,
+    name: publicUser(user)?.name || user.email.split("@")[0],
+    accountType: publicUser(user)?.accountType || "client"
+  });
   const saves = await list("savedEvents");
   const mapped = await mappedFields("eventSave");
-  const existing = saves.find((r) => belongsTo(r, user.email) && eventIds(r).includes(body.eventId));
-  const existingByLinkedField = mapped.savedEvent ? saves.find((r) => eventIds(r).includes(body.eventId) && belongsTo(r, user.email)) : null;
+  const existing = saves.find((r) => belongsTo(r, user.email, account.id) && eventIds(r).includes(body.eventId));
+  const existingByLinkedField = mapped.savedEvent ? saves.find((r) => eventIds(r).includes(body.eventId) && belongsTo(r, user.email, account.id)) : null;
   const active = body.active !== false;
   const fields = {
     [mapped.name]: `${user.email} saved ${event.name}`,
-    [mapped.saverEmail]: user.email,
     [mapped.savedEvent]: [body.eventId],
     [mapped.active]: active
   };
+  if (mapped.saverRecord) fields[mapped.saverRecord] = [account.id];
+  if (mapped.saverEmail) fields[mapped.saverEmail] = user.email;
   if (body.notes !== undefined && mapped.notes) fields[mapped.notes] = String(body.notes || "");
   const current = existing || existingByLinkedField;
   const record = current ? await updateSafe("savedEvents", current.id, fields) : await createSafe("savedEvents", fields);
@@ -328,6 +350,7 @@ async function toggleEvent(user, body) {
 async function saveEvent(user, body) {
   const fields = {
     "Event Name": required(body.eventName, "Event name"),
+    "Host Name": publicUser(user)?.name || user.email.split("@")[0],
     "Host Email": user.email,
     "Category": clean(body.category),
     "Event Audience": clean(body.eventAudience),
@@ -338,6 +361,8 @@ async function saveEvent(user, body) {
     "Address/Link": clean(body.addressLink),
     "Description": required(body.description, "Description"),
     "Registration Link": clean(body.registrationLink),
+    "Image": attachmentFromUrl(body.imageUrl),
+    "Event Image URL": clean(body.imageUrl),
     "Status": "Pending Review"
   };
   removeEmpty(fields);
@@ -345,9 +370,9 @@ async function saveEvent(user, body) {
   if (body.recordId) {
     const current = normalizeEvent(await get("events", body.recordId));
     if (lower(current.hostEmail) !== lower(user.email) && !isAdmin(user)) throw httpError(403, "You cannot edit this event.");
-    return { ok: true, event: normalizeEvent(await update("events", body.recordId, fields)) };
+    return { ok: true, event: normalizeEvent(await updateSafe("events", body.recordId, fields)) };
   }
-  return { ok: true, event: normalizeEvent(await create("events", fields)) };
+  return { ok: true, event: normalizeEvent(await createSafe("events", fields)) };
 }
 
 async function adminEvents() {
@@ -391,7 +416,9 @@ async function signupProfile(body) {
     phone: body.phone,
     website: body.website,
     professionalTitle: body.professionalTitle,
-    message: body.message
+    message: body.message,
+    areaInterest: body.areaInterest || body.interests || body.application?.areaInterest,
+    application: body.application || {}
   };
   const signup = await recordSignup(normalizedType, syncPayload);
   const supabaseSync = await syncSignupToSupabase(normalizedType, syncPayload);
@@ -402,6 +429,9 @@ async function signupProfile(body) {
     name,
     accountType: normalizedType
   });
+  const directoryAccount = normalizedType === "provider"
+    ? await updateSafe("directory", account.id, providerApplicationFields({ ...body.application, name, email, phone: body.phone, website: body.website, professionalTitle: body.professionalTitle, message: body.message }))
+    : account;
 
   return {
     ok: true,
@@ -412,8 +442,51 @@ async function signupProfile(body) {
       warning: signup.syncWarning
     },
     supabaseSync,
-    account: accountFromRecord({ email, user_metadata: { full_name: name, account_type: normalizedType } }, account)
+    account: accountFromRecord({ email, user_metadata: { full_name: name, account_type: normalizedType } }, directoryAccount)
   };
+}
+
+function providerApplicationFields(application = {}) {
+  const fields = {};
+  setAlias(fields, FIELDS.provider.name, application.name);
+  setAlias(fields, FIELDS.provider.pronouns, application.pronouns);
+  setAlias(fields, FIELDS.provider.profession, application.profession || application.professionalTitle);
+  setAlias(fields, FIELDS.provider.license, application.licenseCertification || application.license);
+  setAlias(fields, FIELDS.provider.email, application.email);
+  setAlias(fields, FIELDS.provider.phone, application.phone);
+  setAlias(fields, FIELDS.provider.website, application.website);
+  setAlias(fields, FIELDS.provider.consult, application.consultationLink);
+  setAlias(fields, FIELDS.provider.bio, application.bio || application.message);
+  setAlias(fields, FIELDS.provider.accountType, "provider");
+  setAlias(fields, FIELDS.provider.status, "Pending Review");
+  setAlias(fields, FIELDS.provider.approved, false);
+  setAlias(fields, FIELDS.provider.type, application.serviceType || application.providerType);
+  setAlias(fields, FIELDS.provider.services, application.servicesOffered || application.services);
+  setAlias(fields, FIELDS.provider.support, application.concerns || application.support);
+  setAlias(fields, FIELDS.provider.population, application.populationsServed || application.populations);
+  setAlias(fields, FIELDS.provider.location, application.state || application.location);
+  setAlias(fields, FIELDS.provider.payment, application.payType || application.payment);
+  setAlias(fields, FIELDS.provider.availability, application.availability);
+  setAlias(fields, FIELDS.provider.price, application.price);
+  setAlias(fields, FIELDS.provider.physicalLocations, application.physicalLocations);
+  setAlias(fields, FIELDS.provider.availabilitySpecifics, application.availabilitySpecifics || application.currentAvailability);
+  setAlias(fields, FIELDS.provider.responseTime, application.typicalResponseTime || application.responseTime);
+  setAlias(fields, FIELDS.provider.referralMethod, application.preferredReferralMethod || application.referralMethod);
+  setAlias(fields, FIELDS.provider.referralInstructions, application.referralInstructions);
+  setAlias(fields, FIELDS.provider.collaborationInterests, application.collaborationInterests);
+  setAlias(fields, FIELDS.provider.collaborationDetails, application.collaborationDetails);
+  setAlias(fields, FIELDS.provider.providerNotes, application.providerToProviderNotes || application.providerNotes);
+  if (application.infoOptIn !== undefined) setAlias(fields, FIELDS.provider.infoOptIn, application.infoOptIn ? "Yes" : "No");
+  setAlias(fields, FIELDS.provider.styleWords, application.styleWords);
+  setAlias(fields, FIELDS.provider.clientDescriptors, application.clientsDescribeMeAs || application.clientDescriptors);
+  setAlias(fields, FIELDS.provider.groundingRitual, application.groundingRitual);
+  setAlias(fields, FIELDS.provider.outsideSessions, application.outsideSessions);
+  setAlias(fields, FIELDS.provider.guidingBelief, application.guidingBelief);
+  setAlias(fields, FIELDS.provider.healingWish, application.healingTruth || application.healingWish);
+  setAlias(fields, FIELDS.provider.comfortPractice, application.favoriteComfortPractice || application.comfortPractice);
+  setAlias(fields, FIELDS.provider.funFact, application.funFact);
+  setAlias(fields, FIELDS.provider.vibe, application.vibe);
+  return fields;
 }
 
 async function saveAccount(user, body) {
@@ -450,6 +523,7 @@ async function saveProfile(user, body) {
   setAlias(fields, FIELDS.provider.profession, body.profession);
   setAlias(fields, FIELDS.provider.license, body.license);
   setAlias(fields, FIELDS.provider.identity, body.identity);
+  setAlias(fields, FIELDS.provider.photoUrl, body.photoUrl);
   setAlias(fields, FIELDS.provider.email, user.email);
   setAlias(fields, FIELDS.provider.phone, body.phone);
   setAlias(fields, FIELDS.provider.website, body.website);
@@ -489,6 +563,7 @@ async function saveProfile(user, body) {
 function normalizeProvider(record) {
   const f = record.fields || {};
   const approvalValue = pick(f, FIELDS.provider.approved);
+  const approvalStatus = lower(text(pick(f, FIELDS.provider.status)));
   const accountType = lower(text(pick(f, FIELDS.provider.accountType)));
   const providerSignals = Boolean(
     text(pick(f, FIELDS.provider.profession)) ||
@@ -502,7 +577,7 @@ function normalizeProvider(record) {
     accountType,
     order: numberValue(pick(f, FIELDS.provider.order)),
     email: text(pick(f, FIELDS.provider.email)), phone: text(pick(f, FIELDS.provider.phone)),
-    photo: attachment(pick(f, FIELDS.provider.photo)), bio: text(pick(f, FIELDS.provider.bio)),
+    photo: attachment(pick(f, FIELDS.provider.photo)) || text(pick(f, FIELDS.provider.photoUrl)), bio: text(pick(f, FIELDS.provider.bio)),
     profession: text(pick(f, FIELDS.provider.profession)), pronouns: text(pick(f, FIELDS.provider.pronouns)),
     providerType: array(pick(f, FIELDS.provider.type)), services: array(pick(f, FIELDS.provider.services)),
     support: array(pick(f, FIELDS.provider.support)), populations: array(pick(f, FIELDS.provider.population)),
@@ -510,7 +585,7 @@ function normalizeProvider(record) {
     website: text(pick(f, FIELDS.provider.website)), consultationLink: text(pick(f, FIELDS.provider.consult)),
     humanSide: text(pick(f, FIELDS.provider.human)), collaboration: text(pick(f, FIELDS.provider.collaboration)),
     verified: truthy(pick(f, FIELDS.provider.verified)), approved: truthy(approvalValue),
-    isPublic: !clientAccount && (approvalValue === undefined ? providerSignals : truthy(approvalValue))
+    isPublic: !clientAccount && !approvalStatus.includes("pending") && !approvalStatus.includes("review") && (approvalValue === undefined ? providerSignals : truthy(approvalValue))
   };
 }
 
@@ -553,7 +628,7 @@ function normalizeEvent(record) {
     eventType: text(pick(f, FIELDS.event.type)), start: text(pick(f, FIELDS.event.start)), end: text(pick(f, FIELDS.event.end)),
     locationType: text(pick(f, FIELDS.event.locationType)), address: text(pick(f, FIELDS.event.address)),
     description: text(pick(f, FIELDS.event.description)), registration: text(pick(f, FIELDS.event.registration)),
-    image: attachment(pick(f, FIELDS.event.image)), status, created: text(pick(f, FIELDS.event.created)),
+    image: attachment(pick(f, FIELDS.event.image)) || text(pick(f, FIELDS.event.imageUrl)), status, created: text(pick(f, FIELDS.event.created)),
     isPublic: ["approved", "active", "published", "live", "open"].includes(lower(status))
   };
 }
@@ -580,6 +655,22 @@ async function getDirectoryOptions() {
     support: await selectOptions("directory", FIELDS.provider.support),
     providerType: await selectOptions("directory", FIELDS.provider.type),
     payment: await selectOptions("directory", FIELDS.provider.payment),
+    services: await selectOptions("directory", FIELDS.provider.services),
+    populations: await selectOptions("directory", FIELDS.provider.population),
+    locations: await selectOptions("directory", FIELDS.provider.location),
+    availability: await selectOptions("directory", FIELDS.provider.availability),
+    identity: await selectOptions("directory", FIELDS.provider.identity),
+    collaborationInterests: await selectOptions("directory", FIELDS.provider.collaborationInterests),
+    vibe: await selectOptions("directory", FIELDS.provider.vibe),
+  };
+}
+
+async function getEventOptions() {
+  return {
+    category: await selectOptions("events", FIELDS.event.category),
+    audience: await selectOptions("events", FIELDS.event.audience),
+    eventType: await selectOptions("events", FIELDS.event.type),
+    locationType: await selectOptions("events", FIELDS.event.locationType),
   };
 }
 
@@ -741,6 +832,7 @@ async function safeAirtableSignup(table, accountType, body) {
   setOptional(fields, mapped.website, body.website);
   setOptional(fields, mapped.professionalTitle, body.professionalTitle);
   setOptional(fields, mapped.message, body.message);
+  setOptional(fields, mapped.areaInterest, body.areaInterest);
   setOptional(fields, mapped.source, "app");
 
   const records = await list(table);
@@ -790,6 +882,7 @@ function buildSignupFallbackFields(accountType, body) {
   if (body.website) output.Website = body.website;
   if (body.professionalTitle) output["Professional Title"] = body.professionalTitle;
   if (body.message) output[mapped.notes || "Message"] = body.message;
+  if (body.areaInterest) output["Area of Interest"] = listText(body.areaInterest);
   return output;
 }
 
@@ -813,6 +906,7 @@ async function syncSignupToSupabase(accountType, body) {
     website: clean(body.website),
     professional_title: clean(body.professionalTitle),
     message: clean(body.message),
+    area_interest: listText(body.areaInterest),
     source: "app"
   };
   removeEmpty(payload);
@@ -929,6 +1023,11 @@ function listText(value) {
   return arrayRaw(value).flatMap((item) => String(item || "").split(/[,;\n]+/)).map(clean).filter(Boolean).join(", ");
 }
 
+function attachmentFromUrl(value) {
+  const url = clean(value);
+  return /^https?:\/\//i.test(url) ? [{ url }] : undefined;
+}
+
 function requiredEmail(value) {
   const email = lower(value);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw httpError(400, "A valid email is required.");
@@ -942,7 +1041,7 @@ async function mutateSafe(operation, fields) {
   try {
     return await operation();
   } catch (error) {
-    const badField = unknownFieldName(error.message);
+    const badField = badAirtableFieldName(error.message);
     if (badField && Object.prototype.hasOwnProperty.call(fields, badField)) {
       delete fields[badField];
       if (!Object.keys(fields).length) throw error;
@@ -952,9 +1051,15 @@ async function mutateSafe(operation, fields) {
   }
 }
 
-function unknownFieldName(message) {
-  const match = String(message || "").match(/Unknown field name: "([^"]+)"/i);
-  return match?.[1] || "";
+function badAirtableFieldName(message) {
+  const textMessage = String(message || "");
+  const unknown = textMessage.match(/Unknown field name: "([^"]+)"/i);
+  if (unknown?.[1]) return unknown[1];
+  const cannotAccept = textMessage.match(/Field "?([^"]+)"? cannot accept/i);
+  if (cannotAccept?.[1]) return cannotAccept[1];
+  const cannotUpdate = textMessage.match(/Cannot update field "?([^"]+)"?/i);
+  if (cannotUpdate?.[1]) return cannotUpdate[1];
+  return "";
 }
 
 async function airtable(key, id = "", options = {}) {
@@ -977,8 +1082,12 @@ function requireAdmin(user) { requireUser(user); if (!isAdmin(user)) throw httpE
 function isAdmin(user) { return (user?.roles || user?.app_metadata?.roles || []).includes("admin"); }
 function hasProviderAccess(user) { const roles = user?.roles || user?.app_metadata?.roles || []; const type = lower(user?.user_metadata?.account_type || user?.userMetadata?.account_type || user?.user_metadata?.accountType || user?.userMetadata?.accountType); return roles.includes("admin") || roles.includes("provider") || type === "provider"; }
 function publicUser(user) { return user ? { id: user.id, email: user.email, name: user.user_metadata?.full_name || user.userMetadata?.full_name || "", roles: user.roles || user.app_metadata?.roles || [], accountType: user.user_metadata?.account_type || user.userMetadata?.account_type || user.user_metadata?.accountType || user.userMetadata?.accountType || "" } : null; }
-function belongsTo(record, email) {
+function belongsTo(record, email, accountRecordId = "") {
   const fields = record.fields || {};
+  if (accountRecordId) {
+    const linkedAccountIds = linkedIds(pick(fields, ["Saver Info", "Saver", "Member", "Client", "User", "Saved By"]));
+    if (linkedAccountIds.includes(accountRecordId)) return true;
+  }
   const candidates = [
     "Saver Email Text", "Saver Email", "Email", "User Email", "User's Email", "Saved By", "Saved By Email",
     "Client Email", "Owner Email", "Member Email", "Creator", "Host Email", "Invite Email", "User Email Address"
@@ -993,7 +1102,7 @@ function activeRecord(record) {
   return value === undefined || truthy(value);
 }
 function providerIds(record) {
-  const values = pick(record.fields || {}, ["Saved Provider", "Directory", "Directory Record", "Directory Grid View", "Provider", "Saved Providers", "Providers", "Provider Record"]);
+  const values = pick(record.fields || {}, ["Saved Provider Info", "Saved Provider", "Directory", "Directory Record", "Directory Grid View", "Provider", "Saved Providers", "Providers", "Provider Record"]);
   const listed = linkedIds(values);
   if (listed.length) return listed;
   return extractRecordIds(record.fields || {});

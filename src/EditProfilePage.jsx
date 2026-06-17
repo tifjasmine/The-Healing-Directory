@@ -1,12 +1,15 @@
 import React from "react";
 import {
   Camera,
+  Check,
+  ChevronDown,
   Mail,
   RefreshCw,
   RotateCcw,
   Save,
   Send,
   UserRound,
+  X,
 } from "lucide-react";
 
 const API = "/.netlify/functions/app-api";
@@ -24,6 +27,7 @@ const EMPTY_PROFILE = {
   consultationLink: "",
   bio: "",
   photo: "",
+  photoUrl: "",
   providerType: "",
   services: "",
   support: "",
@@ -52,20 +56,47 @@ const EMPTY_PROFILE = {
   vibe: "",
 };
 
+const EMPTY_OPTIONS = {
+  providerType: [],
+  services: [],
+  support: [],
+  populations: [],
+  payment: [],
+  location: [],
+  availability: [],
+  identity: [],
+  collaborationInterests: [],
+  vibe: [],
+};
+
 export default function EditProfilePage({ user, setNotice }) {
   const [form, setForm] = React.useState(() => ({ ...EMPTY_PROFILE, email: user?.email || "" }));
   const [initial, setInitial] = React.useState(() => ({ ...EMPTY_PROFILE, email: user?.email || "" }));
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [status, setStatus] = React.useState("");
+  const [options, setOptions] = React.useState(EMPTY_OPTIONS);
 
   React.useEffect(() => {
     let alive = true;
 
-    api("my-profile")
-      .then((payload) => {
+    Promise.all([api("my-profile"), api("directory-options").catch(() => ({ directoryOptions: {} }))])
+      .then(([payload, optionPayload]) => {
         if (!alive) return;
         const next = hydrateProfile(payload.profile, user);
+        const incoming = optionPayload.directoryOptions || {};
+        setOptions({
+          providerType: incoming.providerType || [],
+          services: incoming.services || [],
+          support: incoming.support || [],
+          populations: incoming.populations || [],
+          payment: incoming.payment || [],
+          location: incoming.locations || [],
+          availability: incoming.availability || [],
+          identity: incoming.identity || [],
+          collaborationInterests: incoming.collaborationInterests || [],
+          vibe: incoming.vibe || [],
+        });
         setForm(next);
         setInitial(next);
       })
@@ -158,11 +189,8 @@ export default function EditProfilePage({ user, setNotice }) {
               <div>
                 <p className="eyebrow ink">Profile photo</p>
                 <h3>Current profile photo</h3>
-                <p>Photo uploads are still managed from the connected Directory record. This page keeps the saved image visible while you edit the rest of the profile.</p>
-                <span className="photo-note">
-                  <Camera size={16} />
-                  Airtable attachment field
-                </span>
+                <p>Use a public image URL to update the photo shown on your profile. Airtable attachment uploads can still be managed directly in Airtable.</p>
+                <Field label="Profile photo URL" value={form.photoUrl} onChange={(value) => update("photoUrl", value)} placeholder="https://..." />
               </div>
             </div>
 
@@ -171,7 +199,7 @@ export default function EditProfilePage({ user, setNotice }) {
               <Field label="Pronouns" value={form.pronouns} onChange={(value) => update("pronouns", value)} />
               <Field label="Profession" value={form.profession} onChange={(value) => update("profession", value)} required />
               <Field label="License / certification" value={form.license} onChange={(value) => update("license", value)} />
-              <Field label="Racial / ethnic identity" value={form.identity} onChange={(value) => update("identity", value)} />
+              <MultiField label="Racial / ethnic identity" value={form.identity} options={options.identity} onChange={(value) => update("identity", value)} fallback="Other" />
               <Field label="Email" value={form.email} readOnly />
               <Field label="Phone" value={form.phone} onChange={(value) => update("phone", value)} />
               <Field label="Website" value={form.website} onChange={(value) => update("website", value)} />
@@ -180,15 +208,15 @@ export default function EditProfilePage({ user, setNotice }) {
             </div>
           </ProfileSection>
 
-          <ProfileSection title="Areas of care" text="Services, concerns, locations, availability, and payment. Use commas to separate multiple selections.">
+          <ProfileSection title="Areas of care" text="Services, concerns, locations, availability, and payment.">
             <div className="profile-form-grid">
-              <Field label="Service type" value={form.providerType} onChange={(value) => update("providerType", value)} helper="Example: Therapist / Counselor, Somatic Practitioner" required />
-              <Field label="Concerns / areas of support" value={form.support} onChange={(value) => update("support", value)} helper="Example: Anxiety, Depression, Trauma" required />
-              <Field label="Services offered" value={form.services} onChange={(value) => update("services", value)} />
-              <Field label="People served" value={form.populations} onChange={(value) => update("populations", value)} />
-              <Field label="Payment / insurance" value={form.payment} onChange={(value) => update("payment", value)} />
-              <Field label="State" value={form.location} onChange={(value) => update("location", value)} />
-              <Field label="Availability" value={form.availability} onChange={(value) => update("availability", value)} />
+              <MultiField label="Provider type" value={form.providerType} options={options.providerType} onChange={(value) => update("providerType", value)} fallback="Therapist, Coach, Energy Worker" required />
+              <MultiField label="Concerns / areas of support" value={form.support} options={options.support} onChange={(value) => update("support", value)} fallback="Anxiety, Trauma, Grief" required />
+              <MultiField label="Services offered" value={form.services} options={options.services} onChange={(value) => update("services", value)} fallback="Individual Sessions, Workshops" />
+              <MultiField label="People served" value={form.populations} options={options.populations} onChange={(value) => update("populations", value)} fallback="Adults, Teens, Couples" />
+              <MultiField label="Payment / insurance" value={form.payment} options={options.payment} onChange={(value) => update("payment", value)} fallback="Private Pay, Insurance" />
+              <MultiField label="State" value={form.location} options={options.location} onChange={(value) => update("location", value)} fallback="PA, NJ, Virtual" />
+              <MultiField label="Availability" value={form.availability} options={options.availability} onChange={(value) => update("availability", value)} fallback="Accepting New Clients" />
               <Field label="Price" value={form.price} onChange={(value) => update("price", value)} />
               <Field label="Physical locations" value={form.physicalLocations} onChange={(value) => update("physicalLocations", value)} full />
               <Field label="Availability specifics" value={form.availabilitySpecifics} onChange={(value) => update("availabilitySpecifics", value)} textarea full />
@@ -200,7 +228,7 @@ export default function EditProfilePage({ user, setNotice }) {
               <Field label="Typical response time" value={form.responseTime} onChange={(value) => update("responseTime", value)} />
               <Field label="Preferred referral method" value={form.referralMethod} onChange={(value) => update("referralMethod", value)} />
               <Field label="Referral instructions" value={form.referralInstructions} onChange={(value) => update("referralInstructions", value)} textarea full />
-              <Field label="Collaboration interests" value={form.collaborationInterests} onChange={(value) => update("collaborationInterests", value)} helper="Example: Workshops, cross-promotion, peer support" full />
+              <MultiField label="Collaboration interests" value={form.collaborationInterests} options={options.collaborationInterests} onChange={(value) => update("collaborationInterests", value)} fallback="Workshops, Referrals, Peer Consultation" full />
               <Field label="Collaboration details" value={form.collaborationDetails} onChange={(value) => update("collaborationDetails", value)} textarea full />
               <Field label="Provider-to-provider notes" value={form.providerNotes} onChange={(value) => update("providerNotes", value)} textarea full />
             </div>
@@ -221,7 +249,7 @@ export default function EditProfilePage({ user, setNotice }) {
               <Field label="What I wish people knew about healing" value={form.healingWish} onChange={(value) => update("healingWish", value)} textarea full />
               <Field label="Favorite comfort practice" value={form.comfortPractice} onChange={(value) => update("comfortPractice", value)} />
               <Field label="Fun fact" value={form.funFact} onChange={(value) => update("funFact", value)} />
-              <Field label="Vibe" value={form.vibe} onChange={(value) => update("vibe", value)} helper="Example: Warm and nurturing, calm and grounding" />
+              <MultiField label="Vibe" value={form.vibe} options={options.vibe} onChange={(value) => update("vibe", value)} fallback="Warm, Grounding, Direct" />
             </div>
           </ProfileSection>
 
@@ -255,24 +283,52 @@ function ProfileSection({ title, text, children }) {
 
 function ProfilePhoto({ form }) {
   const label = initials(form.name || form.email || "TH");
+  const photo = form.photoUrl || form.photo;
   return (
     <div className="profile-photo">
-      {form.photo ? <img src={form.photo} alt="" /> : <span>{label}</span>}
+      {photo ? <img src={photo} alt="" /> : <span>{label}</span>}
     </div>
   );
 }
 
-function Field({ label, value, onChange, textarea, full, helper, required, readOnly }) {
+function Field({ label, value, onChange, textarea, full, helper, required, readOnly, placeholder }) {
   return (
     <label className={full ? "profile-field full" : "profile-field"}>
       <span>{label}{required ? " *" : ""}</span>
       {textarea ? (
-        <textarea value={value || ""} onChange={(event) => onChange?.(event.target.value)} readOnly={readOnly} rows={6} />
+        <textarea value={value || ""} onChange={(event) => onChange?.(event.target.value)} readOnly={readOnly} rows={6} placeholder={placeholder} />
       ) : (
-        <input value={value || ""} onChange={(event) => onChange?.(event.target.value)} readOnly={readOnly} />
+        <input value={value || ""} onChange={(event) => onChange?.(event.target.value)} readOnly={readOnly} placeholder={placeholder} />
       )}
       {helper ? <small>{helper}</small> : null}
     </label>
+  );
+}
+
+function MultiField({ label, value, options, onChange, fallback, full, required }) {
+  const [open, setOpen] = React.useState(false);
+  const selected = toList(value);
+  const choices = unique([...(options || []), ...toList(fallback), ...selected]);
+
+  function toggle(valueToToggle) {
+    const next = selected.includes(valueToToggle)
+      ? selected.filter((item) => item !== valueToToggle)
+      : [...selected, valueToToggle];
+    onChange(toText(next));
+  }
+
+  return (
+    <div className={full ? "profile-field profile-multi-field full" : "profile-field profile-multi-field"}>
+      <span>{label}{required ? " *" : ""}</span>
+      <button type="button" className={open ? "profile-multi-trigger open" : "profile-multi-trigger"} onClick={() => setOpen((current) => !current)}>
+        <strong>{selected.length ? `${selected.length} selected` : "Choose one or more"}</strong>
+        <ChevronDown size={16} />
+      </button>
+      {selected.length ? <div className="profile-selected-pills">{selected.map((item) => <button type="button" key={item} onClick={() => toggle(item)}>{item}<X size={12} /></button>)}</div> : null}
+      {open ? <div className="profile-multi-menu">
+        {choices.map((choice) => <button type="button" key={choice} className={selected.includes(choice) ? "selected" : ""} onClick={() => toggle(choice)}><span>{selected.includes(choice) ? <Check size={13} /> : null}</span>{choice}</button>)}
+      </div> : null}
+    </div>
   );
 }
 
@@ -281,6 +337,7 @@ function hydrateProfile(profile = {}, user) {
     ...EMPTY_PROFILE,
     ...profile,
     email: profile.email || user?.email || "",
+    photoUrl: profile.photo || "",
     providerType: toText(profile.providerType),
     services: toText(profile.services),
     support: toText(profile.support),
@@ -297,6 +354,7 @@ function hydrateProfile(profile = {}, user) {
 function serializeProfile(form) {
   return {
     ...form,
+    photoUrl: form.photoUrl,
     providerType: toList(form.providerType),
     services: toList(form.services),
     support: toList(form.support),
@@ -319,6 +377,10 @@ function toList(value) {
     .split(/[,;\n]+/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function unique(values) {
+  return [...new Set((values || []).map((item) => String(item || "").trim()).filter(Boolean))];
 }
 
 function initials(value) {

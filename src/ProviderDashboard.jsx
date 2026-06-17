@@ -1,7 +1,7 @@
 import React from "react";
-import { getUser } from "@netlify/identity";
+import { getUser, logout } from "@netlify/identity";
 import {
-  ArrowRight, CalendarDays, HeartHandshake, Plus, RefreshCw, Search,
+  ArrowRight, CalendarDays, CircleUserRound, HeartHandshake, LogOut, Plus, RefreshCw, Search,
   ShieldCheck, Sparkles, Star,
 } from "lucide-react";
 
@@ -35,6 +35,7 @@ export default function ProviderDashboard() {
   if (!user || !payload) return <div className="state"><RefreshCw className="spin" /><h2>Loading dashboard...</h2></div>;
 
   const referralTools = [
+    { eyebrow: "Profile", title: "Edit Directory Profile", text: "Update your public profile, areas of care, referral details, photo URL, and human-side notes.", icon: <CircleUserRound />, path: "/edit-profile" },
     { eyebrow: "Browse", title: "Provider Directory", text: "Find aligned providers by specialty, support area, location, and availability.", icon: <Search />, path: "/" },
     { eyebrow: "Bookmarked", title: "Saved Providers", text: "Return to the providers you saved for referrals, collaboration, and warm handoffs.", icon: <Star />, path: "/saved-providers" },
     { eyebrow: "Community", title: "Referral Room", text: "Request a seat, review your RSVPs, and reconnect with providers you have met.", icon: <HeartHandshake />, path: "/referral-room" },
@@ -51,7 +52,8 @@ export default function ProviderDashboard() {
   return <div className="app-shell">
     <header className="site-header warm-header">
       <button className="brand" onClick={() => go("/")}><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></button>
-      <nav className="site-nav"><button onClick={() => go("/")}>Providers</button><button onClick={() => go("/events")}>Events</button><button onClick={() => go("/my-events")}>My Events</button></nav>
+      <nav className="site-nav"><button onClick={() => go("/")}>Providers</button><button onClick={() => go("/events")}>Events</button><button onClick={() => go("/dashboard")}>Dashboard</button></nav>
+      <div className="account-actions"><button className="account-chip" onClick={() => go("/account-settings")}><CircleUserRound size={17} /><span>{firstName(user.name || user.email)}</span></button><button className="icon-button logout-arrow" onClick={signOut} title="Log out"><LogOut size={18} /></button></div>
     </header>
     <main className="provider-dashboard-page">
       <section className="provider-dashboard-hero">
@@ -59,7 +61,7 @@ export default function ProviderDashboard() {
           <p className="dashboard-kicker"><span /> Provider Dashboard</p>
           <h1>Your home base for referrals, connection, and community care.</h1>
           <p>Build your trusted circle, return to aligned providers, and share the events you are hosting through The Healing Directory.</p>
-          <div className="dashboard-hero-actions"><button className="button event-primary" onClick={() => go("/")}>Browse Providers</button><button className="button event-secondary" onClick={() => go("/my-events")}>My Events</button><button className="button event-secondary" onClick={() => go("/add-event")}>Add Event</button></div>
+          <div className="dashboard-hero-actions"><button className="button event-primary" onClick={() => go("/edit-profile")}>Edit Profile</button><button className="button event-secondary" onClick={() => go("/")}>Browse Providers</button><button className="button event-secondary" onClick={() => go("/my-events")}>My Events</button><button className="button event-secondary" onClick={() => go("/add-event")}>Add Event</button></div>
         </div>
         <aside className="dashboard-summary">
           <p>Welcome back</p><h2>{firstName(user.name || user.email)}.</h2>
@@ -81,4 +83,5 @@ function ToolSection({ eyebrow, title, text, items }) {
 
 function firstName(value) { return String(value || "there").split(/[ @._-]/).filter(Boolean)[0] || "there"; }
 function go(path) { window.location.assign(path); }
+async function signOut() { await logout().catch(() => null); window.location.assign("/"); }
 async function api(action) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); const response = await fetch(url, { credentials: "include" }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }

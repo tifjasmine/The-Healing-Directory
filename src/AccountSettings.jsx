@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowRight, LockKeyhole, RefreshCw, Save, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowRight, CalendarDays, HeartHandshake, LayoutDashboard, LockKeyhole, RefreshCw, Save, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { requestPasswordRecovery } from "@netlify/identity";
 
 const API = "/.netlify/functions/app-api";
@@ -78,19 +78,26 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
 
   return (
     <main className="account-page">
-      <section className="account-hero soft-hero">
-        <p className="brand-pill">Account settings</p>
-        <h1>Manage your account.</h1>
-        <p>Update the basics connected to your Healing Directory login and choose where you want to go next.</p>
+      <section className="account-hero account-hero-clean">
+        <div>
+          <p className="brand-pill">Account</p>
+          <h1>Manage your profile and access.</h1>
+          <p>Keep the basics connected to your saved providers, saved events, and dashboard tools.</p>
+        </div>
+        <div className="account-identity">
+          <UserRound size={24} />
+          <span>{form.accountType === "provider" ? "Provider account" : "Member account"}</span>
+          <strong>{form.email || user?.email}</strong>
+        </div>
       </section>
 
       <section className="settings-grid">
         <form className="account-card settings-card" onSubmit={save}>
-          <div className="section-heading">
-            <UserRound size={22} />
+          <div className="account-card-heading">
+            <Settings size={20} />
             <div>
-              <h2>Profile access</h2>
-              <p>Your account row stays connected to your saved providers, saved events, and provider tools.</p>
+              <h2>Account Details</h2>
+              <p>Small edits here keep your login and dashboard records aligned.</p>
             </div>
           </div>
 
@@ -126,12 +133,20 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
           </div>
         </form>
 
-        <aside className="account-card account-quick">
-          <ShieldCheck size={26} />
-          <h2>Quick access</h2>
-          <button onClick={() => navigate("/edit-profile")}>Edit provider profile <ArrowRight size={16} /></button>
-          <button onClick={() => navigate("/edit-membership")}>Edit membership <ArrowRight size={16} /></button>
-          <button onClick={() => navigate(form.accountType === "provider" ? "/dashboard" : "/client-dashboard")}>Open dashboard <ArrowRight size={16} /></button>
+        <aside className="account-side-stack">
+          <section className="account-card account-summary-card">
+            <ShieldCheck size={24} />
+            <h2>Connected</h2>
+            <p>Your saved lists use this email so providers and events appear in your dashboard.</p>
+          </section>
+          <section className="account-card account-quick">
+            <h2>Next Steps</h2>
+            <button onClick={() => navigate(form.accountType === "provider" ? "/dashboard" : "/client-dashboard")}><LayoutDashboard size={17} /> Open dashboard <ArrowRight size={16} /></button>
+            <button onClick={() => navigate("/") }><HeartHandshake size={17} /> Browse providers <ArrowRight size={16} /></button>
+            <button onClick={() => navigate("/events")}><CalendarDays size={17} /> Browse events <ArrowRight size={16} /></button>
+            {form.accountType === "provider" ? <button onClick={() => navigate("/edit-profile")}>Edit provider profile <ArrowRight size={16} /></button> : null}
+            {form.accountType === "provider" ? <button onClick={() => navigate("/edit-membership")}>Edit membership <ArrowRight size={16} /></button> : null}
+          </section>
         </aside>
       </section>
     </main>

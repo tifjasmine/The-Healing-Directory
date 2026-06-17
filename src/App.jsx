@@ -168,9 +168,15 @@ function Page(props) {
 }
 
 function SiteHeader({ route, user, authReady, navigate, onLogout, menuOpen, setMenuOpen }) {
+  const [signupOpen, setSignupOpen] = React.useState(false);
   const admin = user?.roles?.includes("admin");
   const dashboardPath = user ? defaultDashboardPath(user) : "/client-dashboard";
   const warm = ["/events", "/event-details", "/provider-details", "/add-event", "/edit-event"].includes(route.path);
+  const openDashboard = () => navigate(user ? dashboardPath : `/login?next=${encodeURIComponent("/client-dashboard")}`);
+  const openSignup = (type) => {
+    setSignupOpen(false);
+    navigate(type === "provider" ? "/provider-signup" : "/signup");
+  };
   return (
     <header className={warm ? "site-header warm-header" : "site-header"}>
       <button className="brand" onClick={() => navigate("/")}>
@@ -180,26 +186,33 @@ function SiteHeader({ route, user, authReady, navigate, onLogout, menuOpen, setM
       <nav className={menuOpen ? "site-nav open" : "site-nav"}>
         <button onClick={() => navigate("/")}>Providers</button>
         <button onClick={() => navigate("/events")}>Events</button>
-        {user ? <button onClick={() => navigate(dashboardPath)}>Dashboard</button> : null}
-        {user ? <button onClick={() => navigate("/my-events")}>My Events</button> : null}
-        {user ? <button onClick={() => navigate("/account-settings")}>Account</button> : null}
-        <button onClick={() => navigate("/terms")}>Terms</button>
-        <button onClick={() => navigate("/privacy")}>Privacy</button>
+        <button onClick={openDashboard}>Dashboard</button>
         {admin ? <button onClick={() => navigate("/admin/events")}><ShieldCheck size={15} /> Admin</button> : null}
       </nav>
       <div className="account-actions">
         {!authReady ? (
           <button className="button compact" disabled><RefreshCw size={16} className="spin" /> Checking</button>
         ) : user ? (
-          <><button className="account-chip" onClick={() => navigate("/account-settings")}><CircleUserRound size={17} /><span>{firstName(user.name || user.email)}</span></button><button className="icon-button" onClick={onLogout} title="Log out"><LogOut size={18} /></button></>
-        ) : <button className="button compact" onClick={() => navigate("/login")}><LogIn size={16} /> Log in</button>}
+          <><button className="account-chip" onClick={() => navigate("/account-settings")}><CircleUserRound size={17} /><span>{firstName(user.name || user.email)}</span></button><button className="icon-button logout-arrow" onClick={onLogout} title="Log out"><LogOut size={18} /></button></>
+        ) : (
+          <>
+            <button className="button compact login-button" onClick={() => navigate("/login")}><LogIn size={16} /> Login</button>
+            <div className="signup-menu">
+              <button className="button compact signup-trigger" onClick={() => setSignupOpen((open) => !open)}>Signup <ChevronDown size={16} /></button>
+              {signupOpen ? <div className="signup-dropdown">
+                <button onClick={() => openSignup("provider")}>Become a Provider</button>
+                <button onClick={() => openSignup("client")}>Become a Member</button>
+              </div> : null}
+            </div>
+          </>
+        )}
       </div>
     </header>
   );
 }
 
 function SiteFooter({ navigate }) {
-  return <footer className="site-footer"><div><strong>The Healing Directory</strong><p>Thoughtful connections for healing, wellness, and trusted referrals.</p></div><nav><button onClick={() => navigate("/")}>Directory</button><button onClick={() => navigate("/events")}>Events</button><button onClick={() => navigate("/account-settings")}>Account</button><button onClick={() => navigate("/terms")}>Terms</button><button onClick={() => navigate("/privacy")}>Privacy</button><PwaInstallButton /></nav></footer>;
+  return <footer className="site-footer"><div><strong>The Healing Directory</strong><p>Thoughtful connections for healing, wellness, and trusted referrals.</p></div><nav><button onClick={() => navigate("/terms")}>Terms & Conditions</button><button onClick={() => navigate("/privacy")}>Privacy Policy</button><PwaInstallButton /></nav></footer>;
 }
 
 function DirectoryPage({ data, loading, navigate, toggleSave }) {
@@ -246,7 +259,7 @@ function DirectoryPage({ data, loading, navigate, toggleSave }) {
       </div>
     </section>
     <section className="content-shell">
-      <div className="provider-invite"><div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div><button className="button warm" onClick={() => navigate("/signup")}>Become a Provider <ArrowRight size={17} /></button></div>
+      <div className="provider-invite"><div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div><button className="button warm" onClick={() => navigate("/provider-signup")}>Become a Provider <ArrowRight size={17} /></button></div>
       <div className="results-count"><strong>{providers.length}</strong> providers shown</div>
       {loading ? <LoadingState label="Loading providers" /> : providers.length ? <div className="provider-list">{providers.map((provider) => <ProviderCard key={provider.id} provider={provider} saved={data.savedProviderIds.includes(provider.id)} onSave={() => toggleSave("provider", provider.id, !data.savedProviderIds.includes(provider.id))} onOpen={() => navigate(`/provider-details?id=${provider.id}`)} />)}</div> : <EmptyState title="No providers match that search" text="Try a broader phrase or clear one of the filters." />}
     </section>
@@ -478,7 +491,8 @@ function AdminEvents({ navigate, setNotice }) {
 }
 
 function AuthPage({ mode, navigate, setUser, setNotice }) {
-  const [form, setForm] = React.useState({ name: "", email: "", password: "", confirm: "", accountType: "client" });
+  const initialType = readRoute().query.get("type") === "provider" ? "provider" : "client";
+  const [form, setForm] = React.useState({ name: "", email: "", password: "", confirm: "", accountType: initialType });
   const [busy, setBusy] = React.useState(false);
   const isSignup = mode === "signup";
   const isForgot = mode === "forgot-password";

@@ -7,7 +7,9 @@ import {
   signup,
   updateUser,
 } from "@netlify/identity";
-import { HeartHandshake, LogIn, Users } from "lucide-react";
+import { ChevronDown, HeartHandshake, LogIn, Users } from "lucide-react";
+import ProviderSignupPage from "./ProviderSignupPage.jsx";
+import MemberSignupPage from "./MemberSignupPage.jsx";
 
 const APP_API = "/.netlify/functions/app-api";
 
@@ -16,6 +18,7 @@ export default function AuthAccess({ path }) {
   const [form, setForm] = React.useState({ name: "", email: "", password: "", confirm: "", accountType: "client", phone: "", website: "", professionalTitle: "", message: "" });
   const [notice, setNotice] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+  const [signupOpen, setSignupOpen] = React.useState(false);
   const inviteFlow = mode === "reset-password" && new URLSearchParams(window.location.search).get("flow") === "invite";
   const signingUp = mode === "signup";
   const providerSignup = mode === "provider-signup";
@@ -27,6 +30,9 @@ export default function AuthAccess({ path }) {
     : inviteFlow
       ? "Create a password to finish accepting your provider invitation."
     : "Log in to save providers, manage events, and return to your dashboard.";
+
+  if (providerSignup) return <ProviderSignupPage />;
+  if (signingUp) return <MemberSignupPage />;
 
   async function submit(event) {
     event.preventDefault();
@@ -89,12 +95,21 @@ export default function AuthAccess({ path }) {
   return <div className="app-shell auth-root">
     <header className="site-header">
       <a className="brand" href="/"><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></a>
-      <nav className="site-nav"><a href="/">Providers</a><a href="/events">Events</a></nav>
-      <div className="account-actions"><a className="button compact" href="/login"><LogIn size={16} /> Log in</a></div>
+      <nav className="site-nav"><a href="/">Providers</a><a href="/events">Events</a><a href="/login?next=/client-dashboard">Dashboard</a></nav>
+      <div className="account-actions">
+        <a className="button compact login-button" href="/login"><LogIn size={16} /> Login</a>
+        <div className="signup-menu">
+          <button type="button" className="button compact signup-trigger" onClick={() => setSignupOpen((open) => !open)}>Signup <ChevronDown size={16} /></button>
+          {signupOpen ? <div className="signup-dropdown">
+            <button type="button" onClick={() => window.location.assign("/provider-signup")}>Become a Provider</button>
+            <button type="button" onClick={() => window.location.assign("/signup")}>Become a Member</button>
+          </div> : null}
+        </div>
+      </div>
     </header>
     {notice ? <div className="global-notice"><span>{notice}</span></div> : null}
-    <main className="auth-page"><section className="auth-shell">
-      <div className="auth-copy"><img src="/healing-directory-logo.svg" alt="The Healing Directory" /><p className="eyebrow">Relationship-based care</p><h1>Care, connection, and community.</h1><p>{intro}</p></div>
+    <main className={signingUp || providerSignup ? "auth-page signup-auth-page" : "auth-page"}><section className={providerSignup ? "auth-shell signup-auth-shell provider-auth-shell" : signingUp ? "auth-shell signup-auth-shell" : "auth-shell"}>
+      <div className="auth-copy"><img src="/healing-directory-logo.svg" alt="The Healing Directory" /><p className="eyebrow">Relationship-based care</p><h1>{providerSignup ? "Join as a trusted provider." : signingUp ? "Start saving care that fits." : "Care, connection, and community."}</h1><p>{intro}</p></div>
       <form className="auth-form" onSubmit={submit}>
         <p className="eyebrow ink">{signingUp || providerSignup ? "Join the directory" : "Account access"}</p>
         <h2>{title}</h2>

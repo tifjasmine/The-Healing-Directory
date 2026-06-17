@@ -1,11 +1,17 @@
 import React from "react";
-import { getUser } from "@netlify/identity";
+import { getUser, logout } from "@netlify/identity";
 import {
-  ArrowLeft, CalendarDays, Clock, ExternalLink, Mail,
-  MapPin, Pencil, Plus, RefreshCw, Search, Send, Sparkles,
+  ArrowLeft, CalendarDays, CircleUserRound, Clock, ExternalLink, LogOut, Mail,
+  Image as ImageIcon, Info, MapPin, Pencil, Plus, RefreshCw, Search, Save, Send, Sparkles,
 } from "lucide-react";
 
 const API = "/.netlify/functions/app-api";
+const EVENT_OPTION_FALLBACKS = {
+  category: ["Workshop", "Support Group", "Training", "Referral Room", "Retreat", "Community Event", "Other"],
+  audience: ["Community", "For Providers"],
+  eventType: ["Workshop", "Healing Circle / Support Group", "Training", "Referral Room", "Retreat", "Other"],
+  locationType: ["Virtual", "In Person", "Hybrid"],
+};
 
 export default function EventWorkspace({ path }) {
   const [user, setUser] = React.useState(null);
@@ -26,7 +32,8 @@ export default function EventWorkspace({ path }) {
   return <div className="app-shell event-workspace">
     <header className="site-header warm-header">
       <button className="brand" onClick={() => go("/")}><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></button>
-      <nav className="site-nav"><button onClick={() => go("/")}>Home</button><button onClick={() => go("/events")}>Events</button><button onClick={() => go("/dashboard")}>Dashboard</button></nav>
+      <nav className="site-nav"><button onClick={() => go("/")}>Providers</button><button onClick={() => go("/events")}>Events</button><button onClick={() => go("/dashboard")}>Dashboard</button></nav>
+      <div className="account-actions"><button className="account-chip" onClick={() => go("/account-settings")}><CircleUserRound size={17} /><span>{firstName(user.name || user.email)}</span></button><button className="icon-button logout-arrow" onClick={signOut} title="Log out"><LogOut size={18} /></button></div>
     </header>
     {path === "/my-events" ? <MyEvents user={user} /> : <EventEditor user={user} editing={path === "/edit-event"} />}
   </div>;
@@ -79,40 +86,90 @@ function HostedEventCard({ event }) {
 function EventEditor({ user, editing }) {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id") || params.get("recordId");
-  const [form, setForm] = React.useState({ eventName: "", category: "", eventAudience: "Community", eventType: "Workshop", date: "", endTime: "", locationType: "Virtual", addressLink: "", registrationLink: "", description: "" });
+  const [form, setForm] = React.useState({ eventName: "", category: "", eventAudience: "Community", eventType: "Workshop", date: "", endTime: "", locationType: "Virtual", addressLink: "", registrationLink: "", imageUrl: "", description: "" });
+  const [options, setOptions] = React.useState(EVENT_OPTION_FALLBACKS);
+  const [currentEvent, setCurrentEvent] = React.useState(null);
   const [loading, setLoading] = React.useState(editing);
   const [saving, setSaving] = React.useState(false);
   const [message, setMessage] = React.useState("");
   React.useEffect(() => {
-    if (!editing || !id) return;
-    api("event", { query: { id } }).then(({ event }) => setForm({ eventName: event.name || "", category: event.category || "", eventAudience: event.audience || "Community", eventType: event.eventType || "Workshop", date: localDate(event.start), endTime: localDate(event.end), locationType: event.locationType || "Virtual", addressLink: event.address || "", registrationLink: event.registration || "", description: event.description || "" })).finally(() => setLoading(false));
-  }, [editing, id]);
+    api("event-options").then(({ eventOptions = {} }) => {
+      setOptions({
+        category: withFallback(eventOptions.category, EVENT_OPTION_FALLBACKS.category),
+        audience: withFallback(eventOptions.audience, EVENT_OPTION_FALLBACKS.audience),
+        eventType: withFallback(eventOptions.eventType, EVENT_OPTION_FALLBACKS.eventType),
+        locationType: withFallback(eventOptions.locationType, EVENT_OPTION_FALLBACKS.locationType),
+      });
+    }).catch(() => setOptions(EVENT_OPTION_FALLBACKS));
+  }, []);
+  React.useEffect(() => {
+    if (!editing) return;
+    if (!id) {
+      setMessage("Missing event ID. Please open this from My Events.");
+      setLoading(false);
+      return;
+    }
+    api("event", { query: { id } }).then(({ event }) => {
+      setCurrentEvent(event);
+      if (lower(event.hostEmail) && lower(event.hostEmail) !== lower(user.email)) {
+        setMessage("This event belongs to another provider account. Open the event from the account that created it.");
+        return;
+      }
+      setForm({ eventName: event.name || "", category: event.category || "", eventAudience: event.audience || "Community", eventType: event.eventType || "Workshop", date: localDate(event.start), endTime: localDate(event.end), locationType: event.locationType || "Virtual", addressLink: event.address || "", registrationLink: event.registration || "", imageUrl: event.image || "", description: event.description || "" });
+    }).catch((error) => setMessage(error.message)).finally(() => setLoading(false));
+  }, [editing, id, user.email]);
   const change = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
+  const canEdit = !editing || !currentEvent?.hostEmail || lower(currentEvent.hostEmail) === lower(user.email);
   async function submit(event) {
     event.preventDefault(); setSaving(true); setMessage("");
+    if (!canEdit) {
+      setMessage("This event belongs to another provider account. Open the event from the account that created it.");
+      setSaving(false);
+      return;
+    }
     try { const result = await api("save-event", { method: "POST", body: { ...form, recordId: editing ? id : "" } }); window.location.assign(`/event-details?id=${result.event.id}`); }
     catch (error) { setMessage(error.message); setSaving(false); }
   }
+  const locked = editing && (!canEdit || (message && !currentEvent));
   if (loading) return <WorkspaceState label="Loading event editor" />;
   return <main className="event-editor-page">
-    <section className="event-editor-hero"><div className="workspace-actions"><button onClick={() => go("/events")}><ArrowLeft size={16} /> Back to Events</button><button onClick={() => go("/my-events")}>My Events</button></div><p className="eyebrow">The Healing Directory</p><h1>{editing ? "Update your event listing." : "Create your event listing."}</h1><p>Add provider-only or community-facing workshops, circles, trainings, referral room events, and healing offerings.</p></section>
+    <section className={`event-editor-hero ${editing ? "with-summary" : ""}`}>
+      <div>
+        <div className="workspace-actions"><button onClick={() => go(editing ? "/my-events" : "/events")}><ArrowLeft size={16} /> {editing ? "Back to My Events" : "Back to Events"}</button><button onClick={() => go(editing ? "/events" : "/my-events")}>{editing ? "Browse Events" : "My Events"}</button></div>
+        <p className="eyebrow">The Healing Directory</p>
+        <h1>{editing ? "Edit your event listing." : "Create your event listing."}</h1>
+        <p>{editing ? "Update your workshop, circle, training, referral room event, or community offering. Saved changes move the listing back into review before appearing as approved." : "Add provider-only or community-facing workshops, circles, trainings, referral room events, and healing offerings."}</p>
+      </div>
+      {editing ? <aside className="event-edit-summary"><Sparkles /><span>Editing</span><strong>{currentEvent?.name || form.eventName || "Event listing"}</strong><em>{currentEvent?.status || "Pending Review"}</em></aside> : null}
+    </section>
     <form className="event-editor-card" onSubmit={submit}>
-      <p className="eyebrow ink">Event details</p><h2>Share the details.</h2>
-      <div className="host-email-card"><label>Host Email *</label><strong>{user.email}</strong><p>This event stays connected to your provider account.</p></div>
-      <EditorSection number="01" title="Basic information" text="Name the event and choose how it should be categorized."><EditorField label="Event Name" value={form.eventName} onChange={change("eventName")} placeholder="Ex: Nervous System Reset Circle" required /><EditorField label="Category" value={form.category} onChange={change("category")} placeholder="Community Gathering" required /><EditorSelect label="Event Audience" value={form.eventAudience} onChange={change("eventAudience")} options={["Community", "For Providers"]} /><EditorSelect label="Event Type" value={form.eventType} onChange={change("eventType")} options={["Workshop", "Healing Circle / Support Group", "Training", "Referral Room", "Retreat", "Other"]} /></EditorSection>
-      <EditorSection number="02" title="Time and location" text="Add when it is happening and where people should go."><EditorField label="Start Date + Time" type="datetime-local" value={form.date} onChange={change("date")} required /><EditorField label="End Date + Time" type="datetime-local" value={form.endTime} onChange={change("endTime")} required /><EditorSelect label="Location Type" value={form.locationType} onChange={change("locationType")} options={["Virtual", "In Person", "Hybrid"]} /><EditorField label="Address or Link" value={form.addressLink} onChange={change("addressLink")} placeholder="Zoom link, registration page, studio address, etc." /><EditorField label="Registration Link" value={form.registrationLink} onChange={change("registrationLink")} placeholder="Optional" /></EditorSection>
+      <p className="eyebrow ink">Event details</p><h2>{editing ? "Update the listing." : "Share the details."}</h2>
+      {locked ? <div className="editor-message">{message}</div> : null}
+      <div className="host-email-card"><label>{editing ? "Connected Host Email" : "Host Email"} *</label><strong>{user.email}</strong><p>{editing ? "This is locked to the logged-in provider account so the event stays connected to the correct dashboard." : "This event stays connected to your provider account."}</p></div>
+      {editing ? <div className="editor-alert"><Info size={18} /><span><strong>Changes are pending review.</strong><small>When you save edits, this event moves to Pending Review so updated details can be checked before being marked approved again.</small></span></div> : null}
+      <EditorSection number="01" title="Basic information" text="Name the event and choose how it should be categorized."><EditorField label="Event Name" value={form.eventName} onChange={change("eventName")} placeholder="Ex: Nervous System Reset Circle" required /><EditorSelect label="Category" value={form.category} onChange={change("category")} options={options.category} placeholder="Choose a category" /><EditorSelect label="Event Audience" value={form.eventAudience} onChange={change("eventAudience")} options={options.audience} /><EditorSelect label="Event Type" value={form.eventType} onChange={change("eventType")} options={options.eventType} /></EditorSection>
+      <EditorSection number="02" title="Time and location" text={editing ? "Update when it is happening and where people should go." : "Add when it is happening and where people should go."}><EditorField label="Start Date + Time" type="datetime-local" value={form.date} onChange={change("date")} required /><EditorField label="End Date + Time" type="datetime-local" value={form.endTime} onChange={change("endTime")} required /><EditorSelect label="Location Type" value={form.locationType} onChange={change("locationType")} options={options.locationType} /><EditorField label="Address or Link" value={form.addressLink} onChange={change("addressLink")} placeholder="Zoom link, registration page, studio address, etc." /><EditorField label="Registration Link" value={form.registrationLink} onChange={change("registrationLink")} placeholder="Optional" /><ImageUrlField value={form.imageUrl} onChange={change("imageUrl")} /></EditorSection>
       <EditorSection number="03" title="Description" text="Let people know what this event is about, who it's for, what they can expect, and anything important to know before attending." single><EditorField label="Description" value={form.description} onChange={change("description")} textarea placeholder="Share what the event includes, who it's meant for, and what attendees will experience." required /></EditorSection>
-      {message ? <div className="editor-message">{message}</div> : null}<div className="editor-submit"><button className="button event-gold" disabled={saving}>{saving ? <RefreshCw className="spin" size={17} /> : <Send size={17} />}{saving ? "Submitting..." : editing ? "Save Changes" : "Submit Event"}</button></div>
+      {message && !locked ? <div className="editor-message">{message}</div> : null}<div className="editor-submit split">{editing ? <button type="button" className="button event-outline" onClick={() => go(`/event-details?id=${id}`)}><ExternalLink size={16} /> View Details</button> : null}<button className="button event-gold" disabled={saving || locked}>{saving ? <RefreshCw className="spin" size={17} /> : editing ? <Save size={17} /> : <Send size={17} />}{saving ? "Saving..." : editing ? "Save Changes" : "Submit Event"}</button></div>
     </form>
   </main>;
 }
 
 function EditorSection({ number, title, text, children, single }) { return <section className="editor-section"><div className="editor-section-title"><span>{number}</span><div><h3>{title}</h3><p>{text}</p></div></div><div className={single ? "editor-grid single" : "editor-grid"}>{children}</div></section>; }
 function EditorField({ label, textarea, ...props }) { return <label className={textarea ? "editor-field full" : "editor-field"}><span>{label}{props.required ? " *" : ""}</span>{textarea ? <textarea rows="8" {...props} /> : <input {...props} />}</label>; }
-function EditorSelect({ label, options, ...props }) { return <label className="editor-field"><span>{label} *</span><select {...props}>{options.map((option) => <option key={option}>{option}</option>)}</select></label>; }
+function ImageUrlField({ value, onChange }) {
+  const validImage = /^https?:\/\//i.test(value || "");
+  return <label className="editor-field event-image-field"><span>Event Image URL</span>{validImage ? <div className="image-url-preview"><img src={value} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} /></div> : <div className="image-url-placeholder"><ImageIcon size={22} /><small>Paste a public image link for the event flyer or graphic.</small></div>}<input value={value} onChange={onChange} placeholder="Optional flyer or event image URL" /></label>;
+}
+function EditorSelect({ label, options, required = true, placeholder = "Choose one", ...props }) {
+  const choices = options?.length ? options : ["Other"];
+  return <label className="editor-field"><span>{label}{required ? " *" : ""}</span><select {...props} required={required}><option value="">{placeholder}</option>{choices.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>;
+}
 function WorkspaceState({ label }) { return <div className="state"><RefreshCw className="spin" /><h2>{label}...</h2></div>; }
 function go(path) { window.location.assign(path); }
+async function signOut() { await logout().catch(() => null); window.location.assign("/"); }
 function lower(value) { return String(value || "").toLowerCase(); }
+function firstName(value) { return String(value || "there").split(/[ @._-]/).filter(Boolean)[0] || "there"; }
 function capitalize(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
 function truncate(value, max) { const text = String(value || "").trim(); return text.length > max ? `${text.slice(0, max - 1)}...` : text; }
 function href(value) { return /^(https?:|mailto:|tel:)/i.test(String(value || "")) ? value : `https://${value}`; }
@@ -121,4 +178,5 @@ function formatDate(value) { const parsed = date(value); return parsed ? new Int
 function formatTime(value) { const parsed = date(value); return parsed ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(parsed) : ""; }
 function formatTimeRange(start, end) { return [formatTime(start), formatTime(end)].filter(Boolean).join(" - ") || "Time TBA"; }
 function localDate(value) { const parsed = date(value); if (!parsed) return ""; return new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
+function withFallback(options, fallback) { return options?.length ? options : fallback; }
 async function api(action, options = {}) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); Object.entries(options.query || {}).forEach(([key, value]) => url.searchParams.set(key, value)); const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: options.body ? JSON.stringify(options.body) : undefined }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }

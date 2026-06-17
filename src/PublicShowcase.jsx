@@ -16,6 +16,7 @@ export default function PublicShowcase({ path }) {
   const [notice, setNotice] = React.useState("");
   const [user, setUser] = React.useState(null);
   const [authReady, setAuthReady] = React.useState(false);
+  const [signupOpen, setSignupOpen] = React.useState(false);
 
   const hydrateUser = React.useCallback(async () => {
     const currentUser = normalizeUser(await getUser().catch(() => null));
@@ -89,6 +90,11 @@ export default function PublicShowcase({ path }) {
 
   const warm = path === "/events" || path === "/event-details" || path === "/provider-details";
   const dashboardPath = user ? defaultDashboardPath(user) : "/client-dashboard";
+  const openDashboard = () => go(user ? dashboardPath : `/login?next=${encodeURIComponent("/client-dashboard")}`);
+  const openSignup = (type) => {
+    setSignupOpen(false);
+    go(type === "provider" ? "/provider-signup" : "/signup");
+  };
   return <div className="app-shell">
     <header className={warm ? "site-header warm-header" : "site-header"}>
       <button className="brand" onClick={() => go("/")}>
@@ -98,16 +104,25 @@ export default function PublicShowcase({ path }) {
       <nav className={menuOpen ? "site-nav open" : "site-nav"}>
         <button onClick={() => go("/")}>Providers</button>
         <button onClick={() => go("/events")}>Events</button>
-        {user ? <button onClick={() => go(dashboardPath)}>Dashboard</button> : null}
-        {user ? <button onClick={() => go("/my-events")}>My Events</button> : null}
-        {user ? <button onClick={() => go("/account-settings")}>Account</button> : null}
+        <button onClick={openDashboard}>Dashboard</button>
       </nav>
       <div className="account-actions">
         {!authReady ? (
           <button className="button compact" disabled><RefreshCw className="spin" size={16} /> Checking</button>
         ) : user ? (
-          <><button className="account-chip" onClick={() => go("/account-settings")}><CircleUserRound size={17} /><span>{firstName(user.name || user.email)}</span></button><button className="icon-button" onClick={signOut} title="Log out"><LogOut size={18} /></button></>
-        ) : <button className="button compact" onClick={() => go("/login")}><LogIn size={16} /> Log in</button>}
+          <><button className="account-chip" onClick={() => go("/account-settings")}><CircleUserRound size={17} /><span>{firstName(user.name || user.email)}</span></button><button className="icon-button logout-arrow" onClick={signOut} title="Log out"><LogOut size={18} /></button></>
+        ) : (
+          <>
+            <button className="button compact login-button" onClick={() => go("/login")}><LogIn size={16} /> Login</button>
+            <div className="signup-menu">
+              <button className="button compact signup-trigger" onClick={() => setSignupOpen((open) => !open)}>Signup <ChevronDown size={16} /></button>
+              {signupOpen ? <div className="signup-dropdown">
+                <button onClick={() => openSignup("provider")}>Become a Provider</button>
+                <button onClick={() => openSignup("client")}>Become a Member</button>
+              </div> : null}
+            </div>
+          </>
+        )}
       </div>
     </header>
     {notice ? <div className="global-notice save-notice"><span>{notice}</span><button type="button" onClick={() => setNotice("")}>Dismiss</button></div> : null}
