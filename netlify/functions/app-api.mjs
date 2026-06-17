@@ -8,7 +8,7 @@ const AIRTABLE_AUTO_CREATE_TABLES = lower(process.env.AIRTABLE_AUTO_CREATE_TABLE
 
 const SUPABASE_SIGNUP_TABLES = {
   provider: process.env.SUPABASE_PROVIDER_SIGNUPS_TABLE || "signup_requests",
-  client: process.env.SUPABASE_CLIENTS_TABLE || "clients",
+  client: process.env.SUPABASE_CLIENTS_TABLE || process.env.SUPABASE_MEMBERS_TABLE || "signup_requests",
   fallback: process.env.SUPABASE_SIGNUP_REQUESTS_TABLE || "signup_requests"
 };
 
@@ -68,6 +68,7 @@ const AIRTABLE_BOOTSTRAP_SCHEMAS = {
     fields: [
       { name: "Name", type: "singleLineText" },
       { name: "Email", type: "singleLineText" },
+      { name: "Area of Interest", type: "singleLineText" },
       { name: "Phone", type: "singleLineText" },
       { name: "Website", type: "singleLineText" },
       { name: "Professional Title", type: "singleLineText" },
@@ -226,7 +227,7 @@ async function bootstrap(user) {
   let savedEventIds = [];
 
   if (user?.email) {
-    const account = await findDirectoryByEmail(user.email);
+    const account = await findSaverAccount(user);
     const [providerSaves, eventSaves] = await Promise.all([list("savedProviders"), list("savedEvents")]);
     savedProviderIds = providerSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r)).flatMap(providerIds);
     savedEventIds = eventSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r)).flatMap(eventIds);
@@ -260,7 +261,7 @@ async function getEvent(id, user) {
 
 async function dashboard(user) {
   const [providers, events, providerSaves, eventSaves, account] = await Promise.all([
-    list("directory"), list("events"), list("savedProviders"), list("savedEvents"), findDirectoryByEmail(user.email)
+    list("directory"), list("events"), list("savedProviders"), list("savedEvents"), ensureSaverAccount(user)
   ]);
   const myProviderSaves = providerSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r));
   const myEventSaves = eventSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r));
@@ -269,11 +270,18 @@ async function dashboard(user) {
   const savedProviders = unique(myProviderSaves.flatMap(providerIds)).map((id) => providerMap.get(id)).filter(Boolean);
   const savedEvents = unique(myEventSaves.flatMap(eventIds)).map((id) => eventMap.get(id)).filter(Boolean);
   const upcoming = savedEvents.filter((event) => event.start && new Date(event.start).getTime() >= Date.now()).length;
-  return { savedProviders, savedEvents, counts: { savedProviders: savedProviders.length, savedEvents: savedEvents.length, upcomingEvents: upcoming } };
+  const accountType = accountTypeForUser(user);
+  const signup = accountType === "provider" ? await findSignupByEmail("provider", user.email).catch(() => null) : account;
+  return {
+    account: { ...accountFromRecord(user, account, accountType), interests: accountInterests(account, signup, accountType) },
+    savedProviders,
+    savedEvents,
+    counts: { savedProviders: savedProviders.length, savedEvents: savedEvents.length, upcomingEvents: upcoming }
+  };
 }
 
 async function myEvents(user) {
-  const [events, saves, account] = await Promise.all([list("events"), list("savedEvents"), findDirectoryByEmail(user.email)]);
+  const [events, saves, account] = await Promise.all([list("events"), list("savedEvents"), ensureSaverAccount(user)]);
   const normalized = events.map(normalizeEvent);
   const hosted = normalized.filter((event) => lower(event.hostEmail) === lower(user.email));
   const ids = unique(saves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r)).flatMap(eventIds));
@@ -282,7 +290,7 @@ async function myEvents(user) {
 }
 
 async function savedProviders(user) {
-  const [providers, saves, account] = await Promise.all([list("directory"), list("savedProviders"), findDirectoryByEmail(user.email)]);
+  const [providers, saves, account] = await Promise.all([list("directory"), list("savedProviders"), ensureSaverAccount(user)]);
   const providerMap = new Map(providers.map((r) => [r.id, normalizeProvider(r)]));
   const mapped = await mappedFields("providerSave");
   const items = saves.filter((r) => belongsTo(r, user.email, account?.id)).map((record) => {
@@ -298,11 +306,7 @@ async function savedProviders(user) {
 async function toggleProvider(user, body) {
   if (!body.providerId) throw httpError(400, "Missing provider ID.");
   const provider = normalizeProvider(await get("directory", body.providerId));
-  const account = await ensureDirectoryAccount({
-    email: user.email,
-    name: publicUser(user)?.name || user.email.split("@")[0],
-    accountType: publicUser(user)?.accountType || "client"
-  });
+  const account = await ensureSaverAccount(user);
   const saves = await list("savedProviders");
   const mapped = await mappedFields("providerSave");
   const existing = saves.find((r) => belongsTo(r, user.email, account.id) && providerIds(r).includes(body.providerId));
@@ -325,11 +329,7 @@ async function toggleProvider(user, body) {
 async function toggleEvent(user, body) {
   if (!body.eventId) throw httpError(400, "Missing event ID.");
   const event = normalizeEvent(await get("events", body.eventId));
-  const account = await ensureDirectoryAccount({
-    email: user.email,
-    name: publicUser(user)?.name || user.email.split("@")[0],
-    accountType: publicUser(user)?.accountType || "client"
-  });
+  const account = await ensureSaverAccount(user);
   const saves = await list("savedEvents");
   const mapped = await mappedFields("eventSave");
   const existing = saves.find((r) => belongsTo(r, user.email, account.id) && eventIds(r).includes(body.eventId));
@@ -395,13 +395,10 @@ async function updateAdminEvent(user, body) {
 }
 
 async function accountSettings(user) {
-  const account = await ensureDirectoryAccountForUser(user, {
-    email: user.email,
-    name: publicUser(user)?.name || user.email.split("@")[0],
-    accountType: publicUser(user)?.accountType || "client"
-  });
-  const accountDetails = accountFromRecord(user, account);
-  const signup = await findSignupByEmail(accountDetails.accountType, user.email).catch(() => null);
+  const accountType = accountTypeForUser(user);
+  const account = await ensureSaverAccount(user);
+  const accountDetails = accountFromRecord(user, account, accountType);
+  const signup = accountType === "provider" ? await findSignupByEmail(accountDetails.accountType, user.email).catch(() => null) : account;
   return {
     account: { ...accountDetails, interests: accountInterests(account, signup, accountDetails.accountType) },
     directoryOptions: await getDirectoryOptions()
@@ -430,14 +427,9 @@ async function signupProfile(body) {
   const supabaseSync = await syncSignupToSupabase(normalizedType, syncPayload);
   const mapped = await mappedFields(normalizedType === "provider" ? "providerSignup" : "clientSignup");
 
-  const account = await ensureDirectoryAccount({
-    email,
-    name,
-    accountType: normalizedType
-  });
   const directoryAccount = normalizedType === "provider"
-    ? await updateSafe("directory", account.id, await providerApplicationFields({ ...body.application, name, email, phone: body.phone, website: body.website, professionalTitle: body.professionalTitle, message: body.message }))
-    : account;
+    ? await updateSafe("directory", (await ensureDirectoryAccount({ email, name, accountType: normalizedType })).id, await providerApplicationFields({ ...body.application, name, email, phone: body.phone, website: body.website, professionalTitle: body.professionalTitle, message: body.message }))
+    : signup;
 
   return {
     ok: true,
@@ -498,19 +490,31 @@ async function providerApplicationFields(application = {}) {
 }
 
 async function saveAccount(user, body) {
-  const account = await ensureDirectoryAccountForUser(user, {
-    email: user.email,
-    name: body.name || publicUser(user)?.name || user.email.split("@")[0],
-    accountType: body.accountType || "client"
-  });
-  const fields = {};
-  const table = await metadataTable("directory").catch(() => null);
-  setResolvedAlias(fields, table, FIELDS.provider.name, body.name);
-  setResolvedAlias(fields, table, FIELDS.provider.email, user.email);
-  setResolvedAlias(fields, table, FIELDS.provider.accountType, body.accountType);
-  setResolvedAlias(fields, table, FIELDS.provider.type, body.interests || body.areaInterest);
-  const saved = Object.keys(fields).length ? await updateSafe("directory", account.id, fields) : account;
   const accountType = lower(body.accountType) === "provider" ? "provider" : "client";
+  let saved;
+  if (accountType === "provider") {
+    const account = await ensureDirectoryAccountForUser(user, {
+      email: user.email,
+      name: body.name || publicUser(user)?.name || user.email.split("@")[0],
+      accountType
+    });
+    const fields = {};
+    const table = await metadataTable("directory").catch(() => null);
+    setResolvedAlias(fields, table, FIELDS.provider.name, body.name);
+    setResolvedAlias(fields, table, FIELDS.provider.email, user.email);
+    setResolvedAlias(fields, table, FIELDS.provider.accountType, accountType);
+    setResolvedAlias(fields, table, FIELDS.provider.type, body.interests || body.areaInterest);
+    saved = Object.keys(fields).length ? await updateSafe("directory", account.id, fields) : account;
+  } else {
+    saved = await ensureMemberAccount({
+      email: user.email,
+      name: body.name || publicUser(user)?.name || user.email.split("@")[0],
+      accountType,
+      status: "Approved",
+      areaInterest: body.interests || body.areaInterest,
+      source: "account"
+    });
+  }
   const signup = await recordSignup(accountType, {
     name: body.name || publicUser(user)?.name || user.email.split("@")[0],
     email: user.email,
@@ -526,7 +530,7 @@ async function saveAccount(user, body) {
     status: accountType === "provider" ? "Pending Review" : "Approved",
     areaInterest: body.interests || body.areaInterest
   });
-  return { ok: true, account: { ...accountFromRecord(user, saved), interests: arrayRaw(body.interests || body.areaInterest) }, signup, supabaseSync };
+  return { ok: true, account: { ...accountFromRecord(user, saved, accountType), interests: arrayRaw(body.interests || body.areaInterest) }, signup, supabaseSync };
 }
 
 async function myProfile(user) {
@@ -833,6 +837,7 @@ async function recordSignup(accountType, body) {
   const table = signupTableForType(accountType);
   const result = await safeAirtableSignup(table, accountType, body);
   if (result) return result;
+  if (lower(accountType) !== "provider") throw httpError(500, "Members table was not found in Airtable, so the member account was not recorded.");
   const fallbackTable = "directory";
   const fields = buildSignupFallbackFields(accountType, body);
   const fallbackRecord = await createSafe(fallbackTable, fields);
@@ -860,7 +865,7 @@ async function safeAirtableSignup(table, accountType, body) {
   setOptional(fields, mapped.professionalTitle, body.professionalTitle);
   setOptional(fields, mapped.message, body.message);
   setOptional(fields, mapped.areaInterest, body.areaInterest);
-  setOptional(fields, mapped.source, "app");
+  setOptional(fields, mapped.source, body.source || "app");
 
   const records = await list(table);
   const existing = records.find((record) => {
@@ -1089,6 +1094,49 @@ async function ensureDirectoryAccount({ email, name, accountType }) {
   return createSafe("directory", fields);
 }
 
+async function ensureSaverAccount(user) {
+  const accountType = accountTypeForUser(user);
+  if (accountType === "provider") {
+    return ensureDirectoryAccountForUser(user, {
+      email: user.email,
+      name: publicUser(user)?.name || user.email.split("@")[0],
+      accountType
+    });
+  }
+  return ensureMemberAccount({
+    email: user.email,
+    name: publicUser(user)?.name || user.email.split("@")[0],
+    accountType: "client",
+    status: "Approved",
+    areaInterest: user.user_metadata?.area_interest || user.userMetadata?.area_interest || user.user_metadata?.areaInterest || user.userMetadata?.areaInterest,
+    source: "app"
+  });
+}
+
+async function findSaverAccount(user) {
+  const accountType = accountTypeForUser(user);
+  if (accountType === "provider") return findDirectoryByEmail(user.email);
+  return findSignupByEmail("client", user.email).catch(() => null);
+}
+
+async function ensureMemberAccount(body) {
+  const record = await safeAirtableSignup("clients", "client", {
+    name: body.name,
+    email: body.email,
+    accountType: "client",
+    status: body.status || "Approved",
+    areaInterest: body.areaInterest,
+    source: body.source || "app"
+  });
+  if (!record) throw httpError(500, "Members table was not found in Airtable, so the member account was not recorded.");
+  return record;
+}
+
+function accountTypeForUser(user) {
+  const publicAccountType = lower(publicUser(user)?.accountType);
+  return hasProviderAccess(user) || publicAccountType === "provider" ? "provider" : "client";
+}
+
 function accountInterests(accountRecord, signupRecord, accountType) {
   if (lower(accountType) === "provider") {
     const providerTypes = array(pick(accountRecord.fields || {}, FIELDS.provider.type));
@@ -1101,13 +1149,21 @@ function accountInterests(accountRecord, signupRecord, accountType) {
   return array(pick(accountRecord.fields || {}, FIELDS.provider.type));
 }
 
-function accountFromRecord(user, record) {
+function accountFromRecord(user, record, forcedAccountType = "") {
+  if (!record) {
+    return {
+      id: "",
+      email: user.email || "",
+      name: publicUser(user)?.name || "",
+      accountType: forcedAccountType || user.user_metadata?.account_type || user.userMetadata?.account_type || "client"
+    };
+  }
   const f = record.fields || {};
   return {
     id: record.id,
     email: text(pick(f, FIELDS.provider.email)) || user.email || "",
     name: text(pick(f, FIELDS.provider.name)) || publicUser(user)?.name || "",
-    accountType: text(pick(f, FIELDS.provider.accountType)) || user.user_metadata?.account_type || user.userMetadata?.account_type || "client"
+    accountType: forcedAccountType || text(pick(f, FIELDS.provider.accountType)) || user.user_metadata?.account_type || user.userMetadata?.account_type || "client"
   };
 }
 

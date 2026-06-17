@@ -30,7 +30,7 @@ export default function Root() {
   React.useEffect(() => {
     const hash = window.location.hash || "";
     if (!/^#(confirmation_token|recovery_token|invite_token|email_change_token|access_token)=/.test(hash)) return;
-    handleAuthCallback().then((callback) => {
+    handleAuthCallback().then(async (callback) => {
       if (callback?.type === "invite" && callback.token) {
         sessionStorage.setItem("thd_invite_token", callback.token);
         window.location.replace("/reset-password?flow=invite");
@@ -40,7 +40,10 @@ export default function Root() {
         window.location.replace("/reset-password");
         return;
       }
-      window.location.replace("/dashboard");
+      const currentUser = callback?.user || await getUser().catch(() => null);
+      const metadata = currentUser?.user_metadata || currentUser?.userMetadata || {};
+      const accountType = String(metadata.account_type || metadata.accountType || "").toLowerCase();
+      window.location.replace(accountType === "provider" ? "/dashboard" : "/client-dashboard");
     }).catch(() => {
       window.location.replace("/login?auth=error");
     });

@@ -17,9 +17,20 @@ export default function ClientDashboard() {
       }
       setUser({
         email: current.email || "",
-        name: current.name || current.userMetadata?.full_name || "",
+        name: current.userMetadata?.full_name || current.name || "",
       });
-      api("dashboard").then(setPayload).catch(() => setPayload({ counts: {}, savedProviders: [], savedEvents: [] }));
+      api("dashboard")
+        .then((nextPayload) => {
+          setPayload(nextPayload);
+          if (nextPayload.account) {
+            setUser((existing) => ({
+              ...(existing || {}),
+              email: nextPayload.account.email || existing?.email || current.email || "",
+              name: cleanName(nextPayload.account.name) || cleanName(current.userMetadata?.full_name) || cleanName(current.name) || "",
+            }));
+          }
+        })
+        .catch(() => setPayload({ counts: {}, savedProviders: [], savedEvents: [] }));
     });
   }, []);
 
@@ -32,12 +43,12 @@ export default function ClientDashboard() {
     <header className="site-header warm-header">
       <button className="brand" onClick={() => go("/")}><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></button>
       <nav className="site-nav"><button onClick={() => go("/")}>Providers</button><button onClick={() => go("/events")}>Events</button><button onClick={() => go("/client-dashboard")}>Dashboard</button></nav>
-      <div className="account-actions"><button className="account-chip" onClick={() => go("/account-settings")}><CircleUserRound size={17} /><span>{firstName(user.name || user.email)}</span></button><button className="icon-button logout-arrow" onClick={signOut} title="Log out"><LogOut size={18} /></button></div>
+      <div className="account-actions"><button className="account-chip" onClick={() => go("/account-settings")}><CircleUserRound size={17} /><span>{firstName(cleanName(user.name) || user.email)}</span></button><button className="icon-button logout-arrow" onClick={signOut} title="Log out"><LogOut size={18} /></button></div>
     </header>
     <main className="client-dashboard-page">
       <section className="client-dashboard-hero">
         <p className="client-dashboard-kicker">Client Dashboard</p>
-        <h1>Welcome back, {firstName(user.name || user.email)}.</h1>
+        <h1>Welcome back, {firstName(cleanName(user.name) || user.email)}.</h1>
         <p>Your saved healing support lives here - workshops you want to return to and providers who feel aligned for your next step.</p>
         <div className="client-dashboard-actions"><button className="button client-primary" onClick={() => go("/events")}>Browse Workshops</button><button className="button client-secondary" onClick={() => go("/")}>Find Providers</button></div>
       </section>
@@ -73,6 +84,7 @@ function SavedList({ items, kind }) {
 }
 
 function firstName(value) { return String(value || "there").split(/[ @._-]/).filter(Boolean)[0] || "there"; }
+function cleanName(value) { const name = String(value || "").trim(); return ["name", "full name", "your name"].includes(name.toLowerCase()) ? "" : name; }
 function formatDate(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(time); }
 function go(path) { window.location.assign(path); }
 async function signOut() { await logout().catch(() => null); window.location.assign("/"); }

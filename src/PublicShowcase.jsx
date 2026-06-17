@@ -131,7 +131,7 @@ export default function PublicShowcase({ path }) {
       : path === "/event-details"
         ? <EventDetails data={data} loading={loading} toggleSave={toggleSave} />
       : path === "/events"
-        ? <EventsPage data={data} loading={loading} toggleSave={toggleSave} />
+        ? <EventsPage data={data} loading={loading} toggleSave={toggleSave} user={user} />
         : <DirectoryPage data={data} loading={loading} toggleSave={toggleSave} />}
     <footer className="site-footer"><div><strong>The Healing Directory</strong><p>Thoughtful connections for healing, wellness, and trusted referrals.</p></div><nav><button onClick={() => go("/terms")}>Terms and Conditions</button><button onClick={() => go("/privacy")}>Privacy Policy</button></nav></footer>
   </div>;
@@ -204,7 +204,6 @@ function DirectoryPage({ data, loading, toggleSave }) {
     </section>
     <section className="content-shell">
       <div className="provider-invite"><div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div><button className="button warm" onClick={() => go("/provider-signup")}>Become a Provider <ArrowRight size={17} /></button></div>
-      <div className="results-count"><strong>{providers.length}</strong> providers shown</div>
       {loading ? <State label="Loading providers" /> : providers.length ? <><div className="provider-list">{visibleProviders.map((provider) => <ProviderCard key={provider.id} provider={provider} saved={data.savedProviderIds.includes(provider.id)} onSave={() => toggleSave("provider", provider.id, !data.savedProviderIds.includes(provider.id))} />)}</div><ViewMoreList shown={visibleProviders.length} total={providers.length} label="providers" onMore={() => setVisibleCount((value) => value + LIST_PAGE_SIZE)} /></> : <State label="No providers match that search" />}
     </section>
   </main>;
@@ -273,34 +272,39 @@ function ProviderDetails({ data, loading, toggleSave }) {
   </main>;
 }
 
-function EventsPage({ data, loading, toggleSave }) {
+function EventsPage({ data, loading, toggleSave, user }) {
   const [tab, setTab] = React.useState("all");
   const [query, setQuery] = React.useState("");
   const [category, setCategory] = React.useState("");
   const [locationType, setLocationType] = React.useState("");
   const [visibleCount, setVisibleCount] = React.useState(LIST_PAGE_SIZE);
-  const categories = unique(data.events.map((event) => event.category)).sort();
-  const locations = unique(data.events.map((event) => event.locationType)).sort();
-  const events = data.events.filter((event) => {
-    const providerOnly = String(event.audience || "").toLowerCase().includes("provider");
+  const canSeeProviderEvents = hasProviderEventAccess(user);
+  const visibleSourceEvents = canSeeProviderEvents ? data.events : data.events.filter((event) => !isProviderOnlyEvent(event));
+  const categories = unique(visibleSourceEvents.map((event) => event.category)).sort();
+  const locations = unique(visibleSourceEvents.map((event) => event.locationType)).sort();
+  const availableTabs = canSeeProviderEvents ? ["all", "community", "provider", "saved"] : ["all", "community", "saved"];
+  React.useEffect(() => {
+    if (!availableTabs.includes(tab)) setTab("all");
+  }, [availableTabs, tab]);
+  const events = visibleSourceEvents.filter((event) => {
+    const providerOnly = isProviderOnlyEvent(event);
     const saved = data.savedEventIds.includes(event.id);
     const matchesTab = tab === "all" || (tab === "community" && !providerOnly) || (tab === "provider" && providerOnly) || (tab === "saved" && saved);
     const text = [event.name, event.hostName, event.category, event.description].join(" ").toLowerCase();
     return matchesTab && (!query || text.includes(query.toLowerCase())) && (!category || event.category === category) && (!locationType || event.locationType === locationType);
   });
-  const community = data.events.filter((event) => !String(event.audience || "").toLowerCase().includes("provider")).length;
+  const community = visibleSourceEvents.filter((event) => !isProviderOnlyEvent(event)).length;
   React.useEffect(() => {
     setVisibleCount(LIST_PAGE_SIZE);
   }, [tab, query, category, locationType, data.events.length]);
   const visibleEvents = events.slice(0, visibleCount);
   return <main className="events-page">
     <section className="events-hero"><div className="band-inner events-hero-grid">
-      <div><p className="event-kicker"><span /> Events</p><h1>Workshops, circles, trainings, and healing community events.</h1><p className="lede">Browse upcoming events from The Healing Directory community.</p><div className="action-row"><button className="button event-primary" onClick={() => go("/add-event")}><Plus size={16} /> Add an Event</button><button className="button event-secondary" onClick={() => setTab("community")}><HeartHandshake size={16} /> Community Events</button><button className="button event-secondary" onClick={() => setTab("provider")}><LockKeyhole size={16} /> Provider Events</button></div></div>
-      <aside className="event-summary-panel"><CalendarDays size={30} /><h2>Explore what's coming up.</h2><p>Find healing-centered spaces, local gatherings, professional trainings, and community events all in one place.</p><div><EventCount value={data.events.length} label="Events" /><EventCount value={community} label="Community" /><EventCount value={data.events.length - community} label="Providers" /></div></aside>
+      <div><p className="event-kicker"><span /> Events</p><h1>Workshops, circles, trainings, and healing community events.</h1><p className="lede">Browse upcoming events from The Healing Directory community.</p><div className="action-row">{canSeeProviderEvents ? <button className="button event-primary" onClick={() => go("/add-event")}><Plus size={16} /> Add an Event</button> : null}<button className="button event-secondary" onClick={() => setTab("community")}><HeartHandshake size={16} /> Community Events</button>{canSeeProviderEvents ? <button className="button event-secondary" onClick={() => setTab("provider")}><LockKeyhole size={16} /> Provider Events</button> : null}</div></div>
+      <aside className="event-summary-panel"><CalendarDays size={30} /><h2>Explore what's coming up.</h2><p>Find healing-centered spaces, local gatherings, professional trainings, and community events all in one place.</p>{canSeeProviderEvents ? <div><EventCount value={visibleSourceEvents.length} label="Events" /><EventCount value={community} label="Community" /><EventCount value={visibleSourceEvents.length - community} label="Providers" /></div> : null}</aside>
     </div></section>
     <section className="content-shell">
-      <div className="event-filter-panel"><div className="segmented">{["all", "community", "provider", "saved"].map((key) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{key === "provider" ? <LockKeyhole size={14} /> : key === "saved" ? <Bookmark size={14} /> : <Users size={14} />}{capitalize(key)}</button>)}</div><div className="event-filter-grid"><label className="search-control pale"><span className="filter-label">Search</span><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search event, host, topic, description..." /></label><label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Location type</span><select value={locationType} onChange={(event) => setLocationType(event.target.value)}><option value="">All location types</option>{locations.map((value) => <option key={value}>{value}</option>)}</select></label></div></div>
-      <div className="results-count"><strong>{events.length}</strong> events shown</div>
+      <div className="event-filter-panel"><div className="segmented">{availableTabs.map((key) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{key === "provider" ? <LockKeyhole size={14} /> : key === "saved" ? <Bookmark size={14} /> : <Users size={14} />}{capitalize(key)}</button>)}</div><div className="event-filter-grid"><label className="search-control pale"><span className="filter-label">Search</span><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search event, host, topic, description..." /></label><label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Location type</span><select value={locationType} onChange={(event) => setLocationType(event.target.value)}><option value="">All location types</option>{locations.map((value) => <option key={value}>{value}</option>)}</select></label></div></div>
       {loading ? <State label="Loading events" /> : events.length ? <><div className="event-grid">{visibleEvents.map((event) => <EventCard key={event.id} event={event} saved={data.savedEventIds.includes(event.id)} onSave={() => toggleSave("event", event.id, !data.savedEventIds.includes(event.id))} />)}</div><ViewMoreList shown={visibleEvents.length} total={events.length} label="events" onMore={() => setVisibleCount((value) => value + LIST_PAGE_SIZE)} /></> : <State label="No events in this view" />}
     </section>
   </main>;
@@ -400,7 +404,7 @@ function LeafIcon() { return <HeartHandshake size={20} />; }
 function MugIcon() { return <Clock size={20} />; }
 function EventCount({ value, label }) { return <div className="event-count"><strong>{value}</strong><span>{label}</span></div>; }
 function EventInfo({ icon, label, value }) { if (!value) return null; return <div className="event-info">{React.cloneElement(icon, { size: 19 })}<span><small>{label}</small><strong>{value}</strong></span></div>; }
-function ViewMoreList({ shown, total, onMore, label = "items" }) { if (!total || shown >= total) return null; return <div className="view-more-row"><button type="button" className="button tertiary" onClick={onMore}>View more</button><span>Showing {shown} of {total} {label}</span></div>; }
+function ViewMoreList({ shown, total, onMore }) { if (!total || shown >= total) return null; return <div className="view-more-row"><button type="button" className="button tertiary" onClick={onMore}>View more</button></div>; }
 function State({ label }) { return <div className="state"><HeartHandshake /><h2>{label}</h2></div>; }
 function go(path) { window.location.assign(path); }
 function normalizeUser(current) {
@@ -419,6 +423,11 @@ function defaultDashboardPath(current) {
   const accountType = String(current?.userMetadata?.account_type || current?.userMetadata?.accountType || "").toLowerCase();
   return current?.roles?.includes("provider") || current?.roles?.includes("admin") || accountType === "provider" ? "/dashboard" : "/client-dashboard";
 }
+function hasProviderEventAccess(current) {
+  const accountType = String(current?.userMetadata?.account_type || current?.userMetadata?.accountType || "").toLowerCase();
+  return current?.roles?.includes("provider") || current?.roles?.includes("admin") || accountType === "provider";
+}
+function isProviderOnlyEvent(event) { return String(event?.audience || "").toLowerCase().includes("provider"); }
 function optionChoices(options = [], fallback = []) { return (options?.length ? unique(options) : unique(fallback || [])).filter((value) => String(value).trim().toLowerCase() !== "all").sort(); }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function truncate(value, max) { const text = String(value || "").replace(/\s+/g, " ").trim(); return text.length > max ? `${text.slice(0, max - 1)}...` : text; }
