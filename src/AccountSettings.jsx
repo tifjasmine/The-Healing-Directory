@@ -1,15 +1,19 @@
 import React from "react";
-import { ArrowRight, CalendarDays, HeartHandshake, LayoutDashboard, LockKeyhole, RefreshCw, Save, Settings, ShieldCheck, UserRound } from "lucide-react";
-import { requestPasswordRecovery } from "@netlify/identity";
+import { ArrowRight, CalendarDays, Check, ChevronDown, HeartHandshake, LayoutDashboard, LockKeyhole, RefreshCw, Save, Settings, UserRound, X } from "lucide-react";
+import { requestPasswordRecovery, updateUser } from "@netlify/identity";
 
 const API = "/.netlify/functions/app-api";
+const FALLBACK_INTERESTS = ["Therapist", "Coach", "Bodyworker", "Energy Worker", "Holistic Health", "Consultant", "Events", "Referral Room"];
 
 export default function AccountSettings({ user, navigate, setNotice, setUser }) {
   const [form, setForm] = React.useState({
     name: user?.name || "",
     email: user?.email || "",
     accountType: user?.userMetadata?.account_type || user?.userMetadata?.accountType || "client",
+    interests: [],
   });
+  const [originalEmail, setOriginalEmail] = React.useState(user?.email || "");
+  const [interestOptions, setInterestOptions] = React.useState(FALLBACK_INTERESTS);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
 
@@ -23,7 +27,11 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
           name: payload.account?.name || user?.name || "",
           email: payload.account?.email || user?.email || "",
           accountType: payload.account?.accountType || "client",
+          interests: payload.account?.interests || [],
         });
+        setOriginalEmail(payload.account?.email || user?.email || "");
+        const providerTypes = payload.directoryOptions?.providerType;
+        if (Array.isArray(providerTypes) && providerTypes.length) setInterestOptions([...providerTypes, "Events", "Referral Room"]);
       })
       .catch((error) => setNotice(error.message || "Account settings could not load."))
       .finally(() => alive && setLoading(false));
@@ -42,8 +50,34 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
     setSaving(true);
 
     try {
-      const payload = await api("save-account", { method: "POST", body: form });
-      setNotice("Account settings saved.");
+      const nextEmail = form.email.trim().toLowerCase();
+      const currentEmail = originalEmail.trim().toLowerCase();
+      const emailChanged = nextEmail && nextEmail !== currentEmail;
+
+      if (emailChanged) {
+        await updateUser({
+          email: nextEmail,
+          data: {
+            full_name: form.name,
+            account_type: form.accountType,
+            accountType: form.accountType,
+            area_interest: form.interests,
+            previous_email: originalEmail,
+          },
+        });
+      } else {
+        await updateUser({
+          data: {
+            full_name: form.name,
+            account_type: form.accountType,
+            accountType: form.accountType,
+            area_interest: form.interests,
+          },
+        }).catch(() => null);
+      }
+
+      const payload = await api("save-account", { method: "POST", body: { ...form, email: originalEmail } });
+      setNotice(emailChanged ? "Confirmation email sent. Your account email will update after you confirm it." : "Account settings saved.");
 
       if (payload.account) {
         setUser?.((current) => current ? {
@@ -52,6 +86,8 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
           userMetadata: {
             ...(current.userMetadata || {}),
             account_type: payload.account.accountType,
+            area_interest: payload.account.interests || form.interests,
+            previous_email: emailChanged ? originalEmail : current.userMetadata?.previous_email,
           },
         } : current);
       }
@@ -60,6 +96,15 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
     } finally {
       setSaving(false);
     }
+  }
+
+  function toggleInterest(value) {
+    setForm((current) => ({
+      ...current,
+      interests: current.interests.includes(value)
+        ? current.interests.filter((item) => item !== value)
+        : [...current.interests, value],
+    }));
   }
 
   async function sendPasswordReset() {
@@ -97,7 +142,7 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
             <Settings size={20} />
             <div>
               <h2>Account Details</h2>
-              <p>Small edits here keep your login and dashboard records aligned.</p>
+              <p>Update the basics connected to your member profile.</p>
             </div>
           </div>
 
@@ -110,16 +155,12 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
 
           <label className="profile-field">
             <span>Email</span>
-            <input type="email" value={form.email} readOnly />
+            <input type="email" value={form.email} onChange={(event) => update("email", event.target.value)} placeholder="you@email.com" />
           </label>
 
-          <label className="profile-field">
-            <span>Account type</span>
-            <select value={form.accountType} onChange={(event) => update("accountType", event.target.value)}>
-              <option value="client">Community member / client</option>
-              <option value="provider">Provider</option>
-            </select>
-          </label>
+          <InterestPicker values={form.interests} options={interestOptions} onToggle={toggleInterest} />
+
+          {form.email.trim().toLowerCase() !== originalEmail.trim().toLowerCase() ? <div className="account-email-note">Changing your email sends a confirmation link. Your saved records update after the new email is confirmed.</div> : null}
 
           <div className="profile-actions">
             <button type="button" className="button tertiary" onClick={sendPasswordReset}>
@@ -134,11 +175,6 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
         </form>
 
         <aside className="account-side-stack">
-          <section className="account-card account-summary-card">
-            <ShieldCheck size={24} />
-            <h2>Connected</h2>
-            <p>Your saved lists use this email so providers and events appear in your dashboard.</p>
-          </section>
           <section className="account-card account-quick">
             <h2>Next Steps</h2>
             <button onClick={() => navigate(form.accountType === "provider" ? "/dashboard" : "/client-dashboard")}><LayoutDashboard size={17} /> Open dashboard <ArrowRight size={16} /></button>
@@ -151,6 +187,39 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
       </section>
     </main>
   );
+}
+
+function InterestPicker({ values, options, onToggle }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+  const selected = Array.isArray(values) ? values : [];
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const close = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) setOpen(false);
+    };
+    const escape = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+
+  return <div className="account-interest" ref={ref}>
+    <span>Interests</span>
+    <button type="button" className={open ? "account-interest-trigger open" : "account-interest-trigger"} onClick={() => setOpen((current) => !current)}>
+      <strong>{selected.length ? `${selected.length} selected` : "Choose interests"}</strong><ChevronDown size={17} />
+    </button>
+    {selected.length ? <div className="account-interest-selected">{selected.map((value) => <button type="button" key={value} onClick={() => onToggle(value)}>{value}<X size={12} /></button>)}</div> : null}
+    {open ? <div className="account-interest-menu">
+      {options.map((option) => <button type="button" key={option} className={selected.includes(option) ? "selected" : ""} onClick={() => onToggle(option)}><span>{selected.includes(option) ? <Check size={14} /> : null}</span>{option}</button>)}
+    </div> : null}
+  </div>;
 }
 
 async function api(action, options = {}) {

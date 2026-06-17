@@ -160,6 +160,7 @@ const SAVE_FIELD_SETS = {
     name: ["Name", "Full Name", "Provider Name"],
     email: ["Email"],
     phone: ["Phone", "Phone Number", "Mobile"],
+    areaInterest: ["Area of Interest", "Provider Type Interest", "Interested Provider Type", "Interested In"],
     status: ["Status", "Request Status", "Approval Status"],
     accountType: ["Account Type", "Type", "Role", "User Type"],
     source: ["Source", "Referral Source", "Channel", "Signup Source"]
@@ -394,12 +395,17 @@ async function updateAdminEvent(user, body) {
 }
 
 async function accountSettings(user) {
-  const account = await ensureDirectoryAccount({
+  const account = await ensureDirectoryAccountForUser(user, {
     email: user.email,
     name: publicUser(user)?.name || user.email.split("@")[0],
-    accountType: "client"
+    accountType: publicUser(user)?.accountType || "client"
   });
-  return { account: accountFromRecord(user, account) };
+  const accountDetails = accountFromRecord(user, account);
+  const signup = await findSignupByEmail(accountDetails.accountType, user.email).catch(() => null);
+  return {
+    account: { ...accountDetails, interests: accountInterests(account, signup, accountDetails.accountType) },
+    directoryOptions: await getDirectoryOptions()
+  };
 }
 
 async function signupProfile(body) {
@@ -492,16 +498,35 @@ async function providerApplicationFields(application = {}) {
 }
 
 async function saveAccount(user, body) {
-  const account = await ensureDirectoryAccount({
+  const account = await ensureDirectoryAccountForUser(user, {
     email: user.email,
     name: body.name || publicUser(user)?.name || user.email.split("@")[0],
     accountType: body.accountType || "client"
   });
   const fields = {};
-  setAlias(fields, FIELDS.provider.name, body.name);
-  setAlias(fields, FIELDS.provider.accountType, body.accountType);
+  const table = await metadataTable("directory").catch(() => null);
+  setResolvedAlias(fields, table, FIELDS.provider.name, body.name);
+  setResolvedAlias(fields, table, FIELDS.provider.email, user.email);
+  setResolvedAlias(fields, table, FIELDS.provider.accountType, body.accountType);
+  setResolvedAlias(fields, table, FIELDS.provider.type, body.interests || body.areaInterest);
   const saved = Object.keys(fields).length ? await updateSafe("directory", account.id, fields) : account;
-  return { ok: true, account: accountFromRecord(user, saved) };
+  const accountType = lower(body.accountType) === "provider" ? "provider" : "client";
+  const signup = await recordSignup(accountType, {
+    name: body.name || publicUser(user)?.name || user.email.split("@")[0],
+    email: user.email,
+    accountType,
+    status: accountType === "provider" ? "Pending Review" : "Approved",
+    areaInterest: body.interests || body.areaInterest,
+    source: "account"
+  }).catch((error) => ({ syncWarning: error.message }));
+  const supabaseSync = await syncSignupToSupabase(accountType, {
+    name: body.name || publicUser(user)?.name || user.email.split("@")[0],
+    email: user.email,
+    accountType,
+    status: accountType === "provider" ? "Pending Review" : "Approved",
+    areaInterest: body.interests || body.areaInterest
+  });
+  return { ok: true, account: { ...accountFromRecord(user, saved), interests: arrayRaw(body.interests || body.areaInterest) }, signup, supabaseSync };
 }
 
 async function myProfile(user) {
@@ -1016,9 +1041,39 @@ async function findDirectoryByEmail(email) {
   return records.find((record) => lower(text(pick(record.fields || {}, FIELDS.provider.email))) === lower(email));
 }
 
+async function findSignupByEmail(accountType, email) {
+  const table = signupTableForType(accountType);
+  const mapped = await mappedFields(lower(accountType) === "provider" ? "providerSignup" : "clientSignup");
+  const records = await list(table);
+  return records.find((record) => {
+    const existingEmail = firstEmail(pick(record.fields || {}, [mapped.email]));
+    return existingEmail && lower(existingEmail) === lower(email);
+  });
+}
+
 function setOptional(fields, fieldName, value) {
   if (!fieldName) return;
   setAlias(fields, [fieldName], value);
+}
+
+async function ensureDirectoryAccountForUser(user, fallback) {
+  const currentEmail = requiredEmail(user.email);
+  const existing = await findDirectoryByEmail(currentEmail);
+  if (existing) return existing;
+
+  const metadata = user.user_metadata || user.userMetadata || {};
+  const previousEmail = lower(metadata.previous_email || metadata.previousEmail || "");
+  const previous = previousEmail ? await findDirectoryByEmail(previousEmail) : null;
+  if (previous) {
+    const table = await metadataTable("directory").catch(() => null);
+    const fields = {};
+    setResolvedAlias(fields, table, FIELDS.provider.email, currentEmail);
+    setResolvedAlias(fields, table, FIELDS.provider.name, fallback.name || publicUser(user)?.name || currentEmail);
+    setResolvedAlias(fields, table, FIELDS.provider.accountType, fallback.accountType || publicUser(user)?.accountType || "client");
+    return updateSafe("directory", previous.id, fields);
+  }
+
+  return ensureDirectoryAccount({ ...fallback, email: currentEmail });
 }
 
 async function ensureDirectoryAccount({ email, name, accountType }) {
@@ -1032,6 +1087,18 @@ async function ensureDirectoryAccount({ email, name, accountType }) {
   setResolvedAlias(fields, table, FIELDS.provider.accountType, accountType || "client");
   if (lower(accountType) === "provider") setResolvedAlias(fields, table, FIELDS.provider.status, "Pending Review");
   return createSafe("directory", fields);
+}
+
+function accountInterests(accountRecord, signupRecord, accountType) {
+  if (lower(accountType) === "provider") {
+    const providerTypes = array(pick(accountRecord.fields || {}, FIELDS.provider.type));
+    if (providerTypes.length) return providerTypes;
+  }
+  const mapped = lower(accountType) === "provider" ? SAVE_FIELD_SETS.providerSignup : SAVE_FIELD_SETS.clientSignup;
+  const aliases = mapped?.areaInterest || ["Area of Interest"];
+  const signupInterests = arrayRaw(pick(signupRecord?.fields || {}, aliases));
+  if (signupInterests.length) return signupInterests;
+  return array(pick(accountRecord.fields || {}, FIELDS.provider.type));
 }
 
 function accountFromRecord(user, record) {
