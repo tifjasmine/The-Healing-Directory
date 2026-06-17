@@ -53,7 +53,7 @@ const EMPTY = {
   phone: "",
   website: "",
   consultationLink: "",
-  serviceType: [],
+  providerType: [],
   concerns: [],
   servicesOffered: [],
   populationsServed: [],
@@ -89,6 +89,7 @@ export default function ProviderSignupPage() {
   const [form, setForm] = React.useState(EMPTY);
   const [options, setOptions] = React.useState(FALLBACK_OPTIONS);
   const [notice, setNotice] = React.useState("");
+  const [syncWarning, setSyncWarning] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
 
@@ -130,7 +131,7 @@ export default function ProviderSignupPage() {
     setBusy(true);
     setNotice("");
     try {
-      await api("signup-profile", {
+      const result = await api("signup-profile", {
         method: "POST",
         body: {
           name: form.name,
@@ -140,9 +141,13 @@ export default function ProviderSignupPage() {
           website: form.website,
           professionalTitle: form.profession,
           message: form.bio,
+          areaInterest: form.providerType,
           application: form,
         },
       });
+      if (result.supabaseSync && result.supabaseSync.synced === false) {
+        setSyncWarning(`Supabase did not sync this application yet: ${result.supabaseSync.reason || "check table settings"}.`);
+      }
       setSubmitted(true);
     } catch (error) {
       setNotice(error.message || "Your application could not be submitted.");
@@ -151,7 +156,7 @@ export default function ProviderSignupPage() {
     }
   }
 
-  if (submitted) return <PendingApprovalPage />;
+  if (submitted) return <PendingApprovalPage warning={syncWarning} />;
 
   return <div className="provider-join-page">
     <header className="provider-join-hero">
@@ -208,7 +213,7 @@ function Basics({ form, change }) {
 
 function Care({ form, change, toggle, options }) {
   return <Section title="Areas of care" text="Services, concerns, locations, availability, and payment.">
-    <Row><MultiSelect label="Service type" values={form.serviceType} options={options.providerType} onToggle={(value) => toggle("serviceType", value)} required /><MultiSelect label="Concerns / areas of support" values={form.concerns} options={options.support} onToggle={(value) => toggle("concerns", value)} required /></Row>
+    <Row><MultiSelect label="Provider Type" values={form.providerType} options={options.providerType} onToggle={(value) => toggle("providerType", value)} required /><MultiSelect label="Concerns / areas of support" values={form.concerns} options={options.support} onToggle={(value) => toggle("concerns", value)} required /></Row>
     <Row><MultiSelect label="Services offered" values={form.servicesOffered} options={options.services} onToggle={(value) => toggle("servicesOffered", value)} required /><MultiSelect label="People served" values={form.populationsServed} options={options.populations} onToggle={(value) => toggle("populationsServed", value)} required /></Row>
     <Row><MultiSelect label="Payment / insurance" values={form.payType} options={options.payment} onToggle={(value) => toggle("payType", value)} required /><MultiSelect label="State" values={form.state} options={options.locations} onToggle={(value) => toggle("state", value)} required /></Row>
     <Row><MultiSelect label="Availability" values={form.availability} options={options.availability} onToggle={(value) => toggle("availability", value)} required /><TextField label="Price" value={form.price} onChange={change("price")} required placeholder="$125/session, sliding scale, varies..." /></Row>
@@ -253,7 +258,7 @@ function Consent({ form, change, setValue }) {
   </Section>;
 }
 
-function PendingApprovalPage() {
+function PendingApprovalPage({ warning }) {
   return <div className="provider-join-page">
     <header className="provider-join-hero">
       <div className="provider-join-inner provider-pending-hero">
@@ -267,6 +272,7 @@ function PendingApprovalPage() {
         <CheckCircle2 size={46} />
         <h2>Pending approval</h2>
         <p>Thank you for applying to The Healing Directory. We will review your submission and follow up with next steps for account access and password setup after approval.</p>
+        {warning ? <p className="provider-sync-warning">{warning}</p> : null}
         <p>Questions? Email <a href={`mailto:${ADMIN_EMAIL}`}>{ADMIN_EMAIL}</a>.</p>
         <a className="provider-next" href="/">Back to directory <ArrowRight size={15} /></a>
       </section>
@@ -288,8 +294,24 @@ function TextField({ label, required, textarea, ...props }) {
 
 function MultiSelect({ label, values, options, onToggle, required }) {
   const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
   const selected = Array.isArray(values) ? values : [];
-  return <div className="provider-field provider-multi-field">
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const close = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) setOpen(false);
+    };
+    const escape = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+  return <div className="provider-field provider-multi-field" ref={ref}>
     <span>{label}{required ? " *" : ""}</span>
     <button type="button" className={open ? "provider-multi-trigger open" : "provider-multi-trigger"} onClick={() => setOpen((current) => !current)}>
       <strong>{selected.length ? `${selected.length} selected` : "Choose one or more"}</strong><ChevronDown size={17} />
@@ -310,7 +332,7 @@ function ConsentCheck({ checked, onChange, title, text, required }) {
 
 function stepIsValid(step, form) {
   if (step === 0) return Boolean(form.name.trim() && validEmail(form.email) && form.profession.trim());
-  if (step === 1) return Boolean(form.serviceType.length && form.concerns.length && form.servicesOffered.length && form.populationsServed.length && form.payType.length && form.state.length && form.availability.length && form.price.trim() && form.physicalLocations.trim() && form.availabilitySpecifics.trim());
+  if (step === 1) return Boolean(form.providerType.length && form.concerns.length && form.servicesOffered.length && form.populationsServed.length && form.payType.length && form.state.length && form.availability.length && form.price.trim() && form.physicalLocations.trim() && form.availabilitySpecifics.trim());
   if (step === 5) return Boolean(form.consentDirectory && form.consentCommunity && form.signature.trim());
   return true;
 }

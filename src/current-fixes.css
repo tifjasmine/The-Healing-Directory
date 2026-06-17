@@ -1571,6 +1571,17 @@
   line-height: 1.6;
 }
 
+.provider-pending-card .provider-sync-warning {
+  max-width: 640px;
+  margin-top: 6px;
+  padding: 14px 16px;
+  border: 1px solid #f0d79d;
+  border-radius: 14px;
+  background: #fff7e6;
+  color: #6f4d19;
+  font-weight: 750;
+}
+
 .provider-pending-card a:not(.provider-next) {
   color: #24493d;
   font-weight: 900;

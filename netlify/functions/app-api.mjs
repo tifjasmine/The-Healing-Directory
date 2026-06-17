@@ -7,7 +7,7 @@ const SUPABASE_SERVICE_ROLE_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY ||
 const AIRTABLE_AUTO_CREATE_TABLES = lower(process.env.AIRTABLE_AUTO_CREATE_TABLES || "true") !== "false";
 
 const SUPABASE_SIGNUP_TABLES = {
-  provider: process.env.SUPABASE_PROVIDER_SIGNUPS_TABLE || "providers",
+  provider: process.env.SUPABASE_PROVIDER_SIGNUPS_TABLE || "signup_requests",
   client: process.env.SUPABASE_CLIENTS_TABLE || "clients",
   fallback: process.env.SUPABASE_SIGNUP_REQUESTS_TABLE || "signup_requests"
 };
@@ -430,7 +430,7 @@ async function signupProfile(body) {
     accountType: normalizedType
   });
   const directoryAccount = normalizedType === "provider"
-    ? await updateSafe("directory", account.id, providerApplicationFields({ ...body.application, name, email, phone: body.phone, website: body.website, professionalTitle: body.professionalTitle, message: body.message }))
+    ? await updateSafe("directory", account.id, await providerApplicationFields({ ...body.application, name, email, phone: body.phone, website: body.website, professionalTitle: body.professionalTitle, message: body.message }))
     : account;
 
   return {
@@ -446,46 +446,48 @@ async function signupProfile(body) {
   };
 }
 
-function providerApplicationFields(application = {}) {
+async function providerApplicationFields(application = {}) {
   const fields = {};
-  setAlias(fields, FIELDS.provider.name, application.name);
-  setAlias(fields, FIELDS.provider.pronouns, application.pronouns);
-  setAlias(fields, FIELDS.provider.profession, application.profession || application.professionalTitle);
-  setAlias(fields, FIELDS.provider.license, application.licenseCertification || application.license);
-  setAlias(fields, FIELDS.provider.email, application.email);
-  setAlias(fields, FIELDS.provider.phone, application.phone);
-  setAlias(fields, FIELDS.provider.website, application.website);
-  setAlias(fields, FIELDS.provider.consult, application.consultationLink);
-  setAlias(fields, FIELDS.provider.bio, application.bio || application.message);
-  setAlias(fields, FIELDS.provider.accountType, "provider");
-  setAlias(fields, FIELDS.provider.status, "Pending Review");
-  setAlias(fields, FIELDS.provider.approved, false);
-  setAlias(fields, FIELDS.provider.type, application.serviceType || application.providerType);
-  setAlias(fields, FIELDS.provider.services, application.servicesOffered || application.services);
-  setAlias(fields, FIELDS.provider.support, application.concerns || application.support);
-  setAlias(fields, FIELDS.provider.population, application.populationsServed || application.populations);
-  setAlias(fields, FIELDS.provider.location, application.state || application.location);
-  setAlias(fields, FIELDS.provider.payment, application.payType || application.payment);
-  setAlias(fields, FIELDS.provider.availability, application.availability);
-  setAlias(fields, FIELDS.provider.price, application.price);
-  setAlias(fields, FIELDS.provider.physicalLocations, application.physicalLocations);
-  setAlias(fields, FIELDS.provider.availabilitySpecifics, application.availabilitySpecifics || application.currentAvailability);
-  setAlias(fields, FIELDS.provider.responseTime, application.typicalResponseTime || application.responseTime);
-  setAlias(fields, FIELDS.provider.referralMethod, application.preferredReferralMethod || application.referralMethod);
-  setAlias(fields, FIELDS.provider.referralInstructions, application.referralInstructions);
-  setAlias(fields, FIELDS.provider.collaborationInterests, application.collaborationInterests);
-  setAlias(fields, FIELDS.provider.collaborationDetails, application.collaborationDetails);
-  setAlias(fields, FIELDS.provider.providerNotes, application.providerToProviderNotes || application.providerNotes);
-  if (application.infoOptIn !== undefined) setAlias(fields, FIELDS.provider.infoOptIn, application.infoOptIn ? "Yes" : "No");
-  setAlias(fields, FIELDS.provider.styleWords, application.styleWords);
-  setAlias(fields, FIELDS.provider.clientDescriptors, application.clientsDescribeMeAs || application.clientDescriptors);
-  setAlias(fields, FIELDS.provider.groundingRitual, application.groundingRitual);
-  setAlias(fields, FIELDS.provider.outsideSessions, application.outsideSessions);
-  setAlias(fields, FIELDS.provider.guidingBelief, application.guidingBelief);
-  setAlias(fields, FIELDS.provider.healingWish, application.healingTruth || application.healingWish);
-  setAlias(fields, FIELDS.provider.comfortPractice, application.favoriteComfortPractice || application.comfortPractice);
-  setAlias(fields, FIELDS.provider.funFact, application.funFact);
-  setAlias(fields, FIELDS.provider.vibe, application.vibe);
+  const table = await metadataTable("directory").catch(() => null);
+  const add = (aliases, value) => setResolvedAlias(fields, table, aliases, value);
+  add(FIELDS.provider.name, application.name);
+  add(FIELDS.provider.pronouns, application.pronouns);
+  add(FIELDS.provider.profession, application.profession || application.professionalTitle);
+  add(FIELDS.provider.license, application.licenseCertification || application.license);
+  add(FIELDS.provider.email, application.email);
+  add(FIELDS.provider.phone, application.phone);
+  add(FIELDS.provider.website, application.website);
+  add(FIELDS.provider.consult, application.consultationLink);
+  add(FIELDS.provider.bio, application.bio || application.message);
+  add(FIELDS.provider.accountType, "provider");
+  add(FIELDS.provider.status, "Pending Review");
+  add(FIELDS.provider.approved, false);
+  add(FIELDS.provider.type, application.providerType || application.serviceType);
+  add(FIELDS.provider.services, application.servicesOffered || application.services);
+  add(FIELDS.provider.support, application.concerns || application.support);
+  add(FIELDS.provider.population, application.populationsServed || application.populations);
+  add(FIELDS.provider.location, application.state || application.location);
+  add(FIELDS.provider.payment, application.payType || application.payment);
+  add(FIELDS.provider.availability, application.availability);
+  add(FIELDS.provider.price, application.price);
+  add(FIELDS.provider.physicalLocations, application.physicalLocations);
+  add(FIELDS.provider.availabilitySpecifics, application.availabilitySpecifics || application.currentAvailability);
+  add(FIELDS.provider.responseTime, application.typicalResponseTime || application.responseTime);
+  add(FIELDS.provider.referralMethod, application.preferredReferralMethod || application.referralMethod);
+  add(FIELDS.provider.referralInstructions, application.referralInstructions);
+  add(FIELDS.provider.collaborationInterests, application.collaborationInterests);
+  add(FIELDS.provider.collaborationDetails, application.collaborationDetails);
+  add(FIELDS.provider.providerNotes, application.providerToProviderNotes || application.providerNotes);
+  if (application.infoOptIn !== undefined) add(FIELDS.provider.infoOptIn, application.infoOptIn ? "Yes" : "No");
+  add(FIELDS.provider.styleWords, application.styleWords);
+  add(FIELDS.provider.clientDescriptors, application.clientsDescribeMeAs || application.clientDescriptors);
+  add(FIELDS.provider.groundingRitual, application.groundingRitual);
+  add(FIELDS.provider.outsideSessions, application.outsideSessions);
+  add(FIELDS.provider.guidingBelief, application.guidingBelief);
+  add(FIELDS.provider.healingWish, application.healingTruth || application.healingWish);
+  add(FIELDS.provider.comfortPractice, application.favoriteComfortPractice || application.comfortPractice);
+  add(FIELDS.provider.funFact, application.funFact);
+  add(FIELDS.provider.vibe, application.vibe);
   return fields;
 }
 
@@ -931,8 +933,13 @@ async function syncSignupToSupabase(accountType, body) {
 }
 
 async function upsertSupabaseRow(tableName, record, onConflictField = "email") {
-  try {
-    const endpoint = `${SUPABASE_URL}/rest/v1/${encodeURIComponent(tableName)}?on_conflict=${encodeURIComponent(onConflictField)}`;
+  let nextRecord = { ...record };
+  let useConflict = Boolean(onConflictField);
+  const removedColumns = [];
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    try {
+      const conflictParam = useConflict ? `?on_conflict=${encodeURIComponent(onConflictField)}` : "";
+      const endpoint = `${SUPABASE_URL}/rest/v1/${encodeURIComponent(tableName)}${conflictParam}`;
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -941,12 +948,12 @@ async function upsertSupabaseRow(tableName, record, onConflictField = "email") {
         "Content-Type": "application/json",
         Prefer: "return=representation,resolution=merge-duplicates"
       },
-      body: JSON.stringify([record])
+      body: JSON.stringify([nextRecord])
     });
     const payload = await response.json().catch(() => ({}));
     if (response.ok) {
       const row = Array.isArray(payload) && payload[0] ? payload[0] : null;
-      return { ok: true, recordId: row?.id || row?.record_id || row?.uid || "", note: row ? "upserted" : "recorded" };
+      return { ok: true, recordId: row?.id || row?.record_id || row?.uid || "", note: removedColumns.length ? `upserted without unsupported columns: ${removedColumns.join(", ")}` : row ? "upserted" : "recorded" };
     }
 
     if (response.status === 409 || payload.code === "23505" || /duplicate|conflict/i.test(payload.message || "")) {
@@ -955,10 +962,23 @@ async function upsertSupabaseRow(tableName, record, onConflictField = "email") {
     }
 
     const message = payload.error?.message || payload.message || response.statusText || `Supabase upsert failed (${response.status}).`;
-    return { ok: false, status: response.status, message };
-  } catch (error) {
-    return { ok: false, message: error.message || "Supabase request could not be completed." };
+      const badColumn = supabaseBadColumnName(message);
+      if (badColumn && Object.prototype.hasOwnProperty.call(nextRecord, badColumn)) {
+        delete nextRecord[badColumn];
+        removedColumns.push(badColumn);
+        if (!Object.keys(nextRecord).length) return { ok: false, status: response.status, message };
+        continue;
+      }
+      if (useConflict && /no unique|no exclusion|ON CONFLICT|on conflict/i.test(message)) {
+        useConflict = false;
+        continue;
+      }
+      return { ok: false, status: response.status, message };
+    } catch (error) {
+      return { ok: false, message: error.message || "Supabase request could not be completed." };
+    }
   }
+  return { ok: false, message: "Supabase sync could not match the table schema." };
 }
 
 async function lookupSupabaseByEmail(tableName, email) {
@@ -980,6 +1000,17 @@ async function lookupSupabaseByEmail(tableName, email) {
   }
 }
 
+function supabaseBadColumnName(message) {
+  const textMessage = String(message || "");
+  const quoted = textMessage.match(/'([^']+)'\s+column/i);
+  if (quoted?.[1]) return quoted[1];
+  const missing = textMessage.match(/column\s+"?([a-zA-Z0-9_]+)"?\s+(?:does not exist|not found)/i);
+  if (missing?.[1]) return missing[1];
+  const schema = textMessage.match(/schema cache.*?['"]([a-zA-Z0-9_]+)['"]/i);
+  if (schema?.[1]) return schema[1];
+  return "";
+}
+
 async function findDirectoryByEmail(email) {
   const records = await list("directory");
   return records.find((record) => lower(text(pick(record.fields || {}, FIELDS.provider.email))) === lower(email));
@@ -995,10 +1026,11 @@ async function ensureDirectoryAccount({ email, name, accountType }) {
   const existing = await findDirectoryByEmail(cleanEmail);
   if (existing) return existing;
   const fields = {};
-  setAlias(fields, FIELDS.provider.email, cleanEmail);
-  setAlias(fields, FIELDS.provider.name, name || cleanEmail);
-  setAlias(fields, FIELDS.provider.accountType, accountType || "client");
-  if (lower(accountType) === "provider") setAlias(fields, FIELDS.provider.approved, "Pending Review");
+  const table = await metadataTable("directory").catch(() => null);
+  setResolvedAlias(fields, table, FIELDS.provider.email, cleanEmail);
+  setResolvedAlias(fields, table, FIELDS.provider.name, name || cleanEmail);
+  setResolvedAlias(fields, table, FIELDS.provider.accountType, accountType || "client");
+  if (lower(accountType) === "provider") setResolvedAlias(fields, table, FIELDS.provider.status, "Pending Review");
   return createSafe("directory", fields);
 }
 
@@ -1017,6 +1049,11 @@ function setAlias(fields, names, value) {
   const nextValue = Array.isArray(value) ? listText(value) : typeof value === "boolean" ? value : clean(value);
   if (nextValue === "" || nextValue === undefined || nextValue === null) return;
   fields[names[0]] = nextValue;
+}
+
+function setResolvedAlias(fields, table, names, value) {
+  if (!names?.length) return;
+  setAlias(fields, [findField(table, names)], value);
 }
 
 function listText(value) {
