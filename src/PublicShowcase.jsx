@@ -17,13 +17,21 @@ export default function PublicShowcase({ path }) {
   const [user, setUser] = React.useState(null);
   const [authReady, setAuthReady] = React.useState(false);
 
+  const hydrateUser = React.useCallback(async () => {
+    const currentUser = normalizeUser(await getUser().catch(() => null));
+    setUser(currentUser);
+    return currentUser;
+  }, []);
+
   React.useEffect(() => {
     let active = true;
-    Promise.all([
+    Promise.allSettled([
       api("bootstrap"),
       getUser().catch(() => null),
-    ]).then(([payload, currentUser]) => {
+    ]).then(([bootstrapResult, userResult]) => {
       if (!active) return;
+      const payload = bootstrapResult.status === "fulfilled" ? bootstrapResult.value : {};
+      const currentUser = userResult.status === "fulfilled" ? userResult.value : null;
       setData({
         providers: payload.providers || [],
         events: payload.events || [],
@@ -32,7 +40,7 @@ export default function PublicShowcase({ path }) {
         directoryOptions: payload.directoryOptions || {},
       });
       setUser(normalizeUser(payload.user) || normalizeUser(currentUser));
-    }).catch(() => {}).finally(() => {
+    }).finally(() => {
       if (!active) return;
       setLoading(false);
       setAuthReady(true);
@@ -40,8 +48,18 @@ export default function PublicShowcase({ path }) {
     return () => { active = false; };
   }, []);
 
+  React.useEffect(() => {
+    const recheck = () => void hydrateUser();
+    window.addEventListener("focus", recheck);
+    window.addEventListener("visibilitychange", recheck);
+    return () => {
+      window.removeEventListener("focus", recheck);
+      window.removeEventListener("visibilitychange", recheck);
+    };
+  }, [hydrateUser]);
+
   async function toggleSave(kind, id, active) {
-    const currentUser = user || normalizeUser(await getUser().catch(() => null));
+    const currentUser = user || (await hydrateUser());
     if (!currentUser) {
       go(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
