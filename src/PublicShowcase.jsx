@@ -198,8 +198,7 @@ function DirectoryPage({ data, loading, toggleSave }) {
       <div className="band-inner directory-heading">
         <p className="eyebrow">The Healing Directory</p>
         <h1>Find the right support.</h1>
-        <p className="lede">Browse trusted therapists, wellness professionals, and healing providers by specialty, services, and areas of support.</p>
-        <div className="trust-panel"><CheckCircle2 size={24} /><p><strong>Verified Member</strong> means this provider has been personally introduced within our trusted referral community. It is not a guarantee of fit, availability, or outcomes, but it does mean they are part of a relationship-based network built around connection, collaboration, and thoughtful referrals.</p></div>
+        <p className="lede">Browse trusted therapists, wellness professionals, and healing providers who serve clients in New Jersey and Pennsylvania.</p>
       </div>
       <div className="band-inner directory-search-panel">
         <span className="filter-label">Search</span>
@@ -217,6 +216,7 @@ function DirectoryPage({ data, loading, toggleSave }) {
           <DirectoryMultiSelect label="Payment" values={filters.payment} onToggle={(value) => toggleFilter("payment", value)} options={choices.payment} placeholder="All payment" />
         </div>
         <label className="check-control circle-check-control"><input aria-label="Show verified providers only" type="checkbox" checked={verified} onChange={(event) => setVerified(event.target.checked)} /><span className="circle-toggle" aria-hidden="true" /><span>Verified only</span></label>
+        <div className="verified-note"><CheckCircle2 size={17} /><p><strong>Verified</strong> means the provider has been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes.</p></div>
       </div>
     </section>
     <section className="content-shell">
@@ -282,7 +282,7 @@ function ProviderDetails({ data, loading, toggleSave }) {
     </div></section>
     <section className="content-shell detail-grid profile-content-grid">
       <div className="detail-main">
-        <ContentSection kicker="About" title={`A little about ${firstName(provider.name)}`} defaultOpen><p>{provider.bio || "Profile details are being completed."}</p></ContentSection>
+        <ContentSection kicker="About" title={`A little about ${firstName(provider.name)}`} defaultOpen><FormattedText value={provider.bio || "Profile details are being completed."} /></ContentSection>
         <ContentSection kicker="Specialties & support" title="Areas of care" defaultOpen={false}><p>These selections highlight the provider's main areas of focus. They are not necessarily an exhaustive list of everyone this provider supports.</p><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>
         <HumanSideSection provider={provider} defaultOpen={false} />
         <ProviderConnectionSection provider={provider} defaultOpen={false} />
@@ -447,6 +447,10 @@ function DetailPanel({ title, children, className = "", defaultOpen = true }) {
     </button>
     {open ? <div className="detail-panel-body">{children}</div> : null}
   </section>;
+}
+function FormattedText({ value }) {
+  const blocks = String(value || "").split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
+  return <div className="formatted-copy">{(blocks.length ? blocks : [String(value || "").trim()]).map((block, index) => <p key={`${index}-${block.slice(0, 12)}`}>{block}</p>)}</div>;
 }
 function Info({ icon, label, value }) { if (!value) return null; return <div className="info-line">{React.cloneElement(icon, { size: 17 })}<span><small>{label}</small>{value}</span></div>; }
 function HumanSideSection({ provider, defaultOpen = true }) {

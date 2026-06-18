@@ -282,7 +282,7 @@ function PendingApprovalPage({ warning }) {
 
 function ProviderSignupNav() {
   return <nav className="provider-signup-nav" aria-label="Site navigation">
-    <a className="provider-signup-brand" href="/">The Healing Directory</a>
+    <a className="provider-signup-brand" href="/"><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Trusted healing referrals</small></span></a>
     <div>
       <a href="/">Providers</a>
       <a href="/events">Events</a>
@@ -308,16 +308,15 @@ function MultiSelect({ label, values, options, onToggle, required }) {
   const [open, setOpen] = React.useState(false);
   const [custom, setCustom] = React.useState("");
   const ref = React.useRef(null);
+  const inputRef = React.useRef(null);
   const selected = Array.isArray(values) ? values : [];
-  const menuOptions = uniqueOptions([...(options || []), "Other"]);
-  const otherSelected = selected.some(isOtherValue);
+  const menuOptions = uniqueOptions(options || []).filter((option) => !isOtherValue(option));
   function addCustom() {
     const next = custom.trim();
     if (!next) return;
-    selected.filter(isOtherValue).forEach((value) => onToggle(value));
     if (!selected.includes(next)) onToggle(next);
     setCustom("");
-    setOpen(false);
+    setOpen(true);
   }
   React.useEffect(() => {
     if (!open) return undefined;
@@ -342,13 +341,14 @@ function MultiSelect({ label, values, options, onToggle, required }) {
     {selected.length ? <div className="provider-selected">{selected.map((value) => <button type="button" key={value} onClick={() => onToggle(value)}>{value}<X size={12} /></button>)}</div> : null}
     {open ? <div className="provider-multi-menu">
       {menuOptions.map((option) => <button type="button" key={option} className={selected.includes(option) ? "selected" : ""} onClick={() => onToggle(option)}><span>{selected.includes(option) ? <Check size={14} /> : null}</span>{option}</button>)}
-      {otherSelected ? <div className="provider-other-box">
+      <button type="button" className="provider-other-jump" onClick={() => inputRef.current?.focus()}><span>+</span>Add another option</button>
+      <div className="provider-other-box">
         <label>
-          <span>Add another option</span>
-          <input value={custom} onChange={(event) => setCustom(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addCustom(); } }} placeholder={`Other ${label.toLowerCase()}`} />
+          <span>Other {label.toLowerCase()}</span>
+          <input ref={inputRef} value={custom} onChange={(event) => setCustom(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addCustom(); } }} placeholder={`Type another ${label.toLowerCase()}`} />
         </label>
         <button type="button" onClick={addCustom}>Add</button>
-      </div> : null}
+      </div>
     </div> : null}
   </div>;
 }
