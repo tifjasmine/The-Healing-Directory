@@ -169,7 +169,7 @@ const SAVE_FIELD_SETS = {
   clientSignup: {
     name: ["Name", "Full Name", "Client Name"],
     email: ["Email"],
-    areaInterest: ["Area of Interest", "Provider Type Interest", "Interested Provider Type", "Interested In"],
+    areaInterest: ["Provider Interests", "Provider Interest", "Provider Type Interest", "Interested Provider Type", "Area of Interest", "Interested In"],
     status: ["Status", "Account Status", "Request Status", "Approval Status"],
     accountType: ["Account Type", "Type", "Role", "User Type"],
     source: ["Source", "Referral Source", "Channel", "Signup Source"]
@@ -855,17 +855,18 @@ async function safeAirtableSignup(table, accountType, body) {
   if (!set) throw httpError(500, "Unknown signup table configuration.");
 
   const mapped = await mappedFields(accountType === "provider" ? "providerSignup" : "clientSignup");
+  const tableMeta = await metadataTable(table).catch(() => null);
 
-  setAlias(fields, [mapped.name].filter(Boolean), body.name);
-  setAlias(fields, [mapped.email].filter(Boolean), body.email);
-  setAlias(fields, [mapped.accountType].filter(Boolean), body.accountType);
-  setAlias(fields, [mapped.status].filter(Boolean), body.status);
-  setOptional(fields, mapped.phone, body.phone);
-  setOptional(fields, mapped.website, body.website);
-  setOptional(fields, mapped.professionalTitle, body.professionalTitle);
-  setOptional(fields, mapped.message, body.message);
-  setOptional(fields, mapped.areaInterest, body.areaInterest);
-  setOptional(fields, mapped.source, body.source || "app");
+  setAirtableValue(fields, tableMeta, mapped.name, body.name);
+  setAirtableValue(fields, tableMeta, mapped.email, body.email);
+  setAirtableValue(fields, tableMeta, mapped.accountType, body.accountType);
+  setAirtableValue(fields, tableMeta, mapped.status, body.status);
+  setAirtableValue(fields, tableMeta, mapped.phone, body.phone);
+  setAirtableValue(fields, tableMeta, mapped.website, body.website);
+  setAirtableValue(fields, tableMeta, mapped.professionalTitle, body.professionalTitle);
+  setAirtableValue(fields, tableMeta, mapped.message, body.message);
+  setAirtableValue(fields, tableMeta, mapped.areaInterest, body.areaInterest);
+  setAirtableValue(fields, tableMeta, mapped.source, body.source || "app");
 
   const records = await list(table);
   const existing = records.find((record) => {
@@ -924,10 +925,9 @@ function isMissingAirtableTable(message) {
 }
 
 async function syncSignupToSupabase(accountType, body) {
-  const syncTargets = [
-    accountType === "provider" ? SUPABASE_SIGNUP_TABLES.provider : SUPABASE_SIGNUP_TABLES.client,
-    SUPABASE_SIGNUP_TABLES.fallback
-  ].filter(Boolean);
+  const syncTargets = lower(accountType) === "provider"
+    ? unique([SUPABASE_SIGNUP_TABLES.provider, SUPABASE_SIGNUP_TABLES.fallback].filter(Boolean))
+    : unique([SUPABASE_SIGNUP_TABLES.fallback, "signup_requests", SUPABASE_SIGNUP_TABLES.client].filter(Boolean));
 
   const payload = {
     email: body.email,
@@ -1059,6 +1059,20 @@ async function findSignupByEmail(accountType, email) {
 function setOptional(fields, fieldName, value) {
   if (!fieldName) return;
   setAlias(fields, [fieldName], value);
+}
+
+function setAirtableValue(fields, table, fieldName, value) {
+  if (!fieldName) return;
+  const field = table?.fields?.find((item) => item.name === fieldName);
+  const values = arrayRaw(value).flatMap((item) => String(item || "").split(/[,;\n]+/)).map(clean).filter(Boolean);
+  let nextValue;
+  if (field?.type === "multipleSelects") nextValue = values;
+  else if (field?.type === "singleSelect") nextValue = values[0] || "";
+  else if (Array.isArray(value)) nextValue = listText(value);
+  else if (typeof value === "boolean") nextValue = value;
+  else nextValue = clean(value);
+  if (Array.isArray(nextValue) ? !nextValue.length : nextValue === "" || nextValue === undefined || nextValue === null) return;
+  fields[fieldName] = nextValue;
 }
 
 async function ensureDirectoryAccountForUser(user, fallback) {
