@@ -203,7 +203,7 @@ export default async function handler(request) {
 
     const url = new URL(request.url);
     const action = url.searchParams.get("action") || "bootstrap";
-    const user = await getUser();
+    const user = await optionalUser();
 
     if (request.method === "GET") {
       if (action === "bootstrap") return reply(await bootstrap(user));
@@ -1432,6 +1432,13 @@ async function airtable(key, id = "", options = {}) {
 
 function requireUser(user) { if (!user?.email) throw httpError(401, "Please log in."); return user; }
 function requireAdmin(user) { requireUser(user); if (!isAdmin(user)) throw httpError(403, "Administrator access is required."); return user; }
+async function optionalUser() {
+  try {
+    return await getUser();
+  } catch {
+    return null;
+  }
+}
 function isAdmin(user) { return (user?.roles || user?.app_metadata?.roles || []).includes("admin"); }
 function hasProviderAccess(user) { const roles = user?.roles || user?.app_metadata?.roles || []; const type = lower(user?.user_metadata?.account_type || user?.userMetadata?.account_type || user?.user_metadata?.accountType || user?.userMetadata?.accountType); return roles.includes("admin") || roles.includes("provider") || type === "provider"; }
 function publicUser(user) { return user ? { id: user.id, email: user.email, name: user.user_metadata?.full_name || user.userMetadata?.full_name || "", roles: user.roles || user.app_metadata?.roles || [], accountType: user.user_metadata?.account_type || user.userMetadata?.account_type || user.user_metadata?.accountType || user.userMetadata?.accountType || "" } : null; }
