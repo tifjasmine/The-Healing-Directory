@@ -32,8 +32,8 @@ const FALLBACK_OPTIONS = {
   availability: ["Accepting New Clients", "Waitlist", "Weekdays", "Evenings", "Weekends", "Virtual", "In Person"],
   responseTime: ["Within 24 hours", "1-2 business days", "Within a week", "Varies", "Other"],
   referralMethod: ["Email introduction", "Consultation link", "Phone call", "Provider form", "Client reaches out directly", "Other"],
-  genderIdentity: ["Woman", "Man", "Non-binary", "Gender expansive", "Transgender", "Prefer not to say", "Other"],
-  racialEthnicIdentity: ["Asian", "Black / African American", "Hispanic / Latine", "Indigenous / Native", "Middle Eastern / North African", "Multiracial", "White", "Prefer not to say", "Other"],
+  genderIdentity: ["Woman", "Man", "Non-binary", "Gender expansive", "Transgender", "Prefer not to say"],
+  racialEthnicIdentity: ["Asian", "Black / African American", "Hispanic / Latine", "Indigenous / Native", "Middle Eastern / North African", "Multiracial", "White", "Prefer not to say"],
   heardAboutUs: ["Provider referral", "Client referral", "Instagram", "Facebook", "Google search", "Event", "Referral Room", "Newsletter"],
   collaborationInterests: ["Referrals", "Workshops", "Peer Consultation", "Speaking", "Community Events", "Provider Discounts", "Other"],
   vibe: ["Warm", "Grounding", "Direct", "Creative", "Spiritual", "Clinical", "Collaborative", "Other"],
@@ -226,7 +226,7 @@ function Basics({ form, change, setValue, toggle, options }) {
   return <Section title="The basics" text="Start with who you are and how people can reach you, colleagues and clients alike.">
     <Row><TextField label="Full name" value={form.name} onChange={change("name")} required placeholder="Dr. Jane Smith" /><TextField label="Pronouns" value={form.pronouns} onChange={change("pronouns")} placeholder="she/her, they/them..." /></Row>
     <Row><TextField label="Profession / title" value={form.profession} onChange={change("profession")} required placeholder="Licensed Therapist, Holistic Health Coach..." /><TextField label="License # / certification" value={form.licenseCertification} onChange={change("licenseCertification")} placeholder="LPC #000000, RYT-500..." /></Row>
-    <Row><MultiSelect label="Gender Identity" values={form.genderIdentity} options={options.genderIdentity} onToggle={(value) => toggle("genderIdentity", value)} /><MultiSelect label="Racial / Ethnic Identity" values={form.racialEthnicIdentity} options={options.racialEthnicIdentity} onToggle={(value) => toggle("racialEthnicIdentity", value)} /></Row>
+    <Row><MultiSelect label="Gender Identity" values={form.genderIdentity} options={withoutOther(options.genderIdentity)} onToggle={(value) => toggle("genderIdentity", value)} allowCustom={false} /><MultiSelect label="Racial / Ethnic Identity" values={form.racialEthnicIdentity} options={withoutOther(options.racialEthnicIdentity)} onToggle={(value) => toggle("racialEthnicIdentity", value)} allowCustom={false} /></Row>
     <PhotoUpload value={form.profilePhotoUpload} onChange={(value) => setValue("profilePhotoUpload", value)} />
     <TextField label="Bio" value={form.bio} onChange={change("bio")} textarea placeholder="Let everyone get to know you and your practice." />
     <Row><TextField label="Email" type="email" value={form.email} onChange={change("email")} required placeholder="you@practice.com" /><TextField label="Phone" value={form.phone} onChange={change("phone")} placeholder="(555) 000-0000" /></Row>
@@ -256,8 +256,8 @@ function Referral({ form, change, toggle, options }) {
 function Collaboration({ form, change, toggle, addOther, options }) {
   return <Section title="Collaboration" text="Provider-to-provider collaboration details.">
     <MultiSelect label="Collaboration interests" values={form.collaborationInterests} options={options.collaborationInterests} onToggle={(value) => toggle("collaborationInterests", value)} onAddCustom={addOther("otherCollaboration")} customValue={form.otherCollaboration} customLabel="Other Collaboration" />
-    <TextField label="Collaboration details" value={form.collaborationDetails} onChange={change("collaborationDetails")} textarea placeholder="Workshops, referral relationships, provider discounts, consultation preferences, boundaries..." helper="Maps to Collaboration Details in Airtable." />
-    <TextField label="Additional info" value={form.providerToProviderNotes} onChange={change("providerToProviderNotes")} textarea placeholder="Anything aligned providers should know before referring, collaborating, or reaching out." helper="Maps to Additional Info in Airtable." />
+    <TextField label="Collaboration details" value={form.collaborationDetails} onChange={change("collaborationDetails")} textarea placeholder="Workshops, referral relationships, provider discounts, consultation preferences, boundaries..." />
+    <TextField label="Additional info" value={form.providerToProviderNotes} onChange={change("providerToProviderNotes")} textarea placeholder="Anything aligned providers should know before referring, collaborating, or reaching out." />
   </Section>;
 }
 
@@ -306,7 +306,7 @@ function PendingApprovalPage({ warning }) {
 
 function ProviderSignupNav() {
   return <nav className="provider-signup-nav" aria-label="Site navigation">
-    <a className="provider-signup-brand" href="/"><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Trusted healing referrals</small></span></a>
+    <a className="provider-signup-brand" href="/"><img src="/directory-logo-strip.png" alt="The Healing Directory" /><span><strong>The Healing Directory</strong><small>Trusted healing referrals</small></span></a>
     <div>
       <a href="/">Providers</a>
       <a href="/events">Events</a>
@@ -462,6 +462,10 @@ function uniqueOptions(values) {
 
 function isOtherValue(value) {
   return String(value || "").trim().toLowerCase() === "other";
+}
+
+function withoutOther(values) {
+  return Array.isArray(values) ? values.filter((value) => !isOtherValue(value)) : [];
 }
 
 async function api(action, options = {}) {
