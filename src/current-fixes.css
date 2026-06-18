@@ -4883,19 +4883,13 @@
 .directory-home-hero {
   position: relative;
   overflow: hidden;
-  padding-top: clamp(34px, 5vw, 66px) !important;
-  padding-bottom: clamp(32px, 5vw, 58px) !important;
-  background:
-    radial-gradient(circle at 82% 18%, rgba(240, 167, 47, .18), transparent 28%),
-    linear-gradient(135deg, #173f33 0%, #24493d 54%, #31523f 100%) !important;
+  padding-top: clamp(26px, 4vw, 48px) !important;
+  padding-bottom: clamp(28px, 4vw, 46px) !important;
+  background: linear-gradient(180deg, #fff7ea 0%, #fbf1e2 56%, #24493d 56%, #24493d 100%) !important;
 }
 
 .directory-home-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(90deg, rgba(255, 253, 248, .06), transparent 42%);
+  display: none !important;
 }
 
 .directory-home-hero .band-inner {
@@ -4905,31 +4899,33 @@
 
 .directory-home-hero .directory-heading {
   display: grid !important;
-  gap: 18px !important;
-  padding-bottom: 24px !important;
+  gap: 14px !important;
+  padding-bottom: 26px !important;
+  text-align: center !important;
+  justify-items: center !important;
 }
 
 .directory-hero-lockup {
-  width: fit-content;
+  width: auto;
   max-width: 100%;
   display: inline-flex;
   align-items: center;
-  gap: 13px;
-  padding: 8px 14px 8px 8px;
-  border: 1px solid rgba(255, 255, 255, .18);
-  border-radius: 18px;
-  background: rgba(255, 253, 248, .1);
-  color: #fffdf8;
-  box-shadow: 0 18px 38px rgba(15, 35, 29, .18);
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #24493d;
+  box-shadow: none;
 }
 
 .directory-hero-lockup img {
-  width: 58px;
-  height: 58px;
+  width: 64px;
+  height: 64px;
   object-fit: contain;
-  padding: 7px;
-  border-radius: 14px;
-  background: #fff7ea;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .directory-hero-lockup span {
@@ -4939,97 +4935,80 @@
 }
 
 .directory-hero-lockup strong {
-  color: #fff;
-  font-size: 13px;
+  color: #24493d;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(26px, 3vw, 38px);
   font-weight: 900;
-  letter-spacing: .12em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .directory-hero-lockup small {
-  color: rgba(255, 255, 255, .74);
-  font-size: 12px;
+  color: #746f68;
+  font-size: 11px;
   font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
 .directory-home-hero .directory-heading h1 {
-  max-width: 820px;
+  max-width: 860px;
   margin: 0 !important;
-  color: #fffdf8;
-  font-size: clamp(52px, 7vw, 92px) !important;
-  line-height: .88 !important;
+  color: #24493d;
+  font-size: clamp(48px, 6.2vw, 82px) !important;
+  line-height: .92 !important;
 }
 
 .directory-home-hero .directory-heading .lede {
-  max-width: 760px;
+  max-width: 720px;
   margin: 0 !important;
-  color: rgba(255, 255, 255, .82);
-  font-size: clamp(18px, 2.1vw, 24px) !important;
+  color: #665d55;
+  font-size: clamp(17px, 1.8vw, 21px) !important;
   line-height: 1.45 !important;
 }
 
 .directory-hero-notes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 2px;
-}
-
-.directory-hero-notes span {
-  min-height: 38px;
-  padding: 0 13px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid rgba(255, 255, 255, .18);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .09);
-  color: rgba(255, 255, 255, .86);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.directory-hero-notes svg {
-  color: #f0a72f;
+  display: none !important;
 }
 
 .directory-home-hero .directory-search-panel {
-  margin-top: 8px !important;
-  border-color: rgba(255, 255, 255, .18) !important;
-  background: rgba(255, 253, 248, .1) !important;
-  box-shadow: 0 22px 60px rgba(15, 35, 29, .22);
+  margin-top: 0 !important;
+  border-color: rgba(255, 255, 255, .14) !important;
+  background: #24493d !important;
+  box-shadow: 0 18px 46px rgba(15, 35, 29, .16);
 }
 
 @media (max-width: 760px) {
   .directory-home-hero {
-    padding-top: 26px !important;
-    padding-bottom: 28px !important;
+    padding-top: 22px !important;
+    padding-bottom: 24px !important;
+    background: linear-gradient(180deg, #fff7ea 0%, #fbf1e2 52%, #24493d 52%, #24493d 100%) !important;
   }
 
   .directory-hero-lockup {
-    width: 100%;
-    padding: 7px 10px 7px 7px;
-    border-radius: 16px;
+    width: auto;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
   }
 
   .directory-hero-lockup img {
     width: 48px;
     height: 48px;
-    border-radius: 12px;
   }
 
   .directory-hero-lockup strong {
-    font-size: 11px;
-    letter-spacing: .09em;
+    font-size: 25px;
+    line-height: .95;
   }
 
   .directory-hero-lockup small {
-    font-size: 11px;
+    font-size: 9px;
   }
 
   .directory-home-hero .directory-heading h1 {
-    font-size: clamp(42px, 12.5vw, 58px) !important;
-    line-height: .94 !important;
+    font-size: clamp(38px, 10vw, 50px) !important;
+    line-height: .96 !important;
   }
 
   .directory-home-hero .directory-heading .lede {
@@ -5037,16 +5016,7 @@
     line-height: 1.5 !important;
   }
 
-  .directory-hero-notes {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .directory-hero-notes span {
-    min-height: 36px;
-    justify-content: flex-start;
-    border-radius: 13px;
-    font-size: 12px;
+  .directory-home-hero .directory-search-panel {
+    margin-top: 0 !important;
   }
 }
