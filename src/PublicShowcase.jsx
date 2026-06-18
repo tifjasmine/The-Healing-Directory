@@ -154,7 +154,8 @@ function DirectoryLogoStrip() {
 function DirectoryPage({ data, loading, toggleSave }) {
   const [query, setQuery] = React.useState("");
   const [verified, setVerified] = React.useState(false);
-  const [filters, setFilters] = React.useState({ type: "", service: "", support: "", population: "", location: "", payment: "" });
+  const [filters, setFilters] = React.useState({ type: [], service: [], support: [], population: [], location: [], payment: [] });
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [visibleCount, setVisibleCount] = React.useState(LIST_PAGE_SIZE);
   const choices = {
     type: optionChoices(data.directoryOptions?.providerType, data.providers.flatMap((item) => item.providerType || [])),
@@ -167,17 +168,28 @@ function DirectoryPage({ data, loading, toggleSave }) {
   const providers = data.providers.filter((item) => {
     const text = [item.name, item.profession, item.bio, ...(item.providerType || []), ...(item.services || []), ...(item.support || []), ...(item.location || [])].join(" ").toLowerCase();
     return (!query || text.includes(query.toLowerCase())) && (!verified || item.verified) &&
-      (!filters.type || item.providerType?.includes(filters.type)) &&
-      (!filters.service || item.services?.includes(filters.service)) &&
-      (!filters.support || item.support?.includes(filters.support)) &&
-      (!filters.population || item.populations?.includes(filters.population)) &&
-      (!filters.location || item.location?.includes(filters.location)) &&
-      (!filters.payment || item.payment?.includes(filters.payment));
+      matchesSelected(item.providerType, filters.type) &&
+      matchesSelected(item.services, filters.service) &&
+      matchesSelected(item.support, filters.support) &&
+      matchesSelected(item.populations, filters.population) &&
+      matchesSelected(item.location, filters.location) &&
+      matchesSelected(item.payment, filters.payment);
   });
-  const setFilter = (key) => (event) => setFilters((current) => ({ ...current, [key]: event.target.value }));
+  const toggleFilter = (key, value) => setFilters((current) => {
+    const next = current[key].includes(value)
+      ? current[key].filter((item) => item !== value)
+      : [...current[key], value];
+    return { ...current, [key]: next };
+  });
+  const clearFilters = () => {
+    setQuery("");
+    setVerified(false);
+    setFilters({ type: [], service: [], support: [], population: [], location: [], payment: [] });
+  };
+  const activeFilterCount = Object.values(filters).reduce((total, values) => total + values.length, 0) + (verified ? 1 : 0) + (query.trim() ? 1 : 0);
   React.useEffect(() => {
     setVisibleCount(LIST_PAGE_SIZE);
-  }, [query, verified, filters.type, filters.service, filters.support, filters.population, filters.location, filters.payment, data.providers.length]);
+  }, [query, verified, filters, data.providers.length]);
   const visibleProviders = providers.slice(0, visibleCount);
 
   return <main>
@@ -192,13 +204,17 @@ function DirectoryPage({ data, loading, toggleSave }) {
       <div className="band-inner directory-search-panel">
         <span className="filter-label">Search</span>
         <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, specialty, area of support..." /></label>
-        <div className="directory-filter-grid">
-          <DirectorySelect label="Provider type" value={filters.type} onChange={setFilter("type")} options={choices.type} placeholder="All provider types" />
-          <DirectorySelect label="Service" value={filters.service} onChange={setFilter("service")} options={choices.service} placeholder="All services" />
-          <DirectorySelect label="Areas of Support" value={filters.support} onChange={setFilter("support")} options={choices.support} placeholder="All areas of support" />
-          <DirectorySelect label="Population" value={filters.population} onChange={setFilter("population")} options={choices.population} placeholder="All people" />
-          <DirectorySelect label="Location" value={filters.location} onChange={setFilter("location")} options={choices.location} placeholder="All locations" />
-          <DirectorySelect label="Payment" value={filters.payment} onChange={setFilter("payment")} options={choices.payment} placeholder="All payment" />
+        <div className="directory-filter-actions">
+          <button type="button" className="filter-toggle-button" onClick={() => setFiltersOpen((open) => !open)}>Filters{activeFilterCount ? ` (${activeFilterCount})` : ""}<ChevronDown size={16} /></button>
+          {activeFilterCount ? <button type="button" className="clear-filter-button" onClick={clearFilters}>Clear all</button> : null}
+        </div>
+        <div className={filtersOpen ? "directory-filter-grid open" : "directory-filter-grid"}>
+          <DirectoryMultiSelect label="Provider type" values={filters.type} onToggle={(value) => toggleFilter("type", value)} options={choices.type} placeholder="All provider types" />
+          <DirectoryMultiSelect label="Service" values={filters.service} onToggle={(value) => toggleFilter("service", value)} options={choices.service} placeholder="All services" />
+          <DirectoryMultiSelect label="Areas of Support" values={filters.support} onToggle={(value) => toggleFilter("support", value)} options={choices.support} placeholder="All areas of support" />
+          <DirectoryMultiSelect label="Population" values={filters.population} onToggle={(value) => toggleFilter("population", value)} options={choices.population} placeholder="All people" />
+          <DirectoryMultiSelect label="Location" values={filters.location} onToggle={(value) => toggleFilter("location", value)} options={choices.location} placeholder="All locations" />
+          <DirectoryMultiSelect label="Payment" values={filters.payment} onToggle={(value) => toggleFilter("payment", value)} options={choices.payment} placeholder="All payment" />
         </div>
         <label className="check-control circle-check-control"><input aria-label="Show verified providers only" type="checkbox" checked={verified} onChange={(event) => setVerified(event.target.checked)} /><span className="circle-toggle" aria-hidden="true" /><span>Verified only</span></label>
       </div>
@@ -260,10 +276,10 @@ function ProviderDetails({ data, loading, toggleSave }) {
     </div></section>
     <section className="content-shell detail-grid profile-content-grid">
       <div className="detail-main">
-        <ContentSection kicker="About" title={`A little about ${firstName(provider.name)}`}><p>{provider.bio || "Profile details are being completed."}</p></ContentSection>
-        <ContentSection kicker="Specialties & support" title="Areas of care"><p>These selections highlight the provider's main areas of focus. They are not necessarily an exhaustive list of everyone this provider supports.</p><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>
-        <HumanSideSection provider={provider} />
-        <ProviderConnectionSection provider={provider} />
+        <ContentSection kicker="About" title={`A little about ${firstName(provider.name)}`} defaultOpen><p>{provider.bio || "Profile details are being completed."}</p></ContentSection>
+        <ContentSection kicker="Specialties & support" title="Areas of care" defaultOpen={false}><p>These selections highlight the provider's main areas of focus. They are not necessarily an exhaustive list of everyone this provider supports.</p><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>
+        <HumanSideSection provider={provider} defaultOpen={false} />
+        <ProviderConnectionSection provider={provider} defaultOpen={false} />
       </div>
       <aside className="profile-sidebar">
         <div className="contact-panel"><h2>Connect</h2><p>Reach out directly to learn more about availability, fit, and next steps.</p>{provider.consultationLink ? <a className="button full" href={href(provider.consultationLink)} target="_blank" rel="noreferrer">Book consultation <ArrowRight size={16} /></a> : provider.website ? <a className="button full" href={href(provider.website)} target="_blank" rel="noreferrer">Visit website <ArrowRight size={16} /></a> : null}{provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}{provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}{provider.website ? <a href={href(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>{provider.website}</span></a> : null}</div>
@@ -301,7 +317,7 @@ function EventsPage({ data, loading, toggleSave, user }) {
   const visibleEvents = events.slice(0, visibleCount);
   return <main className="events-page">
     <section className="events-hero"><div className="band-inner events-hero-grid">
-      <div><p className="event-kicker"><span /> Events</p><h1>Workshops, circles, trainings, and healing community events.</h1><p className="lede">Browse upcoming events from The Healing Directory community.</p>{canSeeProviderEvents ? <div className="action-row"><button className="button event-primary" onClick={() => go("/add-event")}><Plus size={16} /> Add an Event</button><button className="button event-secondary" onClick={() => setTab("community")}><HeartHandshake size={16} /> Community Events</button><button className="button event-secondary" onClick={() => setTab("provider")}><LockKeyhole size={16} /> Provider Events</button></div> : null}</div>
+      <div><p className="event-kicker"><span /> Events</p><h1>Workshops, circles, trainings, and healing community events.</h1>{canSeeProviderEvents ? <div className="action-row"><button className="button event-primary" onClick={() => go("/add-event")}><Plus size={16} /> Add an Event</button><button className="button event-secondary" onClick={() => setTab("community")}><HeartHandshake size={16} /> Community Events</button><button className="button event-secondary" onClick={() => setTab("provider")}><LockKeyhole size={16} /> Provider Events</button></div> : null}</div>
       <aside className="event-summary-panel"><CalendarDays size={30} /><h2>Explore what's coming up.</h2><p>Find healing-centered spaces, local gatherings, professional trainings, and community events all in one place.</p>{canSeeProviderEvents ? <div><EventCount value={visibleSourceEvents.length} label="Events" /><EventCount value={community} label="Community" /><EventCount value={visibleSourceEvents.length - community} label="Providers" /></div> : null}</aside>
     </div></section>
     <section className="content-shell">
@@ -360,13 +376,50 @@ function EventDetails({ data, loading, toggleSave }) {
   </main>;
 }
 
-function DirectorySelect({ label, options, placeholder, ...props }) { return <label className="directory-select"><span>{label}</span><div><select {...props}><option value="">{placeholder}</option>{options.map((option) => <option key={option}>{option}</option>)}</select><ChevronDown size={16} /></div></label>; }
+function DirectoryMultiSelect({ label, values = [], options = [], placeholder, onToggle }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const close = (event) => {
+      if (!ref.current?.contains(event.target)) setOpen(false);
+    };
+    window.addEventListener("pointerdown", close);
+    return () => window.removeEventListener("pointerdown", close);
+  }, [open]);
+  return <div className="directory-multi-select" ref={ref}>
+    <span>{label}</span>
+    <button type="button" className={open ? "multi-select-trigger open" : "multi-select-trigger"} onClick={() => setOpen((current) => !current)}>
+      <strong>{values.length ? `${values.length} selected` : placeholder}</strong>
+      <ChevronDown size={16} />
+    </button>
+    {values.length ? <div className="selected-filter-chips">{values.map((value) => <button type="button" key={value} onClick={() => onToggle(value)}>{value}<X size={13} /></button>)}</div> : null}
+    {open ? <div className="multi-select-menu">
+      {options.length ? options.map((option) => {
+        const selected = values.includes(option);
+        return <button type="button" key={option} className={selected ? "selected" : ""} onClick={() => onToggle(option)}>
+          <span>{selected ? <CheckCircle2 size={14} /> : null}</span>
+          {option}
+        </button>;
+      }) : <p>No choices found</p>}
+    </div> : null}
+  </div>;
+}
 function Avatar({ item, large }) { return <div className={large ? "avatar large" : "avatar"}>{item.photo ? <img src={item.photo} alt="" /> : <span>{initials(item.name)}</span>}</div>; }
 function ProfileTags({ label, values = [], warm }) { if (!values.length) return null; return <div className={warm ? "profile-tag-group warm" : "profile-tag-group"}><strong>{label}</strong><div>{values.map((value) => <span key={value}>{value}</span>)}</div></div>; }
 function CareGroup({ label, values = [], warm, neutral }) { return <div className={`care-group${warm ? " warm" : ""}${neutral ? " neutral" : ""}`}><strong>{label}</strong><div className="tag-row large-tags">{values.length ? values.map((value) => <span key={value}>{value}</span>) : <span>Not listed</span>}</div></div>; }
-function ContentSection({ kicker, title, children }) { return <section className="content-section"><p className="eyebrow ink">{kicker}</p><h2>{title}</h2>{children}</section>; }
+function ContentSection({ kicker, title, children, defaultOpen = true }) {
+  const [open, setOpen] = React.useState(defaultOpen);
+  return <section className={open ? "content-section open" : "content-section collapsed"}>
+    <button type="button" className="content-section-toggle" onClick={() => setOpen((current) => !current)} aria-expanded={open}>
+      <span><span className="eyebrow ink">{kicker}</span><h2>{title}</h2></span>
+      <ChevronDown size={19} />
+    </button>
+    {open ? <div className="content-section-body">{children}</div> : null}
+  </section>;
+}
 function Info({ icon, label, value }) { if (!value) return null; return <div className="info-line">{React.cloneElement(icon, { size: 17 })}<span><small>{label}</small>{value}</span></div>; }
-function HumanSideSection({ provider }) {
+function HumanSideSection({ provider, defaultOpen = true }) {
   const prompts = [
     { label: "My style in three words", value: provider.styleWords, icon: <SparkIcon /> },
     { label: "Clients describe me as", value: provider.clientDescriptors, icon: <SmileIcon /> },
@@ -377,17 +430,17 @@ function HumanSideSection({ provider }) {
     { label: "Favorite comfort practice", value: provider.comfortPractice, icon: <LeafIcon /> },
   ].filter((item) => item.value);
   if (!provider.humanSide && !provider.funFact && !provider.vibe?.length && !prompts.length) return null;
-  return <ContentSection kicker="Get to know your provider" title="The human side">
+  return <ContentSection kicker="Get to know your provider" title="The human side" defaultOpen={defaultOpen}>
     {provider.humanSide ? <p>{provider.humanSide}</p> : null}
     {prompts.length ? <div className="human-grid">{prompts.map((item) => <DetailPrompt key={item.label} {...item} />)}</div> : null}
     {provider.vibe?.length ? <div className="detail-chip-block"><strong>Vibe</strong><div className="tag-row large-tags">{provider.vibe.map((value) => <span key={value}>{value}</span>)}</div></div> : null}
     {provider.funFact ? <div className="long-note"><strong>Fun facts</strong><p>{provider.funFact}</p></div> : null}
   </ContentSection>;
 }
-function ProviderConnectionSection({ provider }) {
+function ProviderConnectionSection({ provider, defaultOpen = true }) {
   const hasConnection = provider.referralMethod || provider.referralInstructions || provider.providerNotes || provider.collaborationDetails || provider.collaborationInterests?.length;
   if (!hasConnection) return null;
-  return <ContentSection kicker="Provider-only" title="Provider connection details">
+  return <ContentSection kicker="Provider-only" title="Provider connection details" defaultOpen={defaultOpen}>
     <p>A quick look at how this provider likes to connect, collaborate, consult, and receive aligned referrals from other providers.</p>
     <div className="connection-grid">
       <DetailPrompt label="Best way to connect" value={provider.referralMethod} icon={<Phone size={20} />} />
@@ -430,6 +483,7 @@ function hasProviderEventAccess(current) {
 }
 function isProviderOnlyEvent(event) { return String(event?.audience || "").toLowerCase().includes("provider"); }
 function optionChoices(options = [], fallback = []) { return (options?.length ? unique(options) : unique(fallback || [])).filter((value) => String(value).trim().toLowerCase() !== "all").sort(); }
+function matchesSelected(values = [], selected = []) { return !selected.length || selected.some((value) => values?.includes(value)); }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function truncate(value, max) { const text = String(value || "").replace(/\s+/g, " ").trim(); return text.length > max ? `${text.slice(0, max - 1)}...` : text; }
 function href(value) { return /^(https?:|mailto:|tel:)/i.test(String(value || "")) ? value : `https://${value}`; }

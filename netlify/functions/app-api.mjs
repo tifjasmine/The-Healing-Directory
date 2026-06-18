@@ -596,13 +596,8 @@ function normalizeProvider(record) {
   const approvalValue = pick(f, FIELDS.provider.approved);
   const approvalStatus = lower(text(pick(f, FIELDS.provider.status)));
   const accountType = lower(text(pick(f, FIELDS.provider.accountType)));
-  const providerSignals = Boolean(
-    text(pick(f, FIELDS.provider.profession)) ||
-    text(pick(f, FIELDS.provider.bio)) ||
-    text(pick(f, FIELDS.provider.website)) ||
-    array(pick(f, FIELDS.provider.type)).length
-  );
   const clientAccount = ["client", "community", "community member", "member"].includes(accountType);
+  const explicitlyApproved = truthy(approvalValue) || ["approved", "active", "published", "live", "open"].includes(approvalStatus);
   return {
     id: record.id, name: text(pick(f, FIELDS.provider.name)) || "Provider",
     accountType,
@@ -616,7 +611,7 @@ function normalizeProvider(record) {
     website: text(pick(f, FIELDS.provider.website)), consultationLink: text(pick(f, FIELDS.provider.consult)),
     humanSide: text(pick(f, FIELDS.provider.human)), collaboration: text(pick(f, FIELDS.provider.collaboration)),
     verified: truthy(pick(f, FIELDS.provider.verified)), approved: truthy(approvalValue),
-    isPublic: !clientAccount && !approvalStatus.includes("pending") && !approvalStatus.includes("review") && (approvalValue === undefined ? providerSignals : truthy(approvalValue))
+    isPublic: !clientAccount && explicitlyApproved
   };
 }
 

@@ -157,6 +157,7 @@ export default function ProviderSignupPage() {
   if (submitted) return <PendingApprovalPage warning={syncWarning} />;
 
   return <div className="provider-join-page">
+    <ProviderSignupNav />
     <header className="provider-join-hero">
       <div className="provider-join-inner">
         <p className="provider-join-kicker">The Healing Directory</p>
@@ -258,6 +259,7 @@ function Consent({ form, change, setValue }) {
 
 function PendingApprovalPage({ warning }) {
   return <div className="provider-join-page">
+    <ProviderSignupNav />
     <header className="provider-join-hero">
       <div className="provider-join-inner provider-pending-hero">
         <p className="provider-join-kicker">The Healing Directory</p>
@@ -276,6 +278,18 @@ function PendingApprovalPage({ warning }) {
       </section>
     </main>
   </div>;
+}
+
+function ProviderSignupNav() {
+  return <nav className="provider-signup-nav" aria-label="Site navigation">
+    <a className="provider-signup-brand" href="/">The Healing Directory</a>
+    <div>
+      <a href="/">Providers</a>
+      <a href="/events">Events</a>
+      <a href="/login?next=/client-dashboard">Dashboard</a>
+      <a className="provider-signup-login" href="/login">Login</a>
+    </div>
+  </nav>;
 }
 
 function Section({ title, text, children }) {

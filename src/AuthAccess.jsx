@@ -111,7 +111,7 @@ export default function AuthAccess({ path }) {
     </header>
     {notice ? <div className="global-notice"><span>{notice}</span></div> : null}
     <main className={signingUp || providerSignup ? "auth-page signup-auth-page" : "auth-page"}><section className={providerSignup ? "auth-shell signup-auth-shell provider-auth-shell" : signingUp ? "auth-shell signup-auth-shell" : "auth-shell"}>
-      <div className="auth-copy"><img src="/healing-directory-logo.svg" alt="The Healing Directory" /><p className="eyebrow">Relationship-based care</p><h1>{providerSignup ? "Join as a trusted provider." : signingUp ? "Start saving care that fits." : "Care, connection, and community."}</h1><p>{intro}</p></div>
+      <div className="auth-copy"><img src="/directory-logo-strip.png" alt="The Healing Directory" /><p className="eyebrow">Relationship-based care</p><h1>{providerSignup ? "Join as a trusted provider." : signingUp ? "Start saving care that fits." : "Care, connection, and community."}</h1><p>{intro}</p></div>
       <form className="auth-form" onSubmit={submit}>
         <p className="eyebrow ink">{signingUp || providerSignup ? "Join the directory" : "Account access"}</p>
         <h2>{title}</h2>
