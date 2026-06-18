@@ -161,7 +161,7 @@ const SAVE_FIELD_SETS = {
     name: ["Name", "Full Name", "Provider Name"],
     email: ["Email"],
     phone: ["Phone", "Phone Number", "Mobile"],
-    areaInterest: ["Area of Interest", "Provider Type Interest", "Interested Provider Type", "Interested In"],
+    areaInterest: ["Provider Interests", "Provider Interest", "Provider Type Interest", "Interested Provider Type", "Area of Interest", "Interested In"],
     status: ["Status", "Request Status", "Approval Status"],
     accountType: ["Account Type", "Type", "Role", "User Type"],
     source: ["Source", "Referral Source", "Channel", "Signup Source"]

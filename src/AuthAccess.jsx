@@ -146,6 +146,9 @@ function authErrorMessage(error, signingUp) {
   if (signingUp && (normalized.includes("signup") || normalized.includes("registration") || normalized.includes("not allowed"))) {
     return "Client signup is being blocked by the site auth settings. In Netlify Identity, set Registration to Open so clients can create accounts right away.";
   }
+  if (normalized.includes("email not confirmed") || normalized.includes("invalid_grant")) {
+    return "Please verify your email before logging in. Check your inbox for the confirmation email, then try again.";
+  }
   if (normalized.includes("already")) return "An account already exists for this email. Please log in instead.";
   if (normalized.includes("failed to fetch")) return "The signup service could not be reached. Please try again in a moment.";
   return message || "Authentication could not be completed.";

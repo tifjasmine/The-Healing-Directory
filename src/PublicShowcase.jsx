@@ -98,6 +98,7 @@ export default function PublicShowcase({ path }) {
   return <div className="app-shell">
     <header className={warm ? "site-header warm-header" : "site-header"}>
       <button className="brand" onClick={() => go("/")}>
+        <img src="/healing-directory-logo.svg" alt="" />
         <span><strong>The Healing Directory</strong><small>Relationship-based care</small></span>
       </button>
       <button className="menu-toggle icon-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X /> : <Menu />}</button>
@@ -282,9 +283,9 @@ function EventsPage({ data, loading, toggleSave, user }) {
   const visibleSourceEvents = canSeeProviderEvents ? data.events : data.events.filter((event) => !isProviderOnlyEvent(event));
   const categories = unique(visibleSourceEvents.map((event) => event.category)).sort();
   const locations = unique(visibleSourceEvents.map((event) => event.locationType)).sort();
-  const availableTabs = canSeeProviderEvents ? ["all", "community", "provider", "saved"] : ["all", "community", "saved"];
+  const availableTabs = canSeeProviderEvents ? ["all", "community", "provider", "saved"] : ["community", "saved"];
   React.useEffect(() => {
-    if (!availableTabs.includes(tab)) setTab("all");
+    if (!availableTabs.includes(tab)) setTab(canSeeProviderEvents ? "all" : "community");
   }, [availableTabs, tab]);
   const events = visibleSourceEvents.filter((event) => {
     const providerOnly = isProviderOnlyEvent(event);
@@ -300,7 +301,7 @@ function EventsPage({ data, loading, toggleSave, user }) {
   const visibleEvents = events.slice(0, visibleCount);
   return <main className="events-page">
     <section className="events-hero"><div className="band-inner events-hero-grid">
-      <div><p className="event-kicker"><span /> Events</p><h1>Workshops, circles, trainings, and healing community events.</h1><p className="lede">Browse upcoming events from The Healing Directory community.</p><div className="action-row">{canSeeProviderEvents ? <button className="button event-primary" onClick={() => go("/add-event")}><Plus size={16} /> Add an Event</button> : null}<button className="button event-secondary" onClick={() => setTab("community")}><HeartHandshake size={16} /> Community Events</button>{canSeeProviderEvents ? <button className="button event-secondary" onClick={() => setTab("provider")}><LockKeyhole size={16} /> Provider Events</button> : null}</div></div>
+      <div><p className="event-kicker"><span /> Events</p><h1>Workshops, circles, trainings, and healing community events.</h1><p className="lede">Browse upcoming events from The Healing Directory community.</p>{canSeeProviderEvents ? <div className="action-row"><button className="button event-primary" onClick={() => go("/add-event")}><Plus size={16} /> Add an Event</button><button className="button event-secondary" onClick={() => setTab("community")}><HeartHandshake size={16} /> Community Events</button><button className="button event-secondary" onClick={() => setTab("provider")}><LockKeyhole size={16} /> Provider Events</button></div> : null}</div>
       <aside className="event-summary-panel"><CalendarDays size={30} /><h2>Explore what's coming up.</h2><p>Find healing-centered spaces, local gatherings, professional trainings, and community events all in one place.</p>{canSeeProviderEvents ? <div><EventCount value={visibleSourceEvents.length} label="Events" /><EventCount value={community} label="Community" /><EventCount value={visibleSourceEvents.length - community} label="Providers" /></div> : null}</aside>
     </div></section>
     <section className="content-shell">

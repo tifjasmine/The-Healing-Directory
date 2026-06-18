@@ -43,6 +43,16 @@
   object-fit: contain;
 }
 
+.site-header .brand img,
+.referral-root-header .brand img,
+.auth-root .brand img {
+  display: block !important;
+  width: 54px !important;
+  height: 54px !important;
+  object-fit: contain !important;
+  flex: 0 0 auto !important;
+}
+
 .circle-check-control {
   display: inline-flex;
   align-items: center;
