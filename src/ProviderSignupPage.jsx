@@ -32,8 +32,8 @@ const FALLBACK_OPTIONS = {
   availability: ["Accepting New Clients", "Waitlist", "Weekdays", "Evenings", "Weekends", "Virtual", "In Person"],
   responseTime: ["Within 24 hours", "1-2 business days", "Within a week", "Varies", "Other"],
   referralMethod: ["Email introduction", "Consultation link", "Phone call", "Provider form", "Client reaches out directly", "Other"],
-  genderIdentity: ["Woman", "Man", "Non-binary", "Gender expansive", "Transgender", "Prefer not to say", "Other"],
-  racialEthnicIdentity: ["Asian", "Black / African American", "Hispanic / Latine", "Indigenous / Native", "Middle Eastern / North African", "Multiracial", "White", "Prefer not to say", "Other"],
+  genderIdentity: ["Female", "Male", "Non-binary", "Transgender", "Agender", "Genderfluid", "Genderqueer", "Intersex", "Prefer not to say", "Other"],
+  racialEthnicIdentity: ["Black / African Diaspora", "Indigenous / First Nations", "Latinx / Hispanic", "Asian / Asian American", "Middle Eastern / North African", "Pacific Islander", "White", "Multiracial", "Other", "Prefer not to say"],
   heardAboutUs: ["Provider referral", "Client referral", "Instagram", "Facebook", "Google search", "Event", "Referral Room", "Newsletter"],
   collaborationInterests: ["Referrals", "Workshops", "Peer Consultation", "Speaking", "Community Events", "Provider Discounts", "Other"],
   vibe: ["Warm", "Grounding", "Direct", "Creative", "Spiritual", "Clinical", "Collaborative", "Other"],
@@ -125,8 +125,8 @@ export default function ProviderSignupPage() {
           availability: choose(incoming.availability, FALLBACK_OPTIONS.availability),
           responseTime: choose(incoming.responseTime, FALLBACK_OPTIONS.responseTime),
           referralMethod: choose(incoming.referralMethod, FALLBACK_OPTIONS.referralMethod),
-          genderIdentity: choose(incoming.genderIdentity, FALLBACK_OPTIONS.genderIdentity),
-          racialEthnicIdentity: choose(incoming.identity, FALLBACK_OPTIONS.racialEthnicIdentity),
+          genderIdentity: mergeOptions(incoming.genderIdentity, FALLBACK_OPTIONS.genderIdentity),
+          racialEthnicIdentity: mergeOptions(incoming.identity, FALLBACK_OPTIONS.racialEthnicIdentity),
           heardAboutUs: choose(incoming.heardAboutUs, FALLBACK_OPTIONS.heardAboutUs),
           collaborationInterests: choose(incoming.collaborationInterests, FALLBACK_OPTIONS.collaborationInterests),
           vibe: choose(incoming.vibe, FALLBACK_OPTIONS.vibe),
@@ -306,7 +306,7 @@ function PendingApprovalPage({ warning }) {
 
 function ProviderSignupNav() {
   return <nav className="provider-signup-nav" aria-label="Site navigation">
-    <a className="provider-signup-brand" href="/"><img src="/directory-logo-strip.png" alt="The Healing Directory" /><span><strong>The Healing Directory</strong><small>Trusted healing referrals</small></span></a>
+    <a className="provider-signup-brand" href="/"><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></a>
     <div>
       <a href="/">Providers</a>
       <a href="/events">Events</a>
@@ -448,6 +448,10 @@ function validEmail(value) {
 
 function choose(value, fallback) {
   return Array.isArray(value) && value.length ? value : fallback;
+}
+
+function mergeOptions(primary, required) {
+  return uniqueOptions([...(Array.isArray(primary) ? primary : []), ...(Array.isArray(required) ? required : [])]);
 }
 
 function uniqueOptions(values) {

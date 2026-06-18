@@ -2309,7 +2309,8 @@
 }
 
 .provider-signup-brand span {
-  display: none !important;
+  display: grid !important;
+  gap: 3px !important;
 }
 
 .provider-signup-brand strong {
@@ -2824,7 +2825,8 @@
 }
 
 .provider-signup-brand span {
-  display: none !important;
+  display: grid !important;
+  gap: 3px !important;
 }
 
 .provider-signup-brand strong {
@@ -5069,7 +5071,7 @@
   }
 }
 
-/* Main navigation logo: use the full brand strip instead of the legacy boxed icon. */
+/* Main navigation: text-only brand, no legacy logo image. */
 .site-header .brand,
 .warm-header .brand {
   gap: 0 !important;
@@ -5094,7 +5096,9 @@
 
 .site-header .brand span,
 .warm-header .brand span {
-  display: none !important;
+  display: grid !important;
+  gap: 3px !important;
+  min-width: 0 !important;
 }
 
 @media (max-width: 760px) {

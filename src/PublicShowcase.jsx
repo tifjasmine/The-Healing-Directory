@@ -98,7 +98,6 @@ export default function PublicShowcase({ path }) {
   return <div className="app-shell">
     <header className={warm ? "site-header warm-header" : "site-header"}>
       <button className="brand" onClick={() => go("/")}>
-        <img src="/directory-logo-strip.png" alt="The Healing Directory" />
         <span><strong>The Healing Directory</strong><small>Relationship-based care</small></span>
       </button>
       <button className="menu-toggle icon-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X /> : <Menu />}</button>
