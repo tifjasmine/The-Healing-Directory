@@ -180,7 +180,7 @@ function SiteHeader({ route, user, authReady, navigate, onLogout, menuOpen, setM
   return (
     <header className={warm ? "site-header warm-header" : "site-header"}>
       <button className="brand" onClick={() => navigate("/")}>
-        <img src="/healing-directory-logo.svg" alt="" />
+        <img src="/directory-logo-strip.png" alt="The Healing Directory" />
         <span><strong>The Healing Directory</strong><small>Relationship-based care</small></span>
       </button>
       <button className="menu-toggle icon-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X /> : <Menu />}</button>
