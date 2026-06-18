@@ -28,6 +28,7 @@ const EMPTY_PROFILE = {
   bio: "",
   photo: "",
   photoUrl: "",
+  profilePhotoUpload: null,
   providerType: "",
   services: "",
   support: "",
@@ -189,8 +190,8 @@ export default function EditProfilePage({ user, setNotice }) {
               <div>
                 <p className="eyebrow ink">Profile photo</p>
                 <h3>Current profile photo</h3>
-                <p>Use a public image URL to update the photo shown on your profile. Airtable attachment uploads can still be managed directly in Airtable.</p>
-                <Field label="Profile photo URL" value={form.photoUrl} onChange={(value) => update("photoUrl", value)} placeholder="https://..." />
+                <p>Upload a headshot or profile image. It will update the photo shown on your profile after saving.</p>
+                <PhotoUpload value={form.profilePhotoUpload} onChange={(value) => update("profilePhotoUpload", value)} />
               </div>
             </div>
 
@@ -291,6 +292,38 @@ function ProfilePhoto({ form }) {
   );
 }
 
+function PhotoUpload({ value, onChange }) {
+  const [error, setError] = React.useState("");
+
+  async function handleFile(event) {
+    const file = event.target.files?.[0];
+    setError("");
+    if (!file) {
+      onChange(null);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      setError("Please choose an image under 4MB.");
+      return;
+    }
+    const dataUrl = await fileToDataUrl(file);
+    onChange({ name: file.name, type: file.type, size: file.size, dataUrl });
+  }
+
+  return (
+    <label className="profile-photo-upload">
+      <span>Upload photo</span>
+      <input type="file" accept="image/*" onChange={handleFile} />
+      <small>{value?.name ? `Selected: ${value.name}` : "JPG, PNG, or WebP under 4MB."}</small>
+      {error ? <small className="field-error">{error}</small> : null}
+    </label>
+  );
+}
+
 function Field({ label, value, onChange, textarea, full, helper, required, readOnly, placeholder }) {
   return (
     <label className={full ? "profile-field full" : "profile-field"}>
@@ -338,6 +371,7 @@ function hydrateProfile(profile = {}, user) {
     ...profile,
     email: profile.email || user?.email || "",
     photoUrl: profile.photo || "",
+    profilePhotoUpload: null,
     providerType: toText(profile.providerType),
     services: toText(profile.services),
     support: toText(profile.support),
@@ -355,6 +389,7 @@ function serializeProfile(form) {
   return {
     ...form,
     photoUrl: form.photoUrl,
+    profilePhotoUpload: form.profilePhotoUpload,
     providerType: toList(form.providerType),
     services: toList(form.services),
     support: toList(form.support),
@@ -365,6 +400,15 @@ function serializeProfile(form) {
     collaborationInterests: toList(form.collaborationInterests),
     vibe: toList(form.vibe),
   };
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Photo could not be read."));
+    reader.readAsDataURL(file);
+  });
 }
 
 function toText(value) {

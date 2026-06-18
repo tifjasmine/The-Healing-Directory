@@ -1098,6 +1098,40 @@
   margin-top: 14px;
 }
 
+.profile-photo-upload {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.profile-photo-upload > span {
+  color: #534b43;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.profile-photo-upload input {
+  width: 100%;
+  border: 1px solid #e4d7ca;
+  border-radius: 14px;
+  background: #fffdf8;
+  color: #2f2924;
+  font: inherit;
+  padding: 12px;
+}
+
+.profile-photo-upload small {
+  color: #756a61;
+  font-size: 12px;
+}
+
+.profile-photo-upload .field-error {
+  color: #a4462d;
+  font-weight: 800;
+}
+
 .profile-form-grid {
   display: grid;
   gap: 18px 20px;

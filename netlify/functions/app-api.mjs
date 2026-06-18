@@ -4,6 +4,8 @@ const BASE_ID = process.env.AIRTABLE_BASE_ID || process.env.AIRTABLE_DIRECTORY_B
 const TOKEN = () => process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "";
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://zpgvztndfkochixhuvaf.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+const PROVIDER_APPROVAL_WEBHOOK_SECRET = () => process.env.PROVIDER_APPROVAL_WEBHOOK_SECRET || process.env.AIRTABLE_WEBHOOK_SECRET || "";
+const SITE_URL = () => (process.env.SITE_URL || process.env.URL || process.env.DEPLOY_PRIME_URL || "https://thehealingdirectory.org").replace(/\/+$/, "");
 const AIRTABLE_AUTO_CREATE_TABLES = lower(process.env.AIRTABLE_AUTO_CREATE_TABLES || "true") !== "false";
 
 const SUPABASE_SIGNUP_TABLES = {
@@ -117,6 +119,10 @@ const FIELDS = {
     approved: ["Approved", "Published", "Show in Directory", "Public"],
     verified: ["Verified", "Verified Member", "Referral Room"],
     status: ["Status", "Approval Status", "Request Status"],
+    inviteSent: ["Invite Sent", "Provider Invite Sent", "Supabase Invite Sent"],
+    inviteSentAt: ["Invite Sent At", "Provider Invite Sent At", "Supabase Invite Sent At"],
+    inviteError: ["Invite Error", "Provider Invite Error", "Supabase Invite Error"],
+    inviteUserId: ["Supabase User ID", "Auth User ID", "Invite User ID"],
     responseTime: ["Typical Response Time", "Response Time"],
     referralMethod: ["Preferred Referral Method"],
     referralInstructions: ["Referral Instructions"],
@@ -225,6 +231,7 @@ export default async function handler(request) {
     if (action === "save-account") return reply(await saveAccount(requireUser(user), body));
     if (action === "save-profile") return reply(await saveProfile(requireUser(user), body));
     if (action === "admin-event") return reply(await updateAdminEvent(requireAdmin(user), body));
+    if (action === "provider-approved-invite") return reply(await providerApprovedInvite(user, body, request));
     return reply({ error: "Unknown action." }, 404);
   } catch (error) {
     const status = error.status || 500;
@@ -407,6 +414,89 @@ async function updateAdminEvent(user, body) {
   return { ok: true, event: normalizeEvent(record), admin: user.email };
 }
 
+async function providerApprovedInvite(user, body, request) {
+  requireProviderInviteAccess(user, body, request);
+  if (!SUPABASE_SERVICE_ROLE_KEY()) throw httpError(500, "SUPABASE_SERVICE_ROLE_KEY is not configured.");
+
+  const recordId = required(body.recordId || body.id, "Provider record ID");
+  const record = await get("directory", recordId);
+  const fields = record.fields || {};
+  const email = requiredEmail(body.email || text(pick(fields, FIELDS.provider.email)));
+  const name = clean(body.name || text(pick(fields, FIELDS.provider.name)) || email.split("@")[0]);
+  const approved = truthy(body.approved ?? pick(fields, FIELDS.provider.approved));
+  if (!approved) throw httpError(400, "Provider is not approved yet.");
+
+  const alreadySent = truthy(pick(fields, FIELDS.provider.inviteSent));
+  if (alreadySent && lower(body.force) !== "true" && body.force !== true) {
+    return { ok: true, skipped: true, reason: "Invite already sent.", email, recordId };
+  }
+
+  const table = await metadataTable("directory").catch(() => null);
+  const updateFields = {};
+
+  try {
+    const invite = await inviteSupabaseProvider({
+      email,
+      name,
+      redirectTo: clean(body.redirectTo) || `${SITE_URL()}/login?account=provider`
+    });
+    setResolvedAlias(updateFields, table, FIELDS.provider.status, "Approved");
+    setResolvedAlias(updateFields, table, FIELDS.provider.accountType, "provider");
+    setResolvedAlias(updateFields, table, FIELDS.provider.inviteSent, true);
+    setResolvedAlias(updateFields, table, FIELDS.provider.inviteSentAt, new Date().toISOString());
+    setResolvedAlias(updateFields, table, FIELDS.provider.inviteError, "");
+    setResolvedAlias(updateFields, table, FIELDS.provider.inviteUserId, invite.userId);
+    const updated = Object.keys(updateFields).length ? await updateSafe("directory", recordId, updateFields) : record;
+    const supabaseSync = await syncSignupToSupabase("provider", {
+      name,
+      email,
+      status: "approved",
+      accountType: "provider",
+      source: "airtable-approval"
+    });
+    return { ok: true, email, recordId, invited: true, userId: invite.userId, updated: normalizeProvider(updated), supabaseSync };
+  } catch (error) {
+    const errorFields = {};
+    setResolvedAlias(errorFields, table, FIELDS.provider.inviteError, error.message || "Provider invite failed.");
+    if (Object.keys(errorFields).length) await updateSafe("directory", recordId, errorFields).catch(() => null);
+    throw error;
+  }
+}
+
+function requireProviderInviteAccess(user, body, request) {
+  if (isAdmin(user)) return true;
+  const expected = PROVIDER_APPROVAL_WEBHOOK_SECRET();
+  const provided = clean(body.secret || request.headers.get("x-webhook-secret") || request.headers.get("x-airtable-secret"));
+  if (!expected) throw httpError(500, "PROVIDER_APPROVAL_WEBHOOK_SECRET is not configured.");
+  if (!provided || provided !== expected) throw httpError(401, "Provider approval webhook is not authorized.");
+  return true;
+}
+
+async function inviteSupabaseProvider({ email, name, redirectTo }) {
+  const endpoint = `${SUPABASE_URL.replace(/\/+$/, "")}/auth/v1/invite?redirect_to=${encodeURIComponent(redirectTo)}`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY(),
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY()}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      email,
+      data: {
+        full_name: name,
+        account_type: "provider"
+      }
+    })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = payload.error_description || payload.msg || payload.message || payload.error || `Supabase invite failed (${response.status}).`;
+    throw httpError(response.status, message);
+  }
+  return { userId: payload.user?.id || payload.id || "" };
+}
+
 async function accountSettings(user) {
   const accountType = accountTypeForUser(user);
   const account = await ensureSaverAccount(user);
@@ -579,13 +669,14 @@ async function saveProfile(user, body) {
     name: body.name || publicUser(user)?.name || user.email.split("@")[0],
     accountType: "provider"
   });
+  const uploadedPhotoUrl = await uploadProviderAsset(body.profilePhotoUpload, user.email || body.name, "profile-photo");
   const fields = {};
   setAlias(fields, FIELDS.provider.name, body.name);
   setAlias(fields, FIELDS.provider.pronouns, body.pronouns);
   setAlias(fields, FIELDS.provider.profession, body.profession);
   setAlias(fields, FIELDS.provider.license, body.license);
   setAlias(fields, FIELDS.provider.identity, body.identity);
-  setAlias(fields, FIELDS.provider.photoUrl, body.photoUrl);
+  setAlias(fields, FIELDS.provider.photoUrl, uploadedPhotoUrl || body.photoUrl);
   setAlias(fields, FIELDS.provider.email, user.email);
   setAlias(fields, FIELDS.provider.phone, body.phone);
   setAlias(fields, FIELDS.provider.website, body.website);
@@ -963,7 +1054,7 @@ async function syncSignupToSupabase(accountType, body) {
     email: body.email,
     full_name: body.name,
     account_type: accountType,
-    status: lower(accountType) === "provider" ? "pending" : "approved",
+    status: lower(body.status) || (lower(accountType) === "provider" ? "pending" : "approved"),
     phone: clean(body.phone),
     website: clean(body.website),
     professional_title: clean(body.professionalTitle),

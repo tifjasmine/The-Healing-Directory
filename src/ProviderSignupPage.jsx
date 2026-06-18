@@ -268,7 +268,7 @@ function Human({ form, change, toggle, options }) {
     <TextField label="Guiding belief" value={form.guidingBelief} onChange={change("guidingBelief")} placeholder="Healing happens when..." />
     <TextField label="What I wish people knew about healing" value={form.healingTruth} onChange={change("healingTruth")} textarea />
     <Row><TextField label="Favorite comfort practice" value={form.favoriteComfortPractice} onChange={change("favoriteComfortPractice")} placeholder="Legs up the wall, journaling..." /><TextField label="Fun fact" value={form.funFact} onChange={change("funFact")} placeholder="Something personal and warm..." /></Row>
-    <MultiSelect label="Vibe" values={form.vibe} options={options.vibe} onToggle={(value) => toggle("vibe", value)} />
+    <MultiSelect label="Vibe" values={form.vibe} options={options.vibe} onToggle={(value) => toggle("vibe", value)} allowCustom={false} />
   </Section>;
 }
 

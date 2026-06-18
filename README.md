@@ -51,6 +51,38 @@ SUPABASE_CLIENTS_TABLE=clients
 SUPABASE_SIGNUP_REQUESTS_TABLE=signup_requests
 ```
 
+Provider approval invite flow:
+
+```txt
+PROVIDER_APPROVAL_WEBHOOK_SECRET=make-a-long-random-secret
+SITE_URL=https://thehealingdirectory.org
+```
+
+In Airtable, add optional fields to the Directory table:
+
+- `Invite Sent` checkbox
+- `Invite Sent At` date/time
+- `Invite Error` long text
+- `Supabase User ID` text
+
+Create an Airtable Automation:
+
+- Trigger: when `Approved` is checked and `Invite Sent` is not checked.
+- Action: Webhook / Send web request.
+- Method: `POST`
+- URL: `https://thehealingdirectory.org/.netlify/functions/app-api?action=provider-approved-invite`
+- Header: `Content-Type: application/json`
+- Body:
+
+```json
+{
+  "secret": "same-value-as-PROVIDER_APPROVAL_WEBHOOK_SECRET",
+  "recordId": "{{record.id}}"
+}
+```
+
+The Netlify function verifies the secret, confirms the provider is approved, sends the Supabase Auth provider invite email, then marks the Airtable invite fields.
+
 If your Airtable columns have custom names, add field overrides such as:
 
 ```txt
