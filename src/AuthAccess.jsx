@@ -57,6 +57,7 @@ export default function AuthAccess({ path }) {
       }
       if (signingUp) {
         if (form.password !== form.confirm) throw new Error("Passwords do not match.");
+        if (!strongPassword(form.password)) throw new Error("Please choose a stronger password with at least 10 characters, mixed case, a number, and a symbol.");
         await signup(form.email, form.password, { full_name: form.name, account_type: "client" });
         await api("signup-profile", { method: "POST", body: { name: form.name, email: form.email, accountType: "client" } }).catch(() => null);
         setNotice("Account created. Please check your email to verify your account before logging in.");
@@ -69,6 +70,7 @@ export default function AuthAccess({ path }) {
       }
       if (mode === "reset-password") {
         if (form.password !== form.confirm) throw new Error("Passwords do not match.");
+        if (!strongPassword(form.password)) throw new Error("Please choose a stronger password with at least 10 characters, mixed case, a number, and a symbol.");
         const inviteToken = sessionStorage.getItem("thd_invite_token");
         if (inviteFlow) {
           if (!inviteToken) throw new Error("This invite link is missing or expired. Please use the newest invite email.");
@@ -118,7 +120,7 @@ export default function AuthAccess({ path }) {
         {signingUp || providerSignup ? <Field label="Full name" value={form.name} onChange={set("name")} required /> : null}
         {mode !== "reset-password" ? <Field label="Email" type="email" value={form.email} onChange={set("email")} required /> : null}
         {providerSignup ? <><Field label="Phone" value={form.phone} onChange={set("phone")} /><Field label="Website or profile link" value={form.website} onChange={set("website")} /><Field label="Professional title" value={form.professionalTitle} onChange={set("professionalTitle")} required /><Field label="Tell us about your work" textarea value={form.message} onChange={set("message")} required /></> : null}
-        {!mode.includes("forgot") && !providerSignup ? <Field label="Password" type="password" value={form.password} onChange={set("password")} required /> : null}
+        {!mode.includes("forgot") && !providerSignup ? <><Field label="Password" type="password" value={form.password} onChange={set("password")} required autoComplete={mode === "login" ? "current-password" : "new-password"} />{mode !== "login" ? <PasswordRequirements password={form.password} /> : null}</> : null}
         {signingUp || mode === "reset-password" ? <Field label="Confirm password" type="password" value={form.confirm} onChange={set("confirm")} required /> : null}
         <button className="button full" disabled={busy}>{busy ? "Working..." : providerSignup ? "Submit provider application" : signingUp ? "Create client account" : mode.includes("password") ? "Continue" : "Log in"}</button>
         <div className="auth-links">{mode === "login" ? <><a href="/forgot-password">Forgot password?</a><a href="/signup">Create an account</a></> : <a href="/login">Back to login</a>}</div>
@@ -129,6 +131,25 @@ export default function AuthAccess({ path }) {
 
 function Field({ label, textarea, ...props }) {
   return <label className={textarea ? "field full-field" : "field"}><span>{label}</span>{textarea ? <textarea rows="5" {...props} /> : <input {...props} />}</label>;
+}
+
+function passwordChecks(value) {
+  const password = String(value || "");
+  return [
+    { label: "At least 10 characters", ok: password.length >= 10 },
+    { label: "Upper and lowercase letters", ok: /[A-Z]/.test(password) && /[a-z]/.test(password) },
+    { label: "At least one number", ok: /\d/.test(password) },
+    { label: "At least one symbol", ok: /[^A-Za-z0-9]/.test(password) },
+  ];
+}
+
+function strongPassword(value) { return passwordChecks(value).every((item) => item.ok); }
+
+function PasswordRequirements({ password }) {
+  return <div className="password-checklist compact-password-checklist">
+    <strong>Strong password</strong>
+    {passwordChecks(password).map((item) => <span key={item.label} className={item.ok ? "met" : ""}>{item.label}</span>)}
+  </div>;
 }
 
 async function api(action, options = {}) {

@@ -2038,6 +2038,56 @@
   padding: 12px 14px;
 }
 
+.password-checklist {
+  border: 1px solid #d9e3dc;
+  border-radius: 14px;
+  background: #f7fbf8;
+  color: #4d5a53;
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.25;
+  padding: 13px 14px;
+}
+
+.password-checklist strong {
+  color: #24493d;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.password-checklist span {
+  align-items: center;
+  color: #776b62;
+  display: inline-flex;
+  gap: 7px;
+  font-weight: 750;
+}
+
+.password-checklist span svg {
+  border: 1px solid #d7cdc4;
+  border-radius: 50%;
+  color: transparent;
+  flex: 0 0 auto;
+  padding: 2px;
+}
+
+.password-checklist span.met {
+  color: #24493d;
+}
+
+.password-checklist span.met svg {
+  background: #24493d;
+  border-color: #24493d;
+  color: #fff;
+}
+
+.compact-password-checklist {
+  margin-top: -4px;
+}
+
 .member-submit {
   min-height: 50px;
   border: 1px solid #24493d;

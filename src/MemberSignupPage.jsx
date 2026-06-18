@@ -35,7 +35,9 @@ export default function MemberSignupPage() {
     };
   }, []);
 
-  const valid = form.name.trim() && validEmail(form.email) && form.password.length >= 6 && form.password === form.confirm && form.areaInterest.length;
+  const passwordChecks = passwordChecklist(form.password);
+  const passwordReady = passwordChecks.every((item) => item.ok);
+  const valid = form.name.trim() && validEmail(form.email) && passwordReady && form.password === form.confirm && form.areaInterest.length;
 
   function change(key) {
     return (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
@@ -54,7 +56,7 @@ export default function MemberSignupPage() {
     event.preventDefault();
     setNotice("");
     if (!valid) {
-      setNotice("Please complete each field and choose at least one area of interest.");
+      setNotice(form.password && !passwordReady ? "Please choose a stronger password before creating your account." : "Please complete each field and choose at least one area of interest.");
       return;
     }
     setBusy(true);
@@ -113,7 +115,8 @@ export default function MemberSignupPage() {
           </div>
         </div>
 
-        <label className="member-field"><span>Password *</span><input type="password" value={form.password} onChange={change("password")} placeholder="At least 6 characters" /></label>
+        <label className="member-field"><span>Password *</span><input type="password" value={form.password} onChange={change("password")} placeholder="Create a strong password" autoComplete="new-password" /></label>
+        <PasswordChecklist checks={passwordChecks} />
         <label className="member-field"><span>Confirm password *</span><input type="password" value={form.confirm} onChange={change("confirm")} placeholder="Retype password" /></label>
 
         {notice ? <div className="member-notice"><AlertCircle size={16} />{notice}</div> : null}
@@ -164,12 +167,29 @@ function validEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
+function passwordChecklist(value) {
+  const password = String(value || "");
+  return [
+    { label: "At least 10 characters", ok: password.length >= 10 },
+    { label: "Upper and lowercase letters", ok: /[A-Z]/.test(password) && /[a-z]/.test(password) },
+    { label: "At least one number", ok: /\d/.test(password) },
+    { label: "At least one symbol", ok: /[^A-Za-z0-9]/.test(password) },
+  ];
+}
+
+function PasswordChecklist({ checks }) {
+  return <div className="password-checklist" aria-live="polite">
+    <strong>Password requirements</strong>
+    {checks.map((item) => <span key={item.label} className={item.ok ? "met" : ""}><Check size={13} />{item.label}</span>)}
+  </div>;
+}
+
 function memberErrorMessage(error) {
   const message = error?.message || "";
   const normalized = message.toLowerCase();
   if (normalized.includes("already")) return "An account already exists for this email. Please log in instead.";
   if (normalized.includes("registration") || normalized.includes("signup") || normalized.includes("not allowed")) return "Member signup is being blocked by the site auth settings. In Netlify Identity, Registration must be Open.";
-  if (normalized.includes("password")) return "Please use a password with at least 6 characters.";
+  if (normalized.includes("password")) return "Please choose a stronger password with at least 10 characters, mixed case, a number, and a symbol.";
   if (normalized.includes("failed to fetch")) return "The signup service could not be reached. Please try again in a moment.";
   return message || "Account could not be created.";
 }

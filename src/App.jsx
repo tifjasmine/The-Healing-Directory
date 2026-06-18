@@ -525,6 +525,7 @@ function AuthPage({ mode, navigate, setUser, setNotice }) {
       if (isSignup) {
         if (!form.name.trim()) throw new Error("Add your name before creating an account.");
         if (form.password !== form.confirm) throw new Error("Passwords do not match.");
+        if (!strongPassword(form.password)) throw new Error("Please choose a stronger password with at least 10 characters, mixed case, a number, and a symbol.");
 
         await signup(form.email, form.password, {
           full_name: form.name,
@@ -564,6 +565,7 @@ function AuthPage({ mode, navigate, setUser, setNotice }) {
         navigate("/login");
       } else if (isReset) {
         if (form.password !== form.confirm) throw new Error("Passwords do not match.");
+        if (!strongPassword(form.password)) throw new Error("Please choose a stronger password with at least 10 characters, mixed case, a number, and a symbol.");
         const current = await updateUser({ password: form.password });
         const normalized = normalizeUser(current);
         setUser(normalized);
@@ -629,10 +631,13 @@ function AuthPage({ mode, navigate, setUser, setNotice }) {
           ) : null}
 
           {!isForgot ? (
-            <label className="profile-field">
-              <span>Password</span>
-              <input type="password" value={form.password} onChange={(event) => update("password", event.target.value)} required />
-            </label>
+            <>
+              <label className="profile-field">
+                <span>Password</span>
+                <input type="password" value={form.password} onChange={(event) => update("password", event.target.value)} required autoComplete={isSignup || isReset ? "new-password" : "current-password"} />
+              </label>
+              {(isSignup || isReset) ? <PasswordRequirements password={form.password} /> : null}
+            </>
           ) : null}
 
           {isSignup || isReset ? (
@@ -795,6 +800,22 @@ function authMessage(error) {
   if (normalized.includes("already")) return "An account already exists for this email. Please log in instead.";
   if (normalized.includes("failed to fetch")) return "The login service could not be reached. Please try again in a moment.";
   return message || "Authentication could not be completed.";
+}
+function passwordChecks(value) {
+  const password = String(value || "");
+  return [
+    { label: "At least 10 characters", ok: password.length >= 10 },
+    { label: "Upper and lowercase letters", ok: /[A-Z]/.test(password) && /[a-z]/.test(password) },
+    { label: "At least one number", ok: /\d/.test(password) },
+    { label: "At least one symbol", ok: /[^A-Za-z0-9]/.test(password) },
+  ];
+}
+function strongPassword(value) { return passwordChecks(value).every((item) => item.ok); }
+function PasswordRequirements({ password }) {
+  return <div className="password-checklist compact-password-checklist">
+    <strong>Strong password</strong>
+    {passwordChecks(password).map((item) => <span key={item.label} className={item.ok ? "met" : ""}>{item.label}</span>)}
+  </div>;
 }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function lower(value) { return String(value || "").trim().toLowerCase(); }
