@@ -193,12 +193,20 @@ function DirectoryPage({ data, loading, toggleSave }) {
   const visibleProviders = providers.slice(0, visibleCount);
 
   return <main>
-    <DirectoryLogoStrip />
-    <section className="directory-intro page-band dark-band">
+    <section className="directory-intro page-band dark-band directory-home-hero">
       <div className="band-inner directory-heading">
+        <div className="directory-hero-lockup">
+          <img src="/healing-directory-logo.svg" alt="The Healing Directory" />
+          <span><strong>Relationship-based care</strong><small>New Jersey + Pennsylvania</small></span>
+        </div>
         <p className="eyebrow">The Healing Directory</p>
-        <h1>Find the right support.</h1>
-        <p className="lede">Browse trusted therapists, wellness professionals, and healing providers who serve clients in New Jersey and Pennsylvania.</p>
+        <h1>Find care that feels aligned.</h1>
+        <p className="lede">Browse trusted therapists, wellness professionals, and healing providers serving clients across New Jersey and Pennsylvania.</p>
+        <div className="directory-hero-notes">
+          <span><CheckCircle2 size={16} /> Personally introduced providers</span>
+          <span><MapPin size={16} /> NJ + PA focused</span>
+          <span><HeartHandshake size={16} /> Referral-centered network</span>
+        </div>
       </div>
       <div className="band-inner directory-search-panel">
         <span className="filter-label">Search</span>
