@@ -29,9 +29,12 @@ const FALLBACK_OPTIONS = {
   populations: ["Adults", "Teens", "Couples", "Families", "Providers", "LGBTQIA+", "BIPOC", "Other"],
   payment: ["Private Pay", "Sliding Scale", "Insurance", "Out of Network", "Free Consultation", "Other"],
   locations: ["Virtual", "Pennsylvania", "New Jersey", "New York", "Delaware", "Other"],
-  availability: ["Accepting New Clients", "Waitlist", "Weekdays", "Evenings", "Weekends", "Virtual", "In Person", "Other"],
+  availability: ["Accepting New Clients", "Waitlist", "Weekdays", "Evenings", "Weekends", "Virtual", "In Person"],
   responseTime: ["Within 24 hours", "1-2 business days", "Within a week", "Varies", "Other"],
   referralMethod: ["Email introduction", "Consultation link", "Phone call", "Provider form", "Client reaches out directly", "Other"],
+  genderIdentity: ["Woman", "Man", "Non-binary", "Gender expansive", "Transgender", "Prefer not to say", "Other"],
+  racialEthnicIdentity: ["Asian", "Black / African American", "Hispanic / Latine", "Indigenous / Native", "Middle Eastern / North African", "Multiracial", "White", "Prefer not to say", "Other"],
+  heardAboutUs: ["Provider referral", "Client referral", "Instagram", "Facebook", "Google search", "Event", "Referral Room", "Newsletter"],
   collaborationInterests: ["Referrals", "Workshops", "Peer Consultation", "Speaking", "Community Events", "Provider Discounts", "Other"],
   vibe: ["Warm", "Grounding", "Direct", "Creative", "Spiritual", "Clinical", "Collaborative", "Other"],
 };
@@ -50,9 +53,9 @@ const EMPTY = {
   pronouns: "",
   profession: "",
   licenseCertification: "",
-  profilePhotoUrl: "",
-  genderIdentity: "",
-  racialEthnicIdentity: "",
+  profilePhotoUpload: null,
+  genderIdentity: [],
+  racialEthnicIdentity: [],
   bio: "",
   email: "",
   phone: "",
@@ -78,6 +81,7 @@ const EMPTY = {
   preferredReferralMethod: [],
   referralInstructions: "",
   collaborationInterests: [],
+  otherCollaboration: "",
   collaborationDetails: "",
   providerToProviderNotes: "",
   styleWords: "",
@@ -93,8 +97,7 @@ const EMPTY = {
   consentCommunity: false,
   infoOptIn: false,
   signature: "",
-  signatureImageUrl: "",
-  heardAboutUs: "",
+  heardAboutUs: [],
 };
 
 export default function ProviderSignupPage() {
@@ -122,6 +125,9 @@ export default function ProviderSignupPage() {
           availability: choose(incoming.availability, FALLBACK_OPTIONS.availability),
           responseTime: choose(incoming.responseTime, FALLBACK_OPTIONS.responseTime),
           referralMethod: choose(incoming.referralMethod, FALLBACK_OPTIONS.referralMethod),
+          genderIdentity: choose(incoming.genderIdentity, FALLBACK_OPTIONS.genderIdentity),
+          racialEthnicIdentity: choose(incoming.identity, FALLBACK_OPTIONS.racialEthnicIdentity),
+          heardAboutUs: choose(incoming.heardAboutUs, FALLBACK_OPTIONS.heardAboutUs),
           collaborationInterests: choose(incoming.collaborationInterests, FALLBACK_OPTIONS.collaborationInterests),
           vibe: choose(incoming.vibe, FALLBACK_OPTIONS.vibe),
         });
@@ -197,10 +203,10 @@ export default function ProviderSignupPage() {
 
     <main className="provider-join-shell">
       <form className="provider-join-card" onSubmit={submit}>
-        {step === 0 ? <Basics form={form} change={change} /> : null}
+        {step === 0 ? <Basics form={form} change={change} setValue={setValue} toggle={toggle} options={options} /> : null}
         {step === 1 ? <Care form={form} change={change} toggle={toggle} addOther={addOther} options={options} /> : null}
         {step === 2 ? <Referral form={form} change={change} toggle={toggle} options={options} /> : null}
-        {step === 3 ? <Collaboration form={form} change={change} toggle={toggle} options={options} /> : null}
+        {step === 3 ? <Collaboration form={form} change={change} toggle={toggle} addOther={addOther} options={options} /> : null}
         {step === 4 ? <Human form={form} change={change} toggle={toggle} options={options} /> : null}
         {step === 5 ? <Consent form={form} change={change} setValue={setValue} /> : null}
 
@@ -216,16 +222,16 @@ export default function ProviderSignupPage() {
   </div>;
 }
 
-function Basics({ form, change }) {
+function Basics({ form, change, setValue, toggle, options }) {
   return <Section title="The basics" text="Start with who you are and how people can reach you, colleagues and clients alike.">
     <Row><TextField label="Full name" value={form.name} onChange={change("name")} required placeholder="Dr. Jane Smith" /><TextField label="Pronouns" value={form.pronouns} onChange={change("pronouns")} placeholder="she/her, they/them..." /></Row>
     <Row><TextField label="Profession / title" value={form.profession} onChange={change("profession")} required placeholder="Licensed Therapist, Holistic Health Coach..." /><TextField label="License # / certification" value={form.licenseCertification} onChange={change("licenseCertification")} placeholder="LPC #000000, RYT-500..." /></Row>
-    <Row><TextField label="Gender identity" value={form.genderIdentity} onChange={change("genderIdentity")} placeholder="Optional" /><TextField label="Racial / ethnic identity" value={form.racialEthnicIdentity} onChange={change("racialEthnicIdentity")} placeholder="Optional" /></Row>
-    <TextField label="Profile photo URL" value={form.profilePhotoUrl} onChange={change("profilePhotoUrl")} placeholder="https://..." helper="Paste a public image link. This maps to Profile Photo URL in Airtable." />
+    <Row><MultiSelect label="Gender Identity" values={form.genderIdentity} options={options.genderIdentity} onToggle={(value) => toggle("genderIdentity", value)} /><MultiSelect label="Racial / Ethnic Identity" values={form.racialEthnicIdentity} options={options.racialEthnicIdentity} onToggle={(value) => toggle("racialEthnicIdentity", value)} /></Row>
+    <PhotoUpload value={form.profilePhotoUpload} onChange={(value) => setValue("profilePhotoUpload", value)} />
     <TextField label="Bio" value={form.bio} onChange={change("bio")} textarea placeholder="Let everyone get to know you and your practice." />
     <Row><TextField label="Email" type="email" value={form.email} onChange={change("email")} required placeholder="you@practice.com" /><TextField label="Phone" value={form.phone} onChange={change("phone")} placeholder="(555) 000-0000" /></Row>
     <Row><TextField label="Website" value={form.website} onChange={change("website")} placeholder="yourwebsite.com" /><TextField label="Consultation / booking link" value={form.consultationLink} onChange={change("consultationLink")} placeholder="calendly.com/..." /></Row>
-    <TextField label="How did you hear about us?" value={form.heardAboutUs} onChange={change("heardAboutUs")} placeholder="Referral, Instagram, provider, event..." />
+    <MultiSelect label="How'd you hear about us?" values={form.heardAboutUs} options={options.heardAboutUs} onToggle={(value) => toggle("heardAboutUs", value)} allowCustom={false} />
   </Section>;
 }
 
@@ -234,7 +240,7 @@ function Care({ form, change, toggle, addOther, options }) {
     <Row><MultiSelect label="Provider Type" values={form.providerType} options={options.providerType} onToggle={(value) => toggle("providerType", value)} onAddCustom={addOther("additionalProviderType")} customValue={form.additionalProviderType} customLabel="Additional Provider Type" required /><MultiSelect label="Concerns / areas of support" values={form.concerns} options={options.support} onToggle={(value) => toggle("concerns", value)} onAddCustom={addOther("additionalConcerns")} customValue={form.additionalConcerns} customLabel="Additional Concerns" required /></Row>
     <Row><MultiSelect label="Services offered" values={form.servicesOffered} options={options.services} onToggle={(value) => toggle("servicesOffered", value)} onAddCustom={addOther("additionalServices")} customValue={form.additionalServices} customLabel="Additional Services" required /><MultiSelect label="People served" values={form.populationsServed} options={options.populations} onToggle={(value) => toggle("populationsServed", value)} onAddCustom={addOther("additionalPopulations")} customValue={form.additionalPopulations} customLabel="Additional Populations" required /></Row>
     <Row><MultiSelect label="Payment / insurance" values={form.payType} options={options.payment} onToggle={(value) => toggle("payType", value)} onAddCustom={addOther("additionalPayTypes")} customValue={form.additionalPayTypes} customLabel="Additional Pay Types" required /><MultiSelect label="State" values={form.state} options={options.locations} onToggle={(value) => toggle("state", value)} onAddCustom={addOther("additionalStates")} customValue={form.additionalStates} customLabel="Additional States" required /></Row>
-    <Row><MultiSelect label="Availability" values={form.availability} options={options.availability} onToggle={(value) => toggle("availability", value)} required /><TextField label="Price" value={form.price} onChange={change("price")} required placeholder="$125/session, sliding scale, varies..." /></Row>
+    <Row><MultiSelect label="Availability" values={form.availability} options={options.availability} onToggle={(value) => toggle("availability", value)} allowCustom={false} required /><TextField label="Price" value={form.price} onChange={change("price")} required placeholder="$125/session, sliding scale, varies..." /></Row>
     <TextField label="Physical locations" value={form.physicalLocations} onChange={change("physicalLocations")} required placeholder="Philadelphia, South Jersey, virtual only..." />
     <TextField label="Current availability" value={form.availabilitySpecifics} onChange={change("availabilitySpecifics")} textarea required placeholder="Currently accepting new clients, weekday mornings, evenings, etc." />
   </Section>;
@@ -247,11 +253,11 @@ function Referral({ form, change, toggle, options }) {
   </Section>;
 }
 
-function Collaboration({ form, change, toggle, options }) {
+function Collaboration({ form, change, toggle, addOther, options }) {
   return <Section title="Collaboration" text="Provider-to-provider collaboration details.">
-    <MultiSelect label="Collaboration interests" values={form.collaborationInterests} options={options.collaborationInterests} onToggle={(value) => toggle("collaborationInterests", value)} />
-    <TextField label="Collaboration details" value={form.collaborationDetails} onChange={change("collaborationDetails")} textarea placeholder="Workshops, referral relationships, provider discounts, consultation preferences, boundaries..." />
-    <TextField label="Provider-to-provider notes" value={form.providerToProviderNotes} onChange={change("providerToProviderNotes")} textarea placeholder="Anything aligned providers should know before referring, collaborating, or reaching out." />
+    <MultiSelect label="Collaboration interests" values={form.collaborationInterests} options={options.collaborationInterests} onToggle={(value) => toggle("collaborationInterests", value)} onAddCustom={addOther("otherCollaboration")} customValue={form.otherCollaboration} customLabel="Other Collaboration" />
+    <TextField label="Collaboration details" value={form.collaborationDetails} onChange={change("collaborationDetails")} textarea placeholder="Workshops, referral relationships, provider discounts, consultation preferences, boundaries..." helper="Maps to Collaboration Details in Airtable." />
+    <TextField label="Additional info" value={form.providerToProviderNotes} onChange={change("providerToProviderNotes")} textarea placeholder="Anything aligned providers should know before referring, collaborating, or reaching out." helper="Maps to Additional Info in Airtable." />
   </Section>;
 }
 
@@ -272,7 +278,6 @@ function Consent({ form, change, setValue }) {
     <ConsentCheck checked={form.consentCommunity} onChange={(value) => setValue("consentCommunity", value)} title="I agree to be an intentional, compassionate, respectful, and aligned provider within The Healing Directory community." text="This community is built around trust, care, integrity, collaboration, and respect." required />
     <ConsentCheck checked={form.infoOptIn} onChange={(value) => setValue("infoOptIn", value)} title="I would like to receive provider updates from The Healing Directory." text="Examples may include new providers, workshops, referral room updates, collaboration opportunities, and directory announcements." />
     <TextField label="Signature" value={form.signature} onChange={change("signature")} required placeholder="Type your full name" />
-    <TextField label="Signature image URL" value={form.signatureImageUrl} onChange={change("signatureImageUrl")} placeholder="Optional: link to signed agreement image" helper="Airtable attachments require a public URL. Typed signature is still saved to Signature." />
   </Section>;
 }
 
@@ -323,7 +328,35 @@ function TextField({ label, required, textarea, helper, ...props }) {
   return <label className={textarea ? "provider-field provider-full" : "provider-field"}><span>{label}{required ? " *" : ""}</span>{textarea ? <textarea rows="5" {...props} /> : <input {...props} />}{helper ? <small>{helper}</small> : null}</label>;
 }
 
-function MultiSelect({ label, values, options, onToggle, onAddCustom, customValue, customLabel, required }) {
+function PhotoUpload({ value, onChange }) {
+  const [error, setError] = React.useState("");
+  async function handleFile(event) {
+    const file = event.target.files?.[0];
+    setError("");
+    if (!file) {
+      onChange(null);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Please choose an image under 5 MB.");
+      return;
+    }
+    const dataUrl = await fileToDataUrl(file);
+    onChange({ name: file.name, type: file.type, size: file.size, dataUrl });
+  }
+  return <label className="provider-field provider-full provider-file-field">
+    <span>Profile photo</span>
+    <input type="file" accept="image/*" onChange={handleFile} />
+    {value?.name ? <small>Selected: {value.name}</small> : <small>Upload a headshot or profile image. It will be saved for review with your application.</small>}
+    {error ? <small className="field-error">{error}</small> : null}
+  </label>;
+}
+
+function MultiSelect({ label, values, options, onToggle, onAddCustom, customValue, customLabel, allowCustom = true, required }) {
   const [open, setOpen] = React.useState(false);
   const [custom, setCustom] = React.useState("");
   const ref = React.useRef(null);
@@ -362,16 +395,25 @@ function MultiSelect({ label, values, options, onToggle, onAddCustom, customValu
     {customValue ? <div className="provider-selected provider-other-selected"><span>{customLabel || "Additional option"}: {customValue}</span></div> : null}
     {open ? <div className="provider-multi-menu">
       {menuOptions.map((option) => <button type="button" key={option} className={selected.includes(option) ? "selected" : ""} onClick={() => onToggle(option)}><span>{selected.includes(option) ? <Check size={14} /> : null}</span>{option}</button>)}
-      <button type="button" className="provider-other-jump" onClick={() => inputRef.current?.focus()}><span>+</span>Add another option</button>
-      <div className="provider-other-box">
+      {allowCustom ? <button type="button" className="provider-other-jump" onClick={() => inputRef.current?.focus()}><span>+</span>Add another option</button> : null}
+      {allowCustom ? <div className="provider-other-box">
         <label>
           <span>Other {label.toLowerCase()}</span>
           <input ref={inputRef} value={custom} onChange={(event) => setCustom(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addCustom(); } }} placeholder={`Type another ${label.toLowerCase()}`} />
         </label>
         <button type="button" onClick={addCustom}>Add</button>
-      </div>
+      </div> : null}
     </div> : null}
   </div>;
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Photo could not be read."));
+    reader.readAsDataURL(file);
+  });
 }
 
 function appendText(current, nextValue) {

@@ -122,6 +122,7 @@ const FIELDS = {
     referralInstructions: ["Referral Instructions"],
     collaboration: ["Collaboration", "Collaboration Interests"],
     collaborationInterests: ["Collaboration Interests"],
+    otherCollaboration: ["Other Collaboration", "Additional Collaboration"],
     collaborationDetails: ["Collaboration Details"],
     providerNotes: ["Additional Info", "Provider-to-Provider Notes", "Provider Notes"],
     infoOptIn: ["Directory Updates Opt In", "Info Opt In", "Newsletter"],
@@ -129,7 +130,6 @@ const FIELDS = {
     subscriber: ["Subscriber"],
     consent: ["Consent"],
     signature: ["Signature"],
-    signatureAttachment: ["Signature Attachment", "Signature Image", "Signed Agreement"],
     heardAboutUs: ["How did you hear about us?", "How'd you hear about us?", "How did you hear about us", "Referral Source"],
     human: ["The Human Side", "Human Side"],
     styleWords: ["My Style In Three Words", "Style In Three Words"],
@@ -461,11 +461,12 @@ async function providerApplicationFields(application = {}) {
   const fields = {};
   const table = await metadataTable("directory").catch(() => null);
   const add = (aliases, value) => setResolvedAlias(fields, table, aliases, value);
+  const uploadedPhotoUrl = await uploadProviderAsset(application.profilePhotoUpload, application.email || application.name, "profile-photo");
   add(FIELDS.provider.name, application.name);
   add(FIELDS.provider.pronouns, application.pronouns);
   add(FIELDS.provider.profession, application.profession || application.professionalTitle);
   add(FIELDS.provider.license, application.licenseCertification || application.license);
-  add(FIELDS.provider.photoUrl, application.profilePhotoUrl || application.photoUrl);
+  add(FIELDS.provider.photoUrl, uploadedPhotoUrl || application.photoUrl);
   add(FIELDS.provider.genderIdentity, application.genderIdentity);
   add(FIELDS.provider.identity, application.racialEthnicIdentity || application.identity);
   add(FIELDS.provider.email, application.email);
@@ -496,6 +497,7 @@ async function providerApplicationFields(application = {}) {
   add(FIELDS.provider.referralMethod, application.preferredReferralMethod || application.referralMethod);
   add(FIELDS.provider.referralInstructions, application.referralInstructions);
   add(FIELDS.provider.collaborationInterests, application.collaborationInterests);
+  add(FIELDS.provider.otherCollaboration, application.otherCollaboration);
   add(FIELDS.provider.collaborationDetails, application.collaborationDetails);
   add(FIELDS.provider.providerNotes, application.providerToProviderNotes || application.providerNotes);
   if (application.consentCommunity !== undefined) add(FIELDS.provider.agreement, application.consentCommunity ? "Yes" : "No");
@@ -505,7 +507,6 @@ async function providerApplicationFields(application = {}) {
   }
   if (application.consentDirectory !== undefined) add(FIELDS.provider.consent, application.consentDirectory ? "Yes" : "No");
   add(FIELDS.provider.signature, application.signature);
-  add(FIELDS.provider.signatureAttachment, attachmentFromUrl(application.signatureImageUrl));
   add(FIELDS.provider.heardAboutUs, application.heardAboutUs);
   add(FIELDS.provider.styleWords, application.styleWords);
   add(FIELDS.provider.clientDescriptors, application.clientsDescribeMeAs || application.clientDescriptors);
@@ -719,6 +720,7 @@ async function getDirectoryOptions() {
     genderIdentity: await selectOptions("directory", FIELDS.provider.genderIdentity),
     responseTime: await selectOptions("directory", FIELDS.provider.responseTime),
     referralMethod: await selectOptions("directory", FIELDS.provider.referralMethod),
+    heardAboutUs: await selectOptions("directory", FIELDS.provider.heardAboutUs),
     collaborationInterests: await selectOptions("directory", FIELDS.provider.collaborationInterests),
     vibe: await selectOptions("directory", FIELDS.provider.vibe),
   };
@@ -1241,6 +1243,53 @@ function attachmentFromUrl(value) {
   return /^https?:\/\//i.test(url) ? [{ url }] : undefined;
 }
 
+async function uploadProviderAsset(file, owner = "", kind = "upload") {
+  if (!file?.dataUrl || !SUPABASE_SERVICE_ROLE_KEY()) return "";
+  const match = String(file.dataUrl).match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return "";
+  const mimeType = clean(file.type || match[1] || "application/octet-stream");
+  if (!mimeType.startsWith("image/")) return "";
+  const extension = clean((file.name || "").split(".").pop() || mimeType.split("/").pop() || "jpg").replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) || "jpg";
+  const bucket = "provider-uploads";
+  const safeOwner = slug(owner || "provider");
+  const objectPath = `provider-applications/${safeOwner}-${Date.now()}-${kind}.${extension}`;
+  const bytes = Buffer.from(match[2], "base64");
+  try {
+    await ensureSupabaseBucket(bucket);
+    const endpoint = `${SUPABASE_URL}/storage/v1/object/${bucket}/${objectPath.split("/").map(encodeURIComponent).join("/")}`;
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY(),
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY()}`,
+        "Content-Type": mimeType,
+        "x-upsert": "true"
+      },
+      body: bytes
+    });
+    if (!response.ok) return "";
+    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${objectPath.split("/").map(encodeURIComponent).join("/")}`;
+  } catch {
+    return "";
+  }
+}
+
+async function ensureSupabaseBucket(bucket) {
+  try {
+    await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY(),
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY()}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ id: bucket, name: bucket, public: true, file_size_limit: 5242880, allowed_mime_types: ["image/png", "image/jpeg", "image/webp", "image/gif"] })
+    });
+  } catch {
+    // Bucket may already exist or storage may be unavailable. Upload will decide whether to continue.
+  }
+}
+
 function requiredEmail(value) {
   const email = lower(value);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw httpError(400, "A valid email is required.");
@@ -1370,6 +1419,7 @@ function attachment(value) { const first = arrayRaw(value)[0]; return typeof fir
 function truthy(value) { if (value === true || value === 1) return true; return ["true", "yes", "approved", "published", "active", "open", "1", "checked"].includes(lower(text(value))); }
 function clean(value) { return String(value ?? "").replace(/\s+/g, " ").trim(); }
 function lower(value) { return clean(value).toLowerCase(); }
+function slug(value) { return lower(value).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "provider"; }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function required(value, label) { const cleanValue = clean(value); if (!cleanValue) throw httpError(400, `${label} is required.`); return cleanValue; }
 function removeEmpty(fields, keepEmpty = false) { Object.keys(fields).forEach((key) => { if (fields[key] == null || (!keepEmpty && typeof fields[key] === "string" && !fields[key].trim())) delete fields[key]; }); }
