@@ -1548,6 +1548,49 @@
   background: #eaf5ef;
 }
 
+.provider-other-box {
+  border-top: 1px solid #e8ddd3;
+  display: grid;
+  gap: 8px;
+  margin-top: 5px;
+  padding: 10px 8px 8px;
+}
+
+.provider-other-box label {
+  display: grid;
+  gap: 6px;
+}
+
+.provider-other-box label span {
+  color: #61564e;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.provider-other-box input {
+  min-height: 40px;
+  border: 1px solid #dfcfc0;
+  border-radius: 10px;
+  background: #fffaf6;
+  color: #2f2925;
+  font: inherit;
+  padding: 0 11px;
+}
+
+.provider-multi-menu .provider-other-box > button {
+  min-height: 38px;
+  border: 1px solid #24493d;
+  border-radius: 10px;
+  background: #24493d;
+  color: #fff;
+  display: inline-flex;
+  justify-content: center;
+  font-weight: 850;
+  padding: 0 14px;
+}
+
 .provider-consent {
   width: 100%;
   border: 1px solid #e4d7ca;

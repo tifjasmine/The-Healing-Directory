@@ -145,9 +145,7 @@ export default function ProviderSignupPage() {
           application: form,
         },
       });
-      if (result.supabaseSync && result.supabaseSync.synced === false) {
-        setSyncWarning(`Supabase did not sync this application yet: ${result.supabaseSync.reason || "check table settings"}.`);
-      }
+      if (result.supabaseSync && result.supabaseSync.synced === false) setSyncWarning("");
       setSubmitted(true);
     } catch (error) {
       setNotice(error.message || "Your application could not be submitted.");
@@ -294,8 +292,19 @@ function TextField({ label, required, textarea, ...props }) {
 
 function MultiSelect({ label, values, options, onToggle, required }) {
   const [open, setOpen] = React.useState(false);
+  const [custom, setCustom] = React.useState("");
   const ref = React.useRef(null);
   const selected = Array.isArray(values) ? values : [];
+  const menuOptions = uniqueOptions([...(options || []), "Other"]);
+  const otherSelected = selected.some(isOtherValue);
+  function addCustom() {
+    const next = custom.trim();
+    if (!next) return;
+    selected.filter(isOtherValue).forEach((value) => onToggle(value));
+    if (!selected.includes(next)) onToggle(next);
+    setCustom("");
+    setOpen(false);
+  }
   React.useEffect(() => {
     if (!open) return undefined;
     const close = (event) => {
@@ -318,7 +327,14 @@ function MultiSelect({ label, values, options, onToggle, required }) {
     </button>
     {selected.length ? <div className="provider-selected">{selected.map((value) => <button type="button" key={value} onClick={() => onToggle(value)}>{value}<X size={12} /></button>)}</div> : null}
     {open ? <div className="provider-multi-menu">
-      {options.map((option) => <button type="button" key={option} className={selected.includes(option) ? "selected" : ""} onClick={() => onToggle(option)}><span>{selected.includes(option) ? <Check size={14} /> : null}</span>{option}</button>)}
+      {menuOptions.map((option) => <button type="button" key={option} className={selected.includes(option) ? "selected" : ""} onClick={() => onToggle(option)}><span>{selected.includes(option) ? <Check size={14} /> : null}</span>{option}</button>)}
+      {otherSelected ? <div className="provider-other-box">
+        <label>
+          <span>Add another option</span>
+          <input value={custom} onChange={(event) => setCustom(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addCustom(); } }} placeholder={`Other ${label.toLowerCase()}`} />
+        </label>
+        <button type="button" onClick={addCustom}>Add</button>
+      </div> : null}
     </div> : null}
   </div>;
 }
@@ -348,6 +364,20 @@ function validEmail(value) {
 
 function choose(value, fallback) {
   return Array.isArray(value) && value.length ? value : fallback;
+}
+
+function uniqueOptions(values) {
+  const seen = new Set();
+  return values.map((value) => String(value || "").trim()).filter((value) => {
+    const key = value.toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function isOtherValue(value) {
+  return String(value || "").trim().toLowerCase() === "other";
 }
 
 async function api(action, options = {}) {
