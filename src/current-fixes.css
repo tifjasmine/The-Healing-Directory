@@ -4883,9 +4883,9 @@
 .directory-home-hero {
   position: relative;
   overflow: hidden;
-  padding-top: clamp(26px, 4vw, 48px) !important;
+  padding-top: clamp(22px, 3.2vw, 38px) !important;
   padding-bottom: clamp(28px, 4vw, 46px) !important;
-  background: linear-gradient(180deg, #fff7ea 0%, #fbf1e2 56%, #24493d 56%, #24493d 100%) !important;
+  background: linear-gradient(180deg, #fff7ea 0%, #fbf1e2 64%, #24493d 64%, #24493d 100%) !important;
 }
 
 .directory-home-hero::before {
@@ -4899,18 +4899,17 @@
 
 .directory-home-hero .directory-heading {
   display: grid !important;
-  gap: 14px !important;
-  padding-bottom: 26px !important;
+  gap: 13px !important;
+  padding-top: clamp(20px, 3.2vw, 44px) !important;
+  padding-bottom: clamp(24px, 3vw, 38px) !important;
   text-align: center !important;
   justify-items: center !important;
 }
 
 .directory-hero-lockup {
-  width: auto;
+  width: min(360px, 72vw);
   max-width: 100%;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
+  display: block;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -4920,18 +4919,18 @@
 }
 
 .directory-hero-lockup img {
-  width: 64px;
-  height: 64px;
+  width: 100%;
+  height: auto;
+  max-height: 118px;
   object-fit: contain;
   padding: 0;
   border-radius: 0;
   background: transparent;
+  display: block;
 }
 
 .directory-hero-lockup span {
-  display: grid;
-  gap: 4px;
-  line-height: 1;
+  display: none !important;
 }
 
 .directory-hero-lockup strong {
@@ -4955,8 +4954,8 @@
   max-width: 860px;
   margin: 0 !important;
   color: #24493d;
-  font-size: clamp(48px, 6.2vw, 82px) !important;
-  line-height: .92 !important;
+  font-size: clamp(50px, 6vw, 84px) !important;
+  line-height: .93 !important;
 }
 
 .directory-home-hero .directory-heading .lede {
@@ -4967,34 +4966,66 @@
   line-height: 1.45 !important;
 }
 
+.directory-hero-context {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  max-width: 900px;
+  margin-top: 2px;
+  color: #746f68;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.directory-hero-context span {
+  position: relative;
+}
+
+.directory-hero-context span + span::before {
+  content: "";
+  position: absolute;
+  left: -11px;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #d79b2b;
+  transform: translateY(-50%);
+}
+
 .directory-hero-notes {
   display: none !important;
 }
 
 .directory-home-hero .directory-search-panel {
-  margin-top: 0 !important;
+  width: min(1180px, calc(100% - 48px)) !important;
+  margin: 0 auto !important;
+  padding: clamp(18px, 2.4vw, 28px) !important;
   border-color: rgba(255, 255, 255, .14) !important;
   background: #24493d !important;
+  border-radius: 22px !important;
   box-shadow: 0 18px 46px rgba(15, 35, 29, .16);
+}
+
+.directory-home-hero .directory-search-panel > .search-control {
+  max-width: 620px !important;
 }
 
 @media (max-width: 760px) {
   .directory-home-hero {
-    padding-top: 22px !important;
+    padding-top: 18px !important;
     padding-bottom: 24px !important;
-    background: linear-gradient(180deg, #fff7ea 0%, #fbf1e2 52%, #24493d 52%, #24493d 100%) !important;
+    background: linear-gradient(180deg, #fff7ea 0%, #fbf1e2 56%, #24493d 56%, #24493d 100%) !important;
   }
 
   .directory-hero-lockup {
-    width: auto;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+    width: min(250px, 74vw);
   }
 
   .directory-hero-lockup img {
-    width: 48px;
-    height: 48px;
+    width: 100%;
+    max-height: 88px;
   }
 
   .directory-hero-lockup strong {
@@ -5007,7 +5038,7 @@
   }
 
   .directory-home-hero .directory-heading h1 {
-    font-size: clamp(38px, 10vw, 50px) !important;
+    font-size: clamp(38px, 10vw, 52px) !important;
     line-height: .96 !important;
   }
 
@@ -5016,7 +5047,21 @@
     line-height: 1.5 !important;
   }
 
+  .directory-hero-context {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .directory-hero-context span + span::before {
+    display: none;
+  }
+
   .directory-home-hero .directory-search-panel {
-    margin-top: 0 !important;
+    width: calc(100% - 24px) !important;
+    margin: 0 auto !important;
+    padding: 14px !important;
+    border-radius: 18px !important;
   }
 }
