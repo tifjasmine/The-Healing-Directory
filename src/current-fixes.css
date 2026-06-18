@@ -3619,6 +3619,23 @@
   outline: none;
 }
 
+.provider-other-selected {
+  margin-top: 8px;
+}
+
+.provider-other-selected span {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 7px 10px;
+  border: 1px dashed #c9b8a6;
+  border-radius: 999px;
+  background: #fff7ea;
+  color: #24493d;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
 .provider-multi-menu .provider-other-box > button {
   min-height: 38px;
   border: 1px solid #24493d;

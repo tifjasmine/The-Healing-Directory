@@ -92,20 +92,27 @@ const FIELDS = {
     photoUrl: ["Profile Photo URL", "Photo URL", "Headshot URL", "Image URL"],
     bio: ["Provider Bio", "Bio", "About", "Description"],
     profession: ["Professional Title", "Profession", "Credentials", "Service Type"],
-    license: ["License / Certification", "License # / Certification", "License", "Credentials"],
-    identity: ["Racial / Ethnic Identity", "Identity"],
+    license: ["License #/ Certification", "License # / Certification", "License / Certification", "License", "Credentials"],
+    identity: ["Racial / Ethnic Identity", "Racial/Ethnic Identity", "Identity"],
+    genderIdentity: ["Gender Identity"],
     pronouns: ["Pronouns"],
     type: ["Provider Type", "Provider Types", "Service Type"],
+    additionalProviderType: ["Additional Provider Type", "Additional Provider Types"],
     order: ["Order #", "Order", "Display Order", "Sort Order"],
-    services: ["Additional Services", "Services Offered", "Services"],
+    services: ["Services Offered", "Services"],
+    additionalServices: ["Additional Services"],
     support: ["Areas of Support"],
+    additionalConcerns: ["Additional Concerns", "Additional Areas of Support"],
     population: ["Populations Served", "Who I Serve", "Population"],
+    additionalPopulations: ["Additional Populations", "Additional Populations Served"],
     location: ["State", "Location", "Virtual/In Person", "Neighborhood"],
-    payment: ["Pay Type/Insurance", "Pay Type", "Insurance", "Payment", "Additional Payment"],
+    additionalStates: ["Additional States", "Additional State"],
+    payment: ["Pay Type/Insurance", "Pay Type", "Insurance", "Payment"],
+    additionalPayTypes: ["Additional Pay Types", "Additional Payment", "Additional Insurance"],
     availability: ["Availability"],
     price: ["Price", "Pricing"],
     physicalLocations: ["Physical Locations", "Physical Location"],
-    availabilitySpecifics: ["Availability Specifics", "Current Availability"],
+    availabilitySpecifics: ["Current Availability", "Availability Specifics"],
     website: ["Website", "Web Site"], consult: ["Consultation Link", "Booking Link", "Schedule Link"],
     approved: ["Approved", "Published", "Show in Directory", "Public"],
     verified: ["Verified", "Verified Member", "Referral Room"],
@@ -115,9 +122,15 @@ const FIELDS = {
     referralInstructions: ["Referral Instructions"],
     collaboration: ["Collaboration", "Collaboration Interests"],
     collaborationInterests: ["Collaboration Interests"],
-    collaborationDetails: ["Collaboration Details", "Provider Discount Details"],
-    providerNotes: ["Provider-to-Provider Notes", "Provider Notes"],
+    collaborationDetails: ["Collaboration Details"],
+    providerNotes: ["Additional Info", "Provider-to-Provider Notes", "Provider Notes"],
     infoOptIn: ["Directory Updates Opt In", "Info Opt In", "Newsletter"],
+    agreement: ["Agreement"],
+    subscriber: ["Subscriber"],
+    consent: ["Consent"],
+    signature: ["Signature"],
+    signatureAttachment: ["Signature Attachment", "Signature Image", "Signed Agreement"],
+    heardAboutUs: ["How did you hear about us?", "How'd you hear about us?", "How did you hear about us", "Referral Source"],
     human: ["The Human Side", "Human Side"],
     styleWords: ["My Style In Three Words", "Style In Three Words"],
     clientDescriptors: ["Clients Describe Me As", "Clients Describe Me"],
@@ -127,7 +140,7 @@ const FIELDS = {
     healingWish: ["What I Wish People Knew About Healing", "Healing Wish"],
     comfortPractice: ["Favorite Comfort Practice", "Comfort Practice"],
     funFact: ["Fun Fact"],
-    vibe: ["Vibe"]
+    vibe: ["What's Your Vibe?", "What’s Your Vibe?", "Vibe"]
   },
   event: {
     name: ["Event Name", "Name"], hostName: ["Host Name"], hostEmail: ["Host Email"],
@@ -452,6 +465,9 @@ async function providerApplicationFields(application = {}) {
   add(FIELDS.provider.pronouns, application.pronouns);
   add(FIELDS.provider.profession, application.profession || application.professionalTitle);
   add(FIELDS.provider.license, application.licenseCertification || application.license);
+  add(FIELDS.provider.photoUrl, application.profilePhotoUrl || application.photoUrl);
+  add(FIELDS.provider.genderIdentity, application.genderIdentity);
+  add(FIELDS.provider.identity, application.racialEthnicIdentity || application.identity);
   add(FIELDS.provider.email, application.email);
   add(FIELDS.provider.phone, application.phone);
   add(FIELDS.provider.website, application.website);
@@ -461,11 +477,17 @@ async function providerApplicationFields(application = {}) {
   add(FIELDS.provider.status, "Pending Review");
   add(FIELDS.provider.approved, false);
   add(FIELDS.provider.type, application.providerType || application.serviceType);
+  add(FIELDS.provider.additionalProviderType, application.additionalProviderType);
   add(FIELDS.provider.services, application.servicesOffered || application.services);
+  add(FIELDS.provider.additionalServices, application.additionalServices);
   add(FIELDS.provider.support, application.concerns || application.support);
+  add(FIELDS.provider.additionalConcerns, application.additionalConcerns);
   add(FIELDS.provider.population, application.populationsServed || application.populations);
+  add(FIELDS.provider.additionalPopulations, application.additionalPopulations);
   add(FIELDS.provider.location, application.state || application.location);
+  add(FIELDS.provider.additionalStates, application.additionalStates);
   add(FIELDS.provider.payment, application.payType || application.payment);
+  add(FIELDS.provider.additionalPayTypes, application.additionalPayTypes);
   add(FIELDS.provider.availability, application.availability);
   add(FIELDS.provider.price, application.price);
   add(FIELDS.provider.physicalLocations, application.physicalLocations);
@@ -476,7 +498,15 @@ async function providerApplicationFields(application = {}) {
   add(FIELDS.provider.collaborationInterests, application.collaborationInterests);
   add(FIELDS.provider.collaborationDetails, application.collaborationDetails);
   add(FIELDS.provider.providerNotes, application.providerToProviderNotes || application.providerNotes);
-  if (application.infoOptIn !== undefined) add(FIELDS.provider.infoOptIn, application.infoOptIn ? "Yes" : "No");
+  if (application.consentCommunity !== undefined) add(FIELDS.provider.agreement, application.consentCommunity ? "Yes" : "No");
+  if (application.infoOptIn !== undefined) {
+    add(FIELDS.provider.infoOptIn, application.infoOptIn ? "Yes" : "No");
+    add(FIELDS.provider.subscriber, application.infoOptIn ? "Yes" : "No");
+  }
+  if (application.consentDirectory !== undefined) add(FIELDS.provider.consent, application.consentDirectory ? "Yes" : "No");
+  add(FIELDS.provider.signature, application.signature);
+  add(FIELDS.provider.signatureAttachment, attachmentFromUrl(application.signatureImageUrl));
+  add(FIELDS.provider.heardAboutUs, application.heardAboutUs);
   add(FIELDS.provider.styleWords, application.styleWords);
   add(FIELDS.provider.clientDescriptors, application.clientsDescribeMeAs || application.clientDescriptors);
   add(FIELDS.provider.groundingRitual, application.groundingRitual);
@@ -686,6 +716,9 @@ async function getDirectoryOptions() {
     locations: await selectOptions("directory", FIELDS.provider.location),
     availability: await selectOptions("directory", FIELDS.provider.availability),
     identity: await selectOptions("directory", FIELDS.provider.identity),
+    genderIdentity: await selectOptions("directory", FIELDS.provider.genderIdentity),
+    responseTime: await selectOptions("directory", FIELDS.provider.responseTime),
+    referralMethod: await selectOptions("directory", FIELDS.provider.referralMethod),
     collaborationInterests: await selectOptions("directory", FIELDS.provider.collaborationInterests),
     vibe: await selectOptions("directory", FIELDS.provider.vibe),
   };
@@ -1059,6 +1092,17 @@ function setOptional(fields, fieldName, value) {
 function setAirtableValue(fields, table, fieldName, value) {
   if (!fieldName) return;
   const field = table?.fields?.find((item) => item.name === fieldName);
+  if (field?.type === "multipleAttachments") {
+    const attachments = arrayRaw(value)
+      .map((item) => {
+        if (typeof item === "object" && item?.url) return { url: clean(item.url) };
+        const url = clean(item);
+        return /^https?:\/\//i.test(url) ? { url } : null;
+      })
+      .filter(Boolean);
+    if (attachments.length) fields[fieldName] = attachments;
+    return;
+  }
   const values = arrayRaw(value).flatMap((item) => String(item || "").split(/[,;\n]+/)).map(clean).filter(Boolean);
   let nextValue;
   if (field?.type === "multipleSelects") nextValue = values;
@@ -1185,7 +1229,7 @@ function setAlias(fields, names, value) {
 
 function setResolvedAlias(fields, table, names, value) {
   if (!names?.length) return;
-  setAlias(fields, [findField(table, names)], value);
+  setAirtableValue(fields, table, findField(table, names), value);
 }
 
 function listText(value) {
