@@ -362,7 +362,7 @@ function MultiSelect({ label, values, options, onToggle, onAddCustom, customValu
   const ref = React.useRef(null);
   const inputRef = React.useRef(null);
   const selected = Array.isArray(values) ? values : [];
-  const menuOptions = uniqueOptions(options || []).filter((option) => !isOtherValue(option));
+  const menuOptions = uniqueOptions(options || []).filter((option) => allowCustom ? !isOtherValue(option) : true);
   function addCustom() {
     const next = custom.trim();
     if (!next) return;
