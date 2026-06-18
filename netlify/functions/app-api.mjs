@@ -119,8 +119,8 @@ const FIELDS = {
     approved: ["Approved", "Published", "Show in Directory", "Public"],
     verified: ["Verified", "Verified Member", "Referral Room"],
     status: ["Status", "Approval Status", "Request Status"],
-    inviteSent: ["Invite Sent", "Provider Invite Sent", "Supabase Invite Sent"],
-    inviteSentAt: ["Invite Sent At", "Provider Invite Sent At", "Supabase Invite Sent At"],
+    inviteSent: ["Invite Sent", "Approval Email Sent", "Provider Invite Sent", "Supabase Invite Sent"],
+    inviteSentAt: ["Invite Sent At", "Approval Email Sent At", "Provider Invite Sent At", "Supabase Invite Sent At"],
     inviteError: ["Invite Error", "Provider Invite Error", "Supabase Invite Error"],
     inviteUserId: ["Supabase User ID", "Auth User ID", "Invite User ID"],
     responseTime: ["Typical Response Time", "Response Time"],
@@ -203,7 +203,13 @@ export default async function handler(request) {
 
     const url = new URL(request.url);
     const action = url.searchParams.get("action") || "bootstrap";
-    const user = await optionalUser();
+
+    if (request.method === "POST" && action === "provider-approved-invite") {
+      const body = await request.json().catch(() => ({}));
+      return reply(await providerApprovedInvite(null, body, request));
+    }
+
+    const user = await optionalUser(request);
 
     if (request.method === "GET") {
       if (action === "bootstrap") return reply(await bootstrap(user));
@@ -231,7 +237,6 @@ export default async function handler(request) {
     if (action === "save-account") return reply(await saveAccount(requireUser(user), body));
     if (action === "save-profile") return reply(await saveProfile(requireUser(user), body));
     if (action === "admin-event") return reply(await updateAdminEvent(requireAdmin(user), body));
-    if (action === "provider-approved-invite") return reply(await providerApprovedInvite(user, body, request));
     return reply({ error: "Unknown action." }, 404);
   } catch (error) {
     const status = error.status || 500;
@@ -1432,7 +1437,8 @@ async function airtable(key, id = "", options = {}) {
 
 function requireUser(user) { if (!user?.email) throw httpError(401, "Please log in."); return user; }
 function requireAdmin(user) { requireUser(user); if (!isAdmin(user)) throw httpError(403, "Administrator access is required."); return user; }
-async function optionalUser() {
+async function optionalUser(request) {
+  if (!request?.headers?.get("authorization")) return null;
   try {
     return await getUser();
   } catch {
