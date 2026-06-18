@@ -2149,6 +2149,285 @@
   }
 }
 
+/* Provider directory mobile drawers and cleaner provider detail panels. */
+.provider-contact-toggle,
+.detail-panel-toggle {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.provider-contact-toggle {
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #81746a;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.provider-contact.open .provider-contact-toggle svg {
+  transform: rotate(180deg);
+}
+
+.provider-contact-body {
+  display: contents;
+}
+
+.provider-contact-body > a {
+  min-height: 48px;
+  padding: 0 14px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--ref-line);
+  border-radius: 14px;
+  background: #fcf8f3;
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.provider-contact-body > a span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-panel-toggle {
+  width: 100%;
+  padding: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  text-align: left;
+}
+
+.detail-panel-toggle h2 {
+  margin-bottom: 0 !important;
+}
+
+.detail-panel-toggle svg {
+  margin-top: 7px;
+  color: #24493d;
+  flex: 0 0 auto;
+  transition: transform 140ms ease;
+}
+
+.detail-panel.open .detail-panel-toggle svg {
+  transform: rotate(180deg);
+}
+
+.detail-panel-body {
+  margin-top: 14px;
+}
+
+.profile-sidebar .detail-panel-body > a:not(.button),
+.profile-sidebar .detail-panel-body .info-line {
+  margin-top: 10px;
+  padding: 15px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  border: 1px solid var(--ref-line);
+  border-radius: 14px;
+  background: #fcf8f3;
+}
+
+.profile-sidebar .detail-panel-body > a:not(.button) span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 761px) {
+  .provider-contact-body {
+    display: contents !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .directory-multi-select {
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 16px;
+    padding: 10px;
+    background: rgba(255, 255, 255, .06);
+  }
+
+  .directory-multi-select > span {
+    margin-bottom: 7px !important;
+  }
+
+  .directory-multi-select .selected-filter-chips {
+    display: none !important;
+  }
+
+  .multi-select-trigger {
+    background: #fffaf6 !important;
+    border-color: #eadfd5 !important;
+    color: #2f2925 !important;
+  }
+
+  .multi-select-menu {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    padding: 8px !important;
+    border-radius: 14px !important;
+    background: #fffaf6 !important;
+    box-shadow: none !important;
+  }
+
+  .multi-select-menu button {
+    min-height: 42px !important;
+    grid-template-columns: 22px minmax(0, 1fr) !important;
+    border: 1.5px solid #dfcfc0 !important;
+    border-radius: 12px !important;
+    background: #fff !important;
+    color: #3f3934 !important;
+    font-size: 13px !important;
+    font-weight: 850 !important;
+  }
+
+  .multi-select-menu button.selected {
+    border-color: #24493d !important;
+    background: #e8f4ef !important;
+    color: #24493d !important;
+  }
+
+  .multi-select-menu button span {
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #dccfc1;
+    border-radius: 50%;
+  }
+
+  .multi-select-menu button.selected span {
+    border-color: #24493d;
+  }
+
+  .provider-contact-body {
+    display: none !important;
+  }
+
+  .provider-contact.open .provider-contact-body {
+    display: grid !important;
+    gap: 8px !important;
+  }
+
+  .provider-contact-toggle {
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid #e4d8ca;
+    border-radius: 12px;
+    background: #fffaf6;
+    color: #24493d;
+    justify-content: space-between;
+    width: calc(100% - 52px);
+  }
+
+  .provider-contact.open .provider-contact-toggle {
+    background: #e8f4ef;
+    border-color: #b6cec3;
+  }
+
+  .provider-contact-body > a,
+  .provider-contact-body .button {
+    min-height: 42px !important;
+    border-radius: 12px !important;
+  }
+
+  .profile-band {
+    padding-bottom: 26px !important;
+  }
+
+  .profile-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .profile-band .profile-hero {
+    grid-template-columns: 96px minmax(0, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  .profile-band .profile-hero .avatar {
+    width: 96px !important;
+    height: 112px !important;
+  }
+
+  .profile-band .profile-hero .eyebrow {
+    margin-bottom: 8px !important;
+    font-size: 10px !important;
+  }
+
+  .profile-band .profile-hero h1 {
+    font-size: clamp(33px, 9vw, 43px) !important;
+    line-height: .98 !important;
+  }
+
+  .profile-band .title-line {
+    gap: 8px !important;
+  }
+
+  .pronouns,
+  .profile-band .profile-title,
+  .profile-band .meta-row {
+    font-size: 14px !important;
+  }
+
+  .profile-band .meta-row {
+    gap: 8px !important;
+    line-height: 1.35 !important;
+  }
+
+  .profile-tag-group {
+    margin-top: 14px !important;
+  }
+
+  .profile-tag-group.warm {
+    display: none !important;
+  }
+
+  .profile-content-grid {
+    margin-top: -10px !important;
+  }
+
+  .profile-content-grid .content-section,
+  .profile-content-grid .contact-panel {
+    padding: 16px !important;
+  }
+
+  .profile-content-grid .content-section h2,
+  .profile-content-grid .contact-panel h2 {
+    font-size: 27px !important;
+  }
+
+  .profile-content-grid .content-section p {
+    font-size: 14px !important;
+  }
+
+  .detail-panel-body {
+    margin-top: 12px !important;
+  }
+
+  .profile-sidebar .detail-panel-body > a:not(.button),
+  .profile-sidebar .detail-panel-body .info-line {
+    padding: 12px !important;
+    border-radius: 12px !important;
+  }
+}
+
 /* Provider/member application flow. */
 .provider-join-page {
   min-height: 100vh;

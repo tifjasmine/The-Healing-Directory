@@ -227,6 +227,7 @@ function DirectoryPage({ data, loading, toggleSave }) {
 }
 
 function ProviderCard({ provider, saved, onSave }) {
+  const [contactOpen, setContactOpen] = React.useState(false);
   return <article className="provider-row">
     <Avatar item={provider} />
     <div className="provider-copy">
@@ -236,12 +237,17 @@ function ProviderCard({ provider, saved, onSave }) {
       <p className="summary">{truncate(provider.bio, 210) || "View this provider's profile, approach, services, and contact options."}</p>
       <div className="tag-row">{[...(provider.providerType || []), ...(provider.support || [])].slice(0, 5).map((tag) => <span key={tag}>{tag}</span>)}</div>
     </div>
-    <div className="provider-contact">
-      <div className="provider-contact-title">Contact<button className={saved ? "icon-button saved" : "icon-button"} onClick={onSave} title="Save provider">{saved ? <Star fill="currentColor" /> : <Star />}</button></div>
-      {provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}
-      {provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}
-      {provider.website ? <a href={href(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>Website</span></a> : null}
-      <button className="button full" onClick={() => go(`/provider-details?id=${provider.id}`)}>View profile <ArrowRight size={15} /></button>
+    <div className={contactOpen ? "provider-contact open" : "provider-contact"}>
+      <div className="provider-contact-title">
+        <button type="button" className="provider-contact-toggle" onClick={() => setContactOpen((open) => !open)} aria-expanded={contactOpen}>Contact <ChevronDown size={15} /></button>
+        <button className={saved ? "icon-button saved" : "icon-button"} onClick={onSave} title="Save provider">{saved ? <Star fill="currentColor" /> : <Star />}</button>
+      </div>
+      <div className="provider-contact-body">
+        {provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}
+        {provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}
+        {provider.website ? <a href={href(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>Website</span></a> : null}
+        <button className="button full" onClick={() => go(`/provider-details?id=${provider.id}`)}>View profile <ArrowRight size={15} /></button>
+      </div>
     </div>
   </article>;
 }
@@ -282,8 +288,22 @@ function ProviderDetails({ data, loading, toggleSave }) {
         <ProviderConnectionSection provider={provider} defaultOpen={false} />
       </div>
       <aside className="profile-sidebar">
-        <div className="contact-panel"><h2>Connect</h2><p>Reach out directly to learn more about availability, fit, and next steps.</p>{provider.consultationLink ? <a className="button full" href={href(provider.consultationLink)} target="_blank" rel="noreferrer">Book consultation <ArrowRight size={16} /></a> : provider.website ? <a className="button full" href={href(provider.website)} target="_blank" rel="noreferrer">Visit website <ArrowRight size={16} /></a> : null}{provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}{provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}{provider.website ? <a href={href(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>{provider.website}</span></a> : null}</div>
-        <div className="contact-panel access-panel"><h2>Access &amp; Availability</h2><Info icon={<Star />} label="Pay type / insurance" value={provider.payment?.join(", ")} /><Info icon={<Clock />} label="Availability" value={provider.availability?.join(", ")} /><Info icon={<Clock />} label="Current availability" value={provider.availabilitySpecifics} /><Info icon={<CheckCircle2 />} label="Response time" value={provider.responseTime} /><Info icon={<Tag />} label="Pricing" value={provider.price} /><Info icon={<MapPin />} label="Location" value={provider.location?.join(", ")} /><Info icon={<MapPin />} label="Physical locations" value={provider.physicalLocations} /></div>
+        <DetailPanel className="contact-panel" title="Connect" defaultOpen={false}>
+          <p>Reach out directly to learn more about availability, fit, and next steps.</p>
+          {provider.consultationLink ? <a className="button full" href={href(provider.consultationLink)} target="_blank" rel="noreferrer">Book consultation <ArrowRight size={16} /></a> : provider.website ? <a className="button full" href={href(provider.website)} target="_blank" rel="noreferrer">Visit website <ArrowRight size={16} /></a> : null}
+          {provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}
+          {provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}
+          {provider.website ? <a href={href(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>{provider.website}</span></a> : null}
+        </DetailPanel>
+        <DetailPanel className="contact-panel access-panel" title="Access & Availability" defaultOpen={false}>
+          <Info icon={<Star />} label="Pay type / insurance" value={provider.payment?.join(", ")} />
+          <Info icon={<Clock />} label="Availability" value={provider.availability?.join(", ")} />
+          <Info icon={<Clock />} label="Current availability" value={provider.availabilitySpecifics} />
+          <Info icon={<CheckCircle2 />} label="Response time" value={provider.responseTime} />
+          <Info icon={<Tag />} label="Pricing" value={provider.price} />
+          <Info icon={<MapPin />} label="Location" value={provider.location?.join(", ")} />
+          <Info icon={<MapPin />} label="Physical locations" value={provider.physicalLocations} />
+        </DetailPanel>
       </aside>
     </section>
   </main>;
@@ -416,6 +436,16 @@ function ContentSection({ kicker, title, children, defaultOpen = true }) {
       <ChevronDown size={19} />
     </button>
     {open ? <div className="content-section-body">{children}</div> : null}
+  </section>;
+}
+function DetailPanel({ title, children, className = "", defaultOpen = true }) {
+  const [open, setOpen] = React.useState(defaultOpen);
+  return <section className={`${className} detail-panel ${open ? "open" : "collapsed"}`.trim()}>
+    <button type="button" className="detail-panel-toggle" onClick={() => setOpen((current) => !current)} aria-expanded={open}>
+      <h2>{title}</h2>
+      <ChevronDown size={19} />
+    </button>
+    {open ? <div className="detail-panel-body">{children}</div> : null}
   </section>;
 }
 function Info({ icon, label, value }) { if (!value) return null; return <div className="info-line">{React.cloneElement(icon, { size: 17 })}<span><small>{label}</small>{value}</span></div>; }
