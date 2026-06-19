@@ -58,7 +58,7 @@ Provider approval invite flow:
 
 ```txt
 PROVIDER_APPROVAL_WEBHOOK_SECRET=make-a-long-random-secret
-SITE_URL=https://thehealingdirectory.org
+SITE_URL=https://thehealingdirectory.com
 ```
 
 In Airtable, add optional fields to the Directory table:
@@ -73,7 +73,7 @@ Create an Airtable Automation:
 - Trigger: when `Approved` is checked and `Invite Sent` is not checked.
 - Action: Webhook / Send web request.
 - Method: `POST`
-- URL: `https://thehealingdirectory.org/.netlify/functions/app-api?action=provider-approved-invite`
+- URL: `https://thehealingdirectory.com/.netlify/functions/app-api?action=provider-approved-invite`
 - Header: `Content-Type: application/json`
 - Body:
 

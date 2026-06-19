@@ -5,7 +5,7 @@ const TOKEN = () => process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY |
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://zpgvztndfkochixhuvaf.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
 const PROVIDER_APPROVAL_WEBHOOK_SECRET = () => process.env.PROVIDER_APPROVAL_WEBHOOK_SECRET || process.env.AIRTABLE_WEBHOOK_SECRET || "";
-const SITE_URL = () => (process.env.SITE_URL || process.env.URL || process.env.DEPLOY_PRIME_URL || "https://thehealingdirectory.org").replace(/\/+$/, "");
+const SITE_URL = () => (process.env.SITE_URL || process.env.URL || process.env.DEPLOY_PRIME_URL || "https://thehealingdirectory.com").replace(/\/+$/, "");
 const AIRTABLE_AUTO_CREATE_TABLES = lower(process.env.AIRTABLE_AUTO_CREATE_TABLES || "true") !== "false";
 
 const SUPABASE_SIGNUP_TABLES = {
