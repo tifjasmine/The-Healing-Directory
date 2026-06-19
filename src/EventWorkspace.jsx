@@ -1,5 +1,5 @@
 import React from "react";
-import { getUser, logout } from "@netlify/identity";
+import { getUser, logout } from "./authClient.js";
 import {
   ArrowLeft, CalendarDays, CircleUserRound, Clock, ExternalLink, LogOut, Mail,
   Image as ImageIcon, Info, MapPin, Pencil, Plus, RefreshCw, Search, Save, Send, Sparkles,

@@ -6,7 +6,7 @@ import {
   requestPasswordRecovery,
   signup,
   updateUser,
-} from "@netlify/identity";
+} from "./authClient.js";
 import { ChevronDown, HeartHandshake, LogIn, Users } from "lucide-react";
 import ProviderSignupPage from "./ProviderSignupPage.jsx";
 import MemberSignupPage from "./MemberSignupPage.jsx";
@@ -165,7 +165,7 @@ function authErrorMessage(error, signingUp) {
   const message = error?.message || "";
   const normalized = message.toLowerCase();
   if (signingUp && (normalized.includes("signup") || normalized.includes("registration") || normalized.includes("not allowed"))) {
-    return "Client signup is being blocked by the site auth settings. In Netlify Identity, set Registration to Open so clients can create accounts right away.";
+    return "Member signup is being blocked by the Supabase auth settings. Check that email signup is enabled.";
   }
   if (normalized.includes("email not confirmed") || normalized.includes("invalid_grant")) {
     return "Please verify your email before logging in. Check your inbox for the confirmation email, then try again.";

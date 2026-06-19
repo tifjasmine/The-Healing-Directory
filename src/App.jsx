@@ -7,7 +7,7 @@ import {
   requestPasswordRecovery,
   signup,
   updateUser,
-} from "@netlify/identity";
+} from "./authClient.js";
 import {
   ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, CalendarDays, Check, CheckCircle2,
   ChevronDown, CircleUserRound, Clock, ExternalLink, Eye, Filter, HeartHandshake,

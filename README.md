@@ -45,6 +45,9 @@ Supabase overrides (for signup sync):
 
 ```txt
 SUPABASE_URL=https://zpgvztndfkochixhuvaf.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_SUPABASE_URL=https://zpgvztndfkochixhuvaf.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 SUPABASE_PROVIDER_SIGNUPS_TABLE=providers
 SUPABASE_CLIENTS_TABLE=clients

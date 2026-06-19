@@ -1,5 +1,5 @@
 import React from "react";
-import { getUser, logout } from "@netlify/identity";
+import { getUser, logout } from "./authClient.js";
 import { ArrowRight, CalendarDays, CircleUserRound, HeartHandshake, LogOut, RefreshCw } from "lucide-react";
 
 const API = "/.netlify/functions/app-api";

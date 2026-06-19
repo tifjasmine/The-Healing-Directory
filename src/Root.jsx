@@ -1,5 +1,5 @@
 import React from "react";
-import { getUser, handleAuthCallback } from "@netlify/identity";
+import { getUser, handleAuthCallback } from "./authClient.js";
 import { X } from "lucide-react";
 import App from "./App.jsx";
 import EventWorkspace from "./EventWorkspace.jsx";

@@ -1,5 +1,5 @@
 import React from "react";
-import { signup } from "@netlify/identity";
+import { signup } from "./authClient.js";
 import {
   AlertCircle,
   ArrowRight,
@@ -188,7 +188,7 @@ function memberErrorMessage(error) {
   const message = error?.message || "";
   const normalized = message.toLowerCase();
   if (normalized.includes("already")) return "An account already exists for this email. Please log in instead.";
-  if (normalized.includes("registration") || normalized.includes("signup") || normalized.includes("not allowed")) return "Member signup is being blocked by the site auth settings. In Netlify Identity, Registration must be Open.";
+  if (normalized.includes("registration") || normalized.includes("signup") || normalized.includes("not allowed")) return "Member signup is being blocked by the Supabase auth settings. Check that email signup is enabled.";
   if (normalized.includes("password")) return "Please choose a stronger password with at least 10 characters, mixed case, a number, and a symbol.";
   if (normalized.includes("failed to fetch")) return "The signup service could not be reached. Please try again in a moment.";
   return message || "Account could not be created.";

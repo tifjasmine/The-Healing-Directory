@@ -1,4 +1,4 @@
-import { getUser } from "@netlify/identity";
+import { getUser } from "./supabase-user.mjs";
 
 const BASE_ID = process.env.AIRTABLE_BASE_ID || process.env.AIRTABLE_DIRECTORY_BASE_ID || "appACV3Zz7ngug6yt";
 const TOKEN = () => process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "";
@@ -1440,7 +1440,7 @@ function requireAdmin(user) { requireUser(user); if (!isAdmin(user)) throw httpE
 async function optionalUser(request) {
   if (!request?.headers?.get("authorization")) return null;
   try {
-    return await getUser();
+    return await getUser(request);
   } catch {
     return null;
   }

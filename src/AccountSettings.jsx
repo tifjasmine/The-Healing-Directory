@@ -1,6 +1,6 @@
 import React from "react";
 import { ArrowRight, CalendarDays, Check, ChevronDown, HeartHandshake, LayoutDashboard, LockKeyhole, RefreshCw, Save, Settings, UserRound, X } from "lucide-react";
-import { requestPasswordRecovery, updateUser } from "@netlify/identity";
+import { requestPasswordRecovery, updateUser } from "./authClient.js";
 
 const API = "/.netlify/functions/app-api";
 const FALLBACK_INTERESTS = ["Therapist", "Coach", "Bodyworker", "Energy Worker", "Holistic Health", "Consultant", "Events", "Referral Room"];

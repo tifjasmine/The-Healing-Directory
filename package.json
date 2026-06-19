@@ -5,7 +5,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@netlify/identity": "latest",
     "@vitejs/plugin-react": "latest",
     "vite": "latest",
     "react": "latest",

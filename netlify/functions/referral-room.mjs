@@ -1,4 +1,4 @@
-import { getUser } from "@netlify/identity";
+import { getUser } from "./supabase-user.mjs";
 
 const BASE_ID = process.env.AIRTABLE_BASE_ID || "appACV3Zz7ngug6yt";
 const TOKEN = () => process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "";
@@ -20,7 +20,7 @@ const SERVICE_TYPES = [
 export default async function handler(request) {
   try {
     if (!TOKEN()) return json({ error: "AIRTABLE_TOKEN is not configured." }, 503);
-    const user = requireUser(await getUser());
+    const user = requireUser(await getUser(request));
     const url = new URL(request.url);
     const action = url.searchParams.get("action") || "provider-data";
 
