@@ -1,4 +1,4 @@
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || "https://zpgvztndfkochixhuvaf.supabase.co").replace(/\/+$/, "");
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 const SESSION_KEY = "thd_supabase_session";
 

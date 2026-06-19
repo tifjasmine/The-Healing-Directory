@@ -1,4 +1,4 @@
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://zpgvztndfkochixhuvaf.supabase.co";
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
 
 export default async function handler(request) {

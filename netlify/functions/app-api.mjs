@@ -2,7 +2,7 @@ import { getUser } from "./supabase-user.mjs";
 
 const BASE_ID = process.env.AIRTABLE_BASE_ID || process.env.AIRTABLE_DIRECTORY_BASE_ID || "appACV3Zz7ngug6yt";
 const TOKEN = () => process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "";
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://zpgvztndfkochixhuvaf.supabase.co";
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
 const PROVIDER_APPROVAL_WEBHOOK_SECRET = () => process.env.PROVIDER_APPROVAL_WEBHOOK_SECRET || process.env.AIRTABLE_WEBHOOK_SECRET || "";
 const SITE_URL = () => (process.env.SITE_URL || process.env.URL || process.env.DEPLOY_PRIME_URL || "https://thehealingdirectory.com").replace(/\/+$/, "");
