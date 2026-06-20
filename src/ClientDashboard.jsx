@@ -1,6 +1,6 @@
 import React from "react";
-import { getAccessToken, getUser, logout } from "./authClient.js";
-import { ArrowRight, CalendarDays, CircleUserRound, HeartHandshake, LogOut, RefreshCw, Save } from "lucide-react";
+import { getAccessToken, getUser, logout, refreshSession } from "./authClient.js";
+import { ArrowRight, CalendarDays, ChevronDown, CircleUserRound, HeartHandshake, LogOut, RefreshCw, Save } from "lucide-react";
 
 const API = "/.netlify/functions/app-api";
 
@@ -10,6 +10,8 @@ export default function ClientDashboard() {
   const [tab, setTab] = React.useState("events");
   const [noteDrafts, setNoteDrafts] = React.useState({});
   const [savingNote, setSavingNote] = React.useState("");
+  const [openNotes, setOpenNotes] = React.useState({});
+  const [savedNotes, setSavedNotes] = React.useState({});
 
   React.useEffect(() => {
     getUser().then((current) => {
@@ -65,6 +67,8 @@ export default function ClientDashboard() {
           entry.provider?.id === providerId ? { ...entry, notes: noteDrafts[providerId] || "" } : entry
         )),
       }));
+      setSavedNotes((current) => ({ ...current, [providerId]: true }));
+      setOpenNotes((current) => ({ ...current, [providerId]: false }));
     } finally {
       setSavingNote("");
     }
@@ -91,7 +95,7 @@ export default function ClientDashboard() {
       <section className="client-dashboard-content">
         <div className="client-saved-panel">
           <div className="client-tabs"><button className={tab === "events" ? "active" : ""} onClick={() => setTab("events")}>Saved Workshops</button><button className={tab === "providers" ? "active" : ""} onClick={() => setTab("providers")}>Saved Providers</button></div>
-          {tab === "events" ? <SavedList items={savedEvents} kind="event" /> : <SavedList items={savedProviders} kind="provider" noteDrafts={noteDrafts} setNoteDrafts={setNoteDrafts} savingNote={savingNote} onSaveNote={saveProviderNote} />}
+          {tab === "events" ? <SavedList items={savedEvents} kind="event" /> : <SavedList items={savedProviders} kind="provider" noteDrafts={noteDrafts} setNoteDrafts={setNoteDrafts} savingNote={savingNote} savedNotes={savedNotes} openNotes={openNotes} setOpenNotes={setOpenNotes} onSaveNote={saveProviderNote} />}
         </div>
         <aside className="client-dashboard-aside">
           <section><h2>Not sure where to begin?</h2><p>Start with what your system needs most right now: grounding, therapy, body-based healing, community, motherhood support, or care.</p><button className="button client-side-button" onClick={() => go("/")}>Explore Providers</button></section>
@@ -104,30 +108,60 @@ export default function ClientDashboard() {
 
 function ClientStat({ label, value }) { return <div className="client-stat"><span>{label}</span><strong>{Number(value || 0)}</strong></div>; }
 
-function SavedList({ items, kind, noteDrafts = {}, setNoteDrafts, savingNote, onSaveNote }) {
+function SavedList({ items, kind, noteDrafts = {}, setNoteDrafts, savingNote, savedNotes = {}, openNotes = {}, setOpenNotes, onSaveNote }) {
   if (!items.length) return <div className="client-empty"><h2>No saved {kind === "event" ? "workshops" : "providers"} yet</h2><p>{kind === "event" ? "When you save a workshop, circle, or healing experience, it will show up here." : "Providers you save will become your private healing shortlist."}</p><button className="button client-side-button" onClick={() => go(kind === "event" ? "/events" : "/")}>{kind === "event" ? "Browse Workshops" : "Find Providers"}</button></div>;
   return <div className="client-saved-list">{items.slice(0, 5).map((item, index) => {
     const record = item.event || item.provider || item;
     const title = record.name || record.title || (kind === "event" ? "Saved Workshop" : "Saved Provider");
     const path = kind === "event" ? `/event-details?id=${record.id}` : `/provider-details?id=${record.id}`;
     if (kind === "provider") {
+      const open = Boolean(openNotes[record.id]);
       return <article className="saved-provider-note-card compact" key={record.id || item.id || index}>
-        <button className="saved-provider-main" type="button" onClick={() => go(path)}><span className="client-saved-mark"><HeartHandshake size={19} /></span><span><strong>{title}</strong><small>{record.title || record.category || record.email || "Provider"}</small></span><ArrowRight size={18} /></button>
-        <label className="private-note-field">
-          <span>Private note</span>
-          <small>Only you can see this. Providers cannot see your notes.</small>
-          <textarea value={noteDrafts[record.id] || ""} onChange={(event) => setNoteDrafts?.((current) => ({ ...current, [record.id]: event.target.value }))} placeholder="Add a reminder for yourself..." rows={3} />
-        </label>
-        <button className="button tertiary note-save-button" type="button" disabled={savingNote === record.id} onClick={() => onSaveNote?.(item)}>{savingNote === record.id ? <RefreshCw className="spin" size={15} /> : <Save size={15} />}Save note</button>
+        <div className="saved-provider-main"><button className="saved-provider-photo-button" type="button" onClick={() => go(path)}>{record.photo ? <img src={record.photo} alt="" /> : <span>{initials(title)}</span>}</button><button className="saved-provider-title-button" type="button" onClick={() => go(path)}><strong>{title}</strong><small>{providerTypeLabel(record) || record.profession || record.email || "Provider"}</small></button><button className="saved-note-toggle" type="button" aria-expanded={open} onClick={() => setOpenNotes?.((current) => ({ ...current, [record.id]: !open }))}><span>{noteDrafts[record.id] ? "Edit note" : "Add note"}</span><ChevronDown size={17} /></button><ArrowRight size={18} /></div>
+        {open ? <div className="saved-note-editor"><label className="private-note-field">
+            <span>Private note</span>
+            <small>Only you can see this. Providers cannot see your notes.</small>
+            <textarea value={noteDrafts[record.id] || ""} onChange={(event) => setNoteDrafts?.((current) => ({ ...current, [record.id]: event.target.value }))} placeholder="Add a reminder for yourself..." rows={3} />
+          </label>
+          <button className="button tertiary note-save-button" type="button" disabled={savingNote === record.id} onClick={() => onSaveNote?.(item)}>{savingNote === record.id ? <RefreshCw className="spin" size={15} /> : <Save size={15} />}{savedNotes[record.id] ? "Saved" : "Save note"}</button></div> : noteDrafts[record.id] ? <p className="saved-note-preview">{savedNotes[record.id] ? "Note saved." : "Private note saved."}</p> : null}
       </article>;
     }
-    return <button key={record.id || item.id || index} className="client-saved-row" onClick={() => go(path)}><span className="client-saved-mark"><CalendarDays size={19} /></span><span><strong>{title}</strong><small>{formatDate(record.start || record.date)}</small></span><ArrowRight size={18} /></button>;
+    return <button key={record.id || item.id || index} className="client-saved-row saved-event-row" onClick={() => go(path)}>{record.image ? <img src={record.image} alt="" /> : <span className="client-saved-mark"><CalendarDays size={19} /></span>}<span><strong>{title}</strong><small>{formatDate(record.start || record.date)}</small></span><ArrowRight size={18} /></button>;
   })}</div>;
 }
 
 function firstName(value) { return String(value || "there").split(/[ @._-]/).filter(Boolean)[0] || "there"; }
 function cleanName(value) { const name = String(value || "").trim(); return ["name", "full name", "your name"].includes(name.toLowerCase()) ? "" : name; }
 function formatDate(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(time); }
+function initials(value) { return String(value || "Provider").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "P"; }
+function providerTypeLabel(provider) { return Array.isArray(provider.providerType) ? provider.providerType.join(", ") : String(provider.providerType || ""); }
 function go(path) { window.location.assign(path); }
 async function signOut() { await logout().catch(() => null); window.location.assign("/"); }
-async function api(action) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); const headers = {}; const token = getAccessToken(); if (token) { headers.Authorization = `Bearer ${token}`; headers["X-Supabase-Access-Token"] = token; } const response = await fetch(url, { credentials: "include", headers }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }
+async function api(action, options = {}) {
+  const url = new URL(API, window.location.origin);
+  url.searchParams.set("action", action);
+  const request = async (token) => {
+    const headers = { "Content-Type": "application/json" };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+      headers["X-Supabase-Access-Token"] = token;
+    }
+    const response = await fetch(url, {
+      method: options.method || "GET",
+      credentials: "include",
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+    const payload = await response.json().catch(() => ({}));
+    return { response, payload };
+  };
+  let token = getAccessToken();
+  if (!token) token = (await refreshSession().catch(() => null))?.access_token || getAccessToken();
+  let { response, payload } = await request(token);
+  if (response.status === 401) {
+    token = (await refreshSession().catch(() => null))?.access_token || getAccessToken();
+    ({ response, payload } = await request(token));
+  }
+  if (!response.ok) throw new Error(payload.error || "Request failed.");
+  return payload;
+}

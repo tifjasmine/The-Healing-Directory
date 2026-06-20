@@ -1,10 +1,11 @@
 import React from "react";
-import { getAccessToken, getUser, logout } from "./authClient.js";
+import { getAccessToken, getUser, logout, refreshSession } from "./authClient.js";
 import {
   ArrowRight,
   Bookmark,
   CalendarDays,
   CircleUserRound,
+  ChevronDown,
   HeartHandshake,
   LogOut,
   RefreshCw,
@@ -20,6 +21,8 @@ export default function ProviderDashboard() {
   const [tab, setTab] = React.useState("providers");
   const [savingNote, setSavingNote] = React.useState("");
   const [noteDrafts, setNoteDrafts] = React.useState({});
+  const [openNotes, setOpenNotes] = React.useState({});
+  const [savedNotes, setSavedNotes] = React.useState({});
 
   React.useEffect(() => {
     getUser().then((current) => {
@@ -74,6 +77,8 @@ export default function ProviderDashboard() {
           entry.provider?.id === providerId ? { ...entry, notes: noteDrafts[providerId] || "" } : entry
         )),
       }));
+      setSavedNotes((current) => ({ ...current, [providerId]: true }));
+      setOpenNotes((current) => ({ ...current, [providerId]: false }));
     } finally {
       setSavingNote("");
     }
@@ -107,7 +112,7 @@ export default function ProviderDashboard() {
           ))}
         </div>
 
-        {tab === "providers" ? <SavedProviderPanel items={payload.savedProviderItems} noteDrafts={noteDrafts} setNoteDrafts={setNoteDrafts} savingNote={savingNote} onSaveNote={saveProviderNote} /> : null}
+        {tab === "providers" ? <SavedProviderPanel items={payload.savedProviderItems} noteDrafts={noteDrafts} setNoteDrafts={setNoteDrafts} savingNote={savingNote} savedNotes={savedNotes} openNotes={openNotes} setOpenNotes={setOpenNotes} onSaveNote={saveProviderNote} /> : null}
         {tab === "events" ? <SavedEventPanel items={payload.savedEvents} /> : null}
         {tab === "mine" ? <MyEventsPanel items={payload.myEvents} /> : null}
         {tab === "referral" ? <ReferralPanel /> : null}
@@ -116,27 +121,37 @@ export default function ProviderDashboard() {
   </div>;
 }
 
-function SavedProviderPanel({ items, noteDrafts, setNoteDrafts, savingNote, onSaveNote }) {
+function SavedProviderPanel({ items, noteDrafts, setNoteDrafts, savingNote, savedNotes, openNotes, setOpenNotes, onSaveNote }) {
   if (!items.length) return <EmptyPanel title="No saved providers yet" text="Save providers from the directory and they will show up here for referrals or follow-up." action="Browse providers" path="/" />;
   return <div className="simple-dashboard-list">
     {items.map((item) => {
       const provider = item.provider || {};
       const providerId = provider.id || item.id;
+      const open = Boolean(openNotes[providerId]);
       return <article className="saved-provider-note-card" key={item.id || providerId}>
-        <button className="saved-provider-main" type="button" onClick={() => go(`/provider-details?id=${providerId}`)}>
-          <span className="client-saved-mark"><HeartHandshake size={19} /></span>
-          <span><strong>{provider.name || "Saved provider"}</strong><small>{provider.title || provider.category || provider.email || "Provider"}</small></span>
+        <div className="saved-provider-main">
+          <button className="saved-provider-photo-button" type="button" onClick={() => go(`/provider-details?id=${providerId}`)}>{provider.photo ? <img src={provider.photo} alt="" /> : <span>{initials(provider.name)}</span>}</button>
+          <button className="saved-provider-title-button" type="button" onClick={() => go(`/provider-details?id=${providerId}`)}>
+            <strong>{provider.name || "Saved provider"}</strong>
+            <small>{providerTypeLabel(provider) || provider.profession || provider.email || "Provider"}</small>
+          </button>
+          <button className="saved-note-toggle" type="button" aria-expanded={open} onClick={() => setOpenNotes((current) => ({ ...current, [providerId]: !open }))}>
+            <span>{noteDrafts[providerId] ? "Edit note" : "Add note"}</span>
+            <ChevronDown size={17} />
+          </button>
           <ArrowRight size={18} />
-        </button>
-        <label className="private-note-field">
-          <span>Private note</span>
-          <small>Only you can see this. Providers cannot see your notes.</small>
-          <textarea value={noteDrafts[providerId] || ""} onChange={(event) => setNoteDrafts((current) => ({ ...current, [providerId]: event.target.value }))} placeholder="Add a reminder, referral context, or why this provider felt aligned..." rows={3} />
-        </label>
-        <button className="button tertiary note-save-button" type="button" disabled={savingNote === providerId} onClick={() => onSaveNote(item)}>
-          {savingNote === providerId ? <RefreshCw className="spin" size={15} /> : <Save size={15} />}
-          Save note
-        </button>
+        </div>
+        {open ? <div className="saved-note-editor">
+          <label className="private-note-field">
+            <span>Private note</span>
+            <small>Only you can see this. Providers cannot see your notes.</small>
+            <textarea value={noteDrafts[providerId] || ""} onChange={(event) => setNoteDrafts((current) => ({ ...current, [providerId]: event.target.value }))} placeholder="Add a reminder, referral context, or why this provider felt aligned..." rows={3} />
+          </label>
+          <button className="button tertiary note-save-button" type="button" disabled={savingNote === providerId} onClick={() => onSaveNote(item)}>
+            {savingNote === providerId ? <RefreshCw className="spin" size={15} /> : <Save size={15} />}
+            {savedNotes[providerId] ? "Saved" : "Save note"}
+          </button>
+        </div> : noteDrafts[providerId] ? <p className="saved-note-preview">{savedNotes[providerId] ? "Note saved." : "Private note saved."}</p> : null}
       </article>;
     })}
   </div>;
@@ -144,7 +159,7 @@ function SavedProviderPanel({ items, noteDrafts, setNoteDrafts, savingNote, onSa
 
 function SavedEventPanel({ items }) {
   if (!items.length) return <EmptyPanel title="No saved events yet" text="Save workshops or circles from the events page and they will appear here." action="Browse events" path="/events" />;
-  return <div className="simple-dashboard-list">{items.map((event) => <button key={event.id} className="client-saved-row" type="button" onClick={() => go(`/event-details?id=${event.id}`)}><span className="client-saved-mark"><CalendarDays size={19} /></span><span><strong>{event.name || "Saved event"}</strong><small>{formatDate(event.start || event.date)}</small></span><ArrowRight size={18} /></button>)}</div>;
+  return <div className="simple-dashboard-list">{items.map((event) => <button key={event.id} className="client-saved-row saved-event-row" type="button" onClick={() => go(`/event-details?id=${event.id}`)}>{event.image ? <img src={event.image} alt="" /> : <span className="client-saved-mark"><CalendarDays size={19} /></span>}<span><strong>{event.name || "Saved event"}</strong><small>{formatDate(event.start || event.date)}</small></span><ArrowRight size={18} /></button>)}</div>;
 }
 
 function MyEventsPanel({ items }) {
@@ -168,6 +183,8 @@ function EmptyPanel({ title, text, action, path, inline }) {
 }
 
 function firstName(value) { return String(value || "there").split(/[ @._-]/).filter(Boolean)[0] || "there"; }
+function initials(value) { return String(value || "Provider").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "P"; }
+function providerTypeLabel(provider) { return Array.isArray(provider.providerType) ? provider.providerType.join(", ") : String(provider.providerType || ""); }
 function go(path) { window.location.assign(path); }
 async function signOut() { await logout().catch(() => null); window.location.assign("/"); }
 function formatDate(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(time); }
@@ -188,19 +205,28 @@ async function loadDashboard() {
 async function api(action, options = {}) {
   const url = new URL(API, window.location.origin);
   url.searchParams.set("action", action);
-  const headers = { "Content-Type": "application/json" };
-  const token = getAccessToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-    headers["X-Supabase-Access-Token"] = token;
+  const request = async (token) => {
+    const headers = { "Content-Type": "application/json" };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+      headers["X-Supabase-Access-Token"] = token;
+    }
+    const response = await fetch(url, {
+      method: options.method || "GET",
+      credentials: "include",
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+    const payload = await response.json().catch(() => ({}));
+    return { response, payload };
+  };
+  let token = getAccessToken();
+  if (!token) token = (await refreshSession().catch(() => null))?.access_token || getAccessToken();
+  let { response, payload } = await request(token);
+  if (response.status === 401) {
+    token = (await refreshSession().catch(() => null))?.access_token || getAccessToken();
+    ({ response, payload } = await request(token));
   }
-  const response = await fetch(url, {
-    method: options.method || "GET",
-    credentials: "include",
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || "Request failed.");
   return payload;
 }

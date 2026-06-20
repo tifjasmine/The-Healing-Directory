@@ -1,5 +1,5 @@
 import React from "react";
-import { getAccessToken, getUser, logout } from "./authClient.js";
+import { getAccessToken, getUser, logout, refreshSession } from "./authClient.js";
 import {
   ArrowLeft, CalendarDays, CircleUserRound, Clock, ExternalLink, LogOut, Mail,
   Image as ImageIcon, Info, MapPin, Pencil, Plus, RefreshCw, Search, Save, Send, Sparkles,
@@ -127,7 +127,10 @@ function EventEditor({ user, editing }) {
       setSaving(false);
       return;
     }
-    try { const result = await api("save-event", { method: "POST", body: { ...form, recordId: editing ? id : "" } }); window.location.assign(`/event-details?id=${result.event.id}`); }
+    try {
+      await api("save-event", { method: "POST", body: { ...form, recordId: editing ? id : "" } });
+      window.location.assign(editing ? "/my-events?saved=1" : "/my-events?submitted=1");
+    }
     catch (error) { setMessage(error.message); setSaving(false); }
   }
   const locked = editing && (!canEdit || (message && !currentEvent));
@@ -224,14 +227,23 @@ async function api(action, options = {}) {
   const url = new URL(API, window.location.origin);
   url.searchParams.set("action", action);
   Object.entries(options.query || {}).forEach(([key, value]) => url.searchParams.set(key, value));
-  const headers = new Headers({ "Content-Type": "application/json" });
-  const token = getAccessToken();
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-    headers.set("X-Supabase-Access-Token", token);
+  const request = async (token) => {
+    const headers = new Headers({ "Content-Type": "application/json" });
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+      headers.set("X-Supabase-Access-Token", token);
+    }
+    const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers, body: options.body ? JSON.stringify(options.body) : undefined });
+    const payload = await response.json().catch(() => ({}));
+    return { response, payload };
+  };
+  let token = getAccessToken();
+  if (!token) token = (await refreshSession().catch(() => null))?.access_token || getAccessToken();
+  let { response, payload } = await request(token);
+  if (response.status === 401) {
+    token = (await refreshSession().catch(() => null))?.access_token || getAccessToken();
+    ({ response, payload } = await request(token));
   }
-  const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers, body: options.body ? JSON.stringify(options.body) : undefined });
-  const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || "Request failed.");
   return payload;
 }
