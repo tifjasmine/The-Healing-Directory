@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="The Healing Directory">
+  <rect width="128" height="128" rx="26" fill="#f7f0e5"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="5.8" transform="translate(64 20)">
+    <path d="M0 48C-15 33-15 14 0 0c15 14 15 33 0 48Z" stroke="#24736c"/>
+    <path d="M-12 50c-20-5-30-22-27-43 21 2 34 17 27 43Z" stroke="#23706d"/>
+    <path d="M12 50c20-5 30-22 27-43-21 2-34 17-27 43Z" stroke="#4d8b61"/>
+    <path d="M-5 51c-22 3-39-7-47-26 23-3 39 7 47 26Z" stroke="#bd9f31"/>
+    <path d="M5 51c22 3 39-7 47-26-23-3-39 7-47 26Z" stroke="#d8922a"/>
+    <path d="M0 52c-18 12-39 10-54-3 20-9 39-8 54 3Z" stroke="#e09a2d"/>
+    <path d="M0 52c18 12 39 10 54-3-20-9-39-8-54 3Z" stroke="#dc7f2e"/>
+  </g>
+</svg>
