@@ -50,7 +50,6 @@ function MyEvents({ user }) {
     all: hosted.length,
     upcoming: hosted.filter((event) => new Date(event.start).getTime() >= Date.now()).length,
     past: hosted.filter((event) => new Date(event.start).getTime() < Date.now()).length,
-    approved: hosted.filter((event) => lower(event.status).includes("approved")).length,
     pending: hosted.filter((event) => lower(event.status).includes("pending")).length,
     draft: hosted.filter((event) => lower(event.status).includes("draft")).length,
   };
@@ -78,7 +77,7 @@ function MyEvents({ user }) {
 
 function HostedEventCard({ event }) {
   return <article className="hosted-event-card">
-    <div className="hosted-image">{event.image ? <img src={event.image} alt="" /> : <img src="/healing-directory-logo.svg" alt="" />}<span className={`hosted-status ${lower(event.status).includes("approved") ? "approved" : ""}`}>{event.status || "Pending Review"}</span></div>
+    <div className="hosted-image">{event.image ? <img src={event.image} alt="" /> : <img src="/healing-directory-logo.svg" alt="" />}{event.status && !lower(event.status).includes("approved") ? <span className="hosted-status">{event.status}</span> : null}</div>
     <div className="hosted-copy"><div className="hosted-tags"><span>{event.category || event.eventType}</span>{event.audience ? <span>{event.audience}</span> : null}</div><h3>{event.name}</h3><p>{truncate(event.description, 90)}</p><div className="hosted-facts"><span><CalendarDays />{formatDate(event.start)}</span><span><Clock />{formatTimeRange(event.start, event.end)}</span><span><MapPin />{event.locationType || "Location TBA"}</span></div><div className="hosted-links">{event.address ? <a href={href(event.address)} target="_blank" rel="noreferrer">Address / Link <ExternalLink size={14} /></a> : null}{event.registration ? <a href={href(event.registration)} target="_blank" rel="noreferrer">Registration <ExternalLink size={14} /></a> : null}</div><div className="hosted-actions"><button className="button event-gold" onClick={() => go(`/edit-event?id=${event.id}`)}><Pencil size={16} /> Edit Event</button><button className="button event-outline" onClick={() => go(`/event-details?id=${event.id}`)}>View Details</button></div></div>
   </article>;
 }
@@ -227,7 +226,10 @@ async function api(action, options = {}) {
   Object.entries(options.query || {}).forEach(([key, value]) => url.searchParams.set(key, value));
   const headers = new Headers({ "Content-Type": "application/json" });
   const token = getAccessToken();
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+    headers.set("X-Supabase-Access-Token", token);
+  }
   const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers, body: options.body ? JSON.stringify(options.body) : undefined });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || "Request failed.");

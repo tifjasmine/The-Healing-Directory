@@ -280,7 +280,7 @@ function ProfileSection({ title, text, children }) {
 
 function ProfilePhoto({ form }) {
   const label = initials(form.name || form.email || "TH");
-  const photo = form.photoUrl || form.photo;
+  const photo = form.profilePhotoUpload?.dataUrl || form.photoUrl || form.photo;
   return (
     <div className="profile-photo">
       {photo ? <img src={photo} alt="" /> : <span>{label}</span>}

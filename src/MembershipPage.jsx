@@ -44,13 +44,13 @@ export default function MembershipPage({ user, navigate }) {
 
   return (
     <main className="membership-page">
-      <section className="membership-hero soft-hero">
+      <section className="membership-hero soft-hero compact-membership-hero">
         <p className="brand-pill">Membership</p>
-        <h1>Manage your membership.</h1>
-        <p>Billing and plan changes are handled securely through Stripe.</p>
+        <h1>Membership + billing.</h1>
+        <p>Open your secure Stripe portal to manage billing, plan details, payment methods, and invoices.</p>
       </section>
 
-      <section className="membership-layout membership-portal-layout">
+      <section className="membership-layout membership-portal-layout clean-membership-layout">
         <div className="account-card membership-card membership-portal-card">
           <div className="section-heading">
             {loading ? <RefreshCw className="spin" size={22} /> : <CreditCard size={22} />}
@@ -82,13 +82,6 @@ export default function MembershipPage({ user, navigate }) {
             </div>
           )}
         </div>
-
-        <aside className="account-card account-quick">
-          <h2>Provider tools</h2>
-          <p>You can keep working on your profile and events while billing is being connected.</p>
-          <button onClick={() => navigate("/edit-profile")}>Edit profile <ArrowRight size={16} /></button>
-          <button onClick={() => navigate("/dashboard")}>Provider dashboard <ArrowRight size={16} /></button>
-        </aside>
       </section>
     </main>
   );
@@ -100,6 +93,7 @@ async function api(action, options = {}) {
   const headers = new Headers({ "Content-Type": "application/json" });
   const token = getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (token) headers.set("X-Supabase-Access-Token", token);
   const response = await fetch(url, {
     method: options.method || "GET",
     credentials: "include",

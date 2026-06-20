@@ -383,7 +383,7 @@ function EventDetails({ data, loading, toggleSave }) {
     <section className="event-showcase-hero">
       <div className="event-showcase-image">{event.image ? <img src={event.image} alt="" /> : <img src="/healing-directory-logo.svg" alt="The Healing Directory" />}</div>
       <div className="event-showcase-copy">
-        <div className="event-badges"><span><Users size={15} />{event.audience || "Community"}</span><span><CheckCircle2 size={15} />{event.status || "Approved"}</span><span><Tag size={15} />{event.category || event.eventType}</span></div>
+        <div className="event-badges"><span><Users size={15} />{event.audience || "Community"}</span><span><Tag size={15} />{event.category || event.eventType}</span></div>
         <h1>{event.name}</h1>
         <div className="event-facts"><span><CalendarDays />{formatDate(event.start)}</span><span><Clock />{formatTime(event.start)}{event.end ? ` - ${formatTime(event.end)}` : ""}</span>{event.hostName ? <span><CircleUserRound />{event.hostName}</span> : null}</div>
         <div className="action-row">

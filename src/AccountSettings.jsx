@@ -158,7 +158,7 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
             <input type="email" value={form.email} onChange={(event) => update("email", event.target.value)} placeholder="you@email.com" />
           </label>
 
-          <InterestPicker values={form.interests} options={interestOptions} onToggle={toggleInterest} />
+          <InterestPicker label={form.accountType === "provider" ? "Provider type" : "Interests"} values={form.interests} options={interestOptions} onToggle={toggleInterest} />
 
           {form.email.trim().toLowerCase() !== originalEmail.trim().toLowerCase() ? <div className="account-email-note">Changing your email sends a confirmation link. Your saved records update after the new email is confirmed.</div> : null}
 
@@ -189,7 +189,7 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
   );
 }
 
-function InterestPicker({ values, options, onToggle }) {
+function InterestPicker({ label, values, options, onToggle }) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef(null);
   const selected = Array.isArray(values) ? values : [];
@@ -211,9 +211,9 @@ function InterestPicker({ values, options, onToggle }) {
   }, [open]);
 
   return <div className="account-interest" ref={ref}>
-    <span>Interests</span>
+    <span>{label}</span>
     <button type="button" className={open ? "account-interest-trigger open" : "account-interest-trigger"} onClick={() => setOpen((current) => !current)}>
-      <strong>{selected.length ? `${selected.length} selected` : "Choose interests"}</strong><ChevronDown size={17} />
+      <strong>{selected.length ? `${selected.length} selected` : `Choose ${String(label || "interests").toLowerCase()}`}</strong><ChevronDown size={17} />
     </button>
     {selected.length ? <div className="account-interest-selected">{selected.map((value) => <button type="button" key={value} onClick={() => onToggle(value)}>{value}<X size={12} /></button>)}</div> : null}
     {open ? <div className="account-interest-menu">

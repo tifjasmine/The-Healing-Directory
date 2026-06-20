@@ -372,12 +372,31 @@ function MyEvents({ navigate }) {
 
 function SavedProviders({ navigate, toggleSave }) {
   const [items, setItems] = React.useState([]);
-  const [tab, setTab] = React.useState("active");
   const [query, setQuery] = React.useState("");
   const [loading, setLoading] = React.useState(true);
+  const [drafts, setDrafts] = React.useState({});
+  const [savingNote, setSavingNote] = React.useState("");
   React.useEffect(() => { api("saved-providers").then((p) => setItems(p.items || [])).finally(() => setLoading(false)); }, []);
-  const shown = items.filter((item) => (tab === "all" || (tab === "active" ? item.active : !item.active)) && (!query || [item.provider.name, item.provider.email, item.notes].join(" ").toLowerCase().includes(query.toLowerCase())));
-  return <main><PageTitle eyebrow="Saved Providers" title="Your trusted circle." text="A private working list for referrals, collaboration, and thoughtful follow-up." /><section className="content-shell"><div className="toolbar"><div className="segmented"><button className={tab === "active" ? "active" : ""} onClick={() => setTab("active")}>Active</button><button className={tab === "inactive" ? "active" : ""} onClick={() => setTab("inactive")}>Inactive</button><button className={tab === "all" ? "active" : ""} onClick={() => setTab("all")}>All</button></div><label className="search-control pale"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search names, email, or notes" /></label></div>{loading ? <LoadingState label="Loading saved providers" /> : shown.length ? <div className="provider-list">{shown.map((item) => <ProviderCard key={item.id} provider={item.provider} saved={item.active} onSave={async () => { await toggleSave("provider", item.provider.id, !item.active); setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, active: !entry.active } : entry)); }} onOpen={() => navigate(`/provider-details?id=${item.provider.id}`)} />)}</div> : <EmptyState title="No saved providers in this view" text="Browse the directory and bookmark people you want to revisit." action="Browse providers" onAction={() => navigate("/")} />}</section></main>;
+  React.useEffect(() => {
+    const next = {};
+    items.forEach((item) => {
+      if (item.provider?.id) next[item.provider.id] = item.notes || "";
+    });
+    setDrafts(next);
+  }, [items]);
+  const shown = items.filter((item) => item.active !== false && (!query || [item.provider.name, item.provider.email, item.notes].join(" ").toLowerCase().includes(query.toLowerCase())));
+  async function saveNote(item) {
+    const providerId = item.provider?.id;
+    if (!providerId) return;
+    setSavingNote(providerId);
+    try {
+      await api("toggle-provider", { method: "POST", body: { providerId, active: true, notes: drafts[providerId] || "" } });
+      setItems((current) => current.map((entry) => entry.provider?.id === providerId ? { ...entry, notes: drafts[providerId] || "", active: true } : entry));
+    } finally {
+      setSavingNote("");
+    }
+  }
+  return <main><PageTitle eyebrow="Saved Providers" title="Your trusted circle." text="A private working list for referrals, collaboration, and thoughtful follow-up." /><section className="content-shell"><div className="toolbar"><label className="search-control pale"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search names, email, or notes" /></label></div>{loading ? <LoadingState label="Loading saved providers" /> : shown.length ? <div className="provider-list saved-provider-note-list">{shown.map((item) => <article className="saved-provider-note-card" key={item.id}><ProviderCard provider={item.provider} saved={item.active} onSave={async () => { await toggleSave("provider", item.provider.id, false); setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, active: false } : entry)); }} onOpen={() => navigate(`/provider-details?id=${item.provider.id}`)} /><label className="private-note-field"><span>Private note</span><small>Only you can see this. Providers cannot see your notes.</small><textarea value={drafts[item.provider.id] || ""} onChange={(event) => setDrafts((current) => ({ ...current, [item.provider.id]: event.target.value }))} rows={3} placeholder="Add a reminder for yourself..." /></label><button className="button tertiary note-save-button" disabled={savingNote === item.provider.id} onClick={() => saveNote(item)}>{savingNote === item.provider.id ? <RefreshCw className="spin" size={15} /> : <Save size={15} />}Save note</button></article>)}</div> : <EmptyState title="No saved providers yet" text="Browse the directory and bookmark people you want to revisit." action="Browse providers" onAction={() => navigate("/")} />}</section></main>;
 }
 
 function Dashboard({ user, navigate }) {
