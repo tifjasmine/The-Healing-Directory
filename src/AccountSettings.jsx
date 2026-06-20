@@ -1,6 +1,6 @@
 import React from "react";
 import { ArrowRight, CalendarDays, Check, ChevronDown, HeartHandshake, LayoutDashboard, LockKeyhole, RefreshCw, Save, Settings, UserRound, X } from "lucide-react";
-import { requestPasswordRecovery, updateUser } from "./authClient.js";
+import { getAccessToken, requestPasswordRecovery, updateUser } from "./authClient.js";
 
 const API = "/.netlify/functions/app-api";
 const FALLBACK_INTERESTS = ["Therapist", "Coach", "Bodyworker", "Energy Worker", "Holistic Health", "Consultant", "Events", "Referral Room"];
@@ -225,11 +225,14 @@ function InterestPicker({ values, options, onToggle }) {
 async function api(action, options = {}) {
   const url = new URL(API, window.location.origin);
   url.searchParams.set("action", action);
+  const headers = { "Content-Type": "application/json" };
+  const token = getAccessToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
 
   const response = await fetch(url, {
     method: options.method || "GET",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { getUser, logout } from "./authClient.js";
+import { getAccessToken, getUser, logout } from "./authClient.js";
 import { ArrowRight, CalendarDays, CircleUserRound, HeartHandshake, LogOut, RefreshCw } from "lucide-react";
 
 const API = "/.netlify/functions/app-api";
@@ -88,4 +88,4 @@ function cleanName(value) { const name = String(value || "").trim(); return ["na
 function formatDate(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(time); }
 function go(path) { window.location.assign(path); }
 async function signOut() { await logout().catch(() => null); window.location.assign("/"); }
-async function api(action) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); const response = await fetch(url, { credentials: "include" }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }
+async function api(action) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); const headers = {}; const token = getAccessToken(); if (token) headers.Authorization = `Bearer ${token}`; const response = await fetch(url, { credentials: "include", headers }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }

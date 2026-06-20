@@ -88,13 +88,13 @@ const TABLE_META_CACHE = new Map();
 
 const FIELDS = {
   provider: {
-    name: ["Provider / Practice Name", "Provider Name", "Name", "Full Name"],
-    email: ["Email", "Provider Email"], phone: ["Phone", "Phone Number"],
+    name: ["Provider / Practice Name", "Provider Name", "Name", "Full Name", "Full Name *"],
+    email: ["Email", "Email Address", "Provider Email", "Provider Email Address", "Contact Email", "Login Email"], phone: ["Phone", "Phone Number"],
     accountType: ["Account Type", "User Type", "Member Type", "Role"],
     photo: ["Profile Photo", "Photo", "Headshot", "Image"],
     photoUrl: ["Profile Photo URL", "Photo URL", "Headshot URL", "Image URL"],
-    bio: ["Provider Bio", "Bio", "About", "Description"],
-    profession: ["Professional Title", "Profession", "Credentials", "Service Type"],
+    bio: ["Provider Bio", "Bio", "About", "Description", "Bio / About", "Public Bio"],
+    profession: ["Professional Title", "Profession", "Profession / Title", "Credentials", "Service Type"],
     license: ["License #/ Certification", "License # / Certification", "License / Certification", "License", "Credentials"],
     identity: ["Racial / Ethnic Identity", "Racial/Ethnic Identity", "Identity"],
     genderIdentity: ["Gender Identity"],
@@ -106,7 +106,7 @@ const FIELDS = {
     additionalServices: ["Additional Services"],
     support: ["Areas of Support"],
     additionalConcerns: ["Additional Concerns", "Additional Areas of Support"],
-    population: ["Populations Served", "Who I Serve", "Population"],
+    population: ["People Served", "Populations Served", "Who I Serve", "Population"],
     additionalPopulations: ["Additional Populations", "Additional Populations Served"],
     location: ["State", "Location", "Virtual/In Person", "Neighborhood"],
     additionalStates: ["Additional States", "Additional State"],
@@ -115,8 +115,8 @@ const FIELDS = {
     availability: ["Availability"],
     price: ["Price", "Pricing"],
     physicalLocations: ["Physical Locations", "Physical Location"],
-    availabilitySpecifics: ["Current Availability", "Availability Specifics"],
-    website: ["Website", "Web Site"], consult: ["Consultation Link", "Booking Link", "Schedule Link"],
+    availabilitySpecifics: ["Current Availability", "Availability Specifics", "Availability Details", "Availability Notes"],
+    website: ["Website", "Web Site"], consult: ["Consultation / Booking Link", "Consultation Link", "Booking Link", "Schedule Link"],
     approved: ["Approved", "Published", "Show in Directory", "Public"],
     verified: ["Verified", "Verified Member", "Referral Room"],
     status: ["Status", "Approval Status", "Request Status"],
@@ -695,7 +695,7 @@ async function saveAccount(user, body) {
 }
 
 async function myProfile(user) {
-  const profile = await ensureDirectoryAccount({
+  const profile = await ensureDirectoryAccountForUser(user, {
     email: user.email,
     name: publicUser(user)?.name || user.email.split("@")[0],
     accountType: "provider"
@@ -704,51 +704,53 @@ async function myProfile(user) {
 }
 
 async function saveProfile(user, body) {
-  const profile = await ensureDirectoryAccount({
+  const profile = await ensureDirectoryAccountForUser(user, {
     email: user.email,
     name: body.name || publicUser(user)?.name || user.email.split("@")[0],
     accountType: "provider"
   });
   const uploadedPhotoUrl = await uploadProviderAsset(body.profilePhotoUpload, user.email || body.name, "profile-photo");
   const fields = {};
-  setAlias(fields, FIELDS.provider.name, body.name);
-  setAlias(fields, FIELDS.provider.pronouns, body.pronouns);
-  setAlias(fields, FIELDS.provider.profession, body.profession);
-  setAlias(fields, FIELDS.provider.license, body.license);
-  setAlias(fields, FIELDS.provider.identity, body.identity);
-  setAlias(fields, FIELDS.provider.photoUrl, uploadedPhotoUrl || body.photoUrl);
-  setAlias(fields, FIELDS.provider.email, user.email);
-  setAlias(fields, FIELDS.provider.phone, body.phone);
-  setAlias(fields, FIELDS.provider.website, body.website);
-  setAlias(fields, FIELDS.provider.consult, body.consultationLink);
-  setAlias(fields, FIELDS.provider.bio, body.bio);
-  setAlias(fields, FIELDS.provider.accountType, "provider");
-  setAlias(fields, FIELDS.provider.type, body.providerType);
-  setAlias(fields, FIELDS.provider.services, body.services);
-  setAlias(fields, FIELDS.provider.support, body.support);
-  setAlias(fields, FIELDS.provider.population, body.populations);
-  setAlias(fields, FIELDS.provider.location, body.location);
-  setAlias(fields, FIELDS.provider.payment, body.payment);
-  setAlias(fields, FIELDS.provider.availability, body.availability);
-  setAlias(fields, FIELDS.provider.price, body.price);
-  setAlias(fields, FIELDS.provider.physicalLocations, body.physicalLocations);
-  setAlias(fields, FIELDS.provider.availabilitySpecifics, body.availabilitySpecifics);
-  setAlias(fields, FIELDS.provider.responseTime, body.responseTime);
-  setAlias(fields, FIELDS.provider.referralMethod, body.referralMethod);
-  setAlias(fields, FIELDS.provider.referralInstructions, body.referralInstructions);
-  setAlias(fields, FIELDS.provider.collaborationInterests, body.collaborationInterests);
-  setAlias(fields, FIELDS.provider.collaborationDetails, body.collaborationDetails);
-  setAlias(fields, FIELDS.provider.providerNotes, body.providerNotes);
-  if (body.infoOptIn !== undefined) setAlias(fields, FIELDS.provider.infoOptIn, body.infoOptIn ? "Yes" : "No");
-  setAlias(fields, FIELDS.provider.styleWords, body.styleWords);
-  setAlias(fields, FIELDS.provider.clientDescriptors, body.clientDescriptors);
-  setAlias(fields, FIELDS.provider.groundingRitual, body.groundingRitual);
-  setAlias(fields, FIELDS.provider.outsideSessions, body.outsideSessions);
-  setAlias(fields, FIELDS.provider.guidingBelief, body.guidingBelief);
-  setAlias(fields, FIELDS.provider.healingWish, body.healingWish);
-  setAlias(fields, FIELDS.provider.comfortPractice, body.comfortPractice);
-  setAlias(fields, FIELDS.provider.funFact, body.funFact);
-  setAlias(fields, FIELDS.provider.vibe, body.vibe);
+  const table = await metadataTable("directory").catch(() => null);
+  const add = (aliases, value) => setResolvedAlias(fields, table, aliases, value);
+  add(FIELDS.provider.name, body.name);
+  add(FIELDS.provider.pronouns, body.pronouns);
+  add(FIELDS.provider.profession, body.profession);
+  add(FIELDS.provider.license, body.license);
+  add(FIELDS.provider.identity, body.identity);
+  add(FIELDS.provider.photoUrl, uploadedPhotoUrl || body.photoUrl);
+  add(FIELDS.provider.email, user.email);
+  add(FIELDS.provider.phone, body.phone);
+  add(FIELDS.provider.website, body.website);
+  add(FIELDS.provider.consult, body.consultationLink);
+  add(FIELDS.provider.bio, body.bio);
+  add(FIELDS.provider.accountType, "provider");
+  add(FIELDS.provider.type, body.providerType);
+  add(FIELDS.provider.services, body.services);
+  add(FIELDS.provider.support, body.support);
+  add(FIELDS.provider.population, body.populations);
+  add(FIELDS.provider.location, body.location);
+  add(FIELDS.provider.payment, body.payment);
+  add(FIELDS.provider.availability, body.availability);
+  add(FIELDS.provider.price, body.price);
+  add(FIELDS.provider.physicalLocations, body.physicalLocations);
+  add(FIELDS.provider.availabilitySpecifics, body.availabilitySpecifics);
+  add(FIELDS.provider.responseTime, body.responseTime);
+  add(FIELDS.provider.referralMethod, body.referralMethod);
+  add(FIELDS.provider.referralInstructions, body.referralInstructions);
+  add(FIELDS.provider.collaborationInterests, body.collaborationInterests);
+  add(FIELDS.provider.collaborationDetails, body.collaborationDetails);
+  add(FIELDS.provider.providerNotes, body.providerNotes);
+  if (body.infoOptIn !== undefined) add(FIELDS.provider.infoOptIn, body.infoOptIn ? "Yes" : "No");
+  add(FIELDS.provider.styleWords, body.styleWords);
+  add(FIELDS.provider.clientDescriptors, body.clientDescriptors);
+  add(FIELDS.provider.groundingRitual, body.groundingRitual);
+  add(FIELDS.provider.outsideSessions, body.outsideSessions);
+  add(FIELDS.provider.guidingBelief, body.guidingBelief);
+  add(FIELDS.provider.healingWish, body.healingWish);
+  add(FIELDS.provider.comfortPractice, body.comfortPractice);
+  add(FIELDS.provider.funFact, body.funFact);
+  add(FIELDS.provider.vibe, body.vibe);
   const saved = await updateSafe("directory", profile.id, fields);
   return { ok: true, profile: normalizeProfile(saved) };
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { getUser, logout, refreshSession } from "./authClient.js";
+import { getAccessToken, getUser, logout, refreshSession } from "./authClient.js";
 import {
   ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, CalendarDays, CheckCircle2,
   ChevronDown, CircleUserRound, Clock, ExternalLink, HeartHandshake, LockKeyhole,
@@ -531,4 +531,4 @@ function capitalize(value) { return value.charAt(0).toUpperCase() + value.slice(
 function time(value) { const date = new Date(value || 0); return Number.isNaN(date.getTime()) ? null : date; }
 function formatDate(value) { const date = time(value); return date ? new Intl.DateTimeFormat(undefined, { weekday: "short", month: "long", day: "numeric", year: "numeric" }).format(date) : "Date TBA"; }
 function formatTime(value) { const date = time(value); return date ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(date) : "Time TBA"; }
-async function api(action, options = {}) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); Object.entries(options.query || {}).forEach(([key, value]) => url.searchParams.set(key, value)); const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: options.body ? JSON.stringify(options.body) : undefined }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }
+async function api(action, options = {}) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); Object.entries(options.query || {}).forEach(([key, value]) => url.searchParams.set(key, value)); const headers = { "Content-Type": "application/json" }; const token = getAccessToken(); if (token) headers.Authorization = `Bearer ${token}`; const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers, body: options.body ? JSON.stringify(options.body) : undefined }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }

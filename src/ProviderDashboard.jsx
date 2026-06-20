@@ -1,7 +1,7 @@
 import React from "react";
-import { getUser, logout } from "./authClient.js";
+import { getAccessToken, getUser, logout } from "./authClient.js";
 import {
-  ArrowRight, CalendarDays, CircleUserRound, CreditCard, HeartHandshake, LogOut, RefreshCw,
+  ArrowRight, CalendarDays, CircleUserRound, HeartHandshake, LogOut, RefreshCw,
   ShieldCheck, Star,
 } from "lucide-react";
 
@@ -37,7 +37,6 @@ export default function ProviderDashboard() {
   const tools = [
     { eyebrow: "Profile", title: "Directory Profile", text: "Edit your public profile, areas of care, photo, and provider-only referral details.", icon: <CircleUserRound />, path: "/edit-profile" },
     { eyebrow: "Events", title: "My Events", text: "Create, edit, and review the workshops or offerings connected to your account.", icon: <CalendarDays />, path: "/my-events" },
-    { eyebrow: "Membership", title: "Billing + Access", text: "Open your membership portal for billing, plan, and account access details.", icon: <CreditCard />, path: "/edit-membership" },
     { eyebrow: "Saved", title: "Saved Providers", text: "Return to providers you saved for referrals, collaboration, and warm handoffs.", icon: <Star />, path: "/saved-providers" },
     { eyebrow: "Community", title: "Referral Room", text: "Request a seat, review RSVPs, and reconnect with providers you have met.", icon: <HeartHandshake />, path: "/referral-room" },
   ];
@@ -78,4 +77,4 @@ function ToolSection({ eyebrow, title, text, items }) {
 function firstName(value) { return String(value || "there").split(/[ @._-]/).filter(Boolean)[0] || "there"; }
 function go(path) { window.location.assign(path); }
 async function signOut() { await logout().catch(() => null); window.location.assign("/"); }
-async function api(action) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); const response = await fetch(url, { credentials: "include" }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }
+async function api(action) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); const headers = {}; const token = getAccessToken(); if (token) headers.Authorization = `Bearer ${token}`; const response = await fetch(url, { credentials: "include", headers }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }

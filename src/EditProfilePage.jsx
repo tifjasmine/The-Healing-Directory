@@ -9,6 +9,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+import { getAccessToken } from "./authClient.js";
 
 const API = "/.netlify/functions/app-api";
 
@@ -432,11 +433,14 @@ function initials(value) {
 async function api(action, options = {}) {
   const url = new URL(API, window.location.origin);
   url.searchParams.set("action", action);
+  const headers = { "Content-Type": "application/json" };
+  const token = getAccessToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
 
   const response = await fetch(url, {
     method: options.method || "GET",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
