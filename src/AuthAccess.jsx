@@ -19,7 +19,8 @@ export default function AuthAccess({ path }) {
   const [notice, setNotice] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [signupOpen, setSignupOpen] = React.useState(false);
-  const inviteFlow = mode === "reset-password" && new URLSearchParams(window.location.search).get("flow") === "invite";
+  const [storedInvite, setStoredInvite] = React.useState(() => sessionStorage.getItem("thd_invite_token") || "");
+  const inviteFlow = mode === "reset-password" && (new URLSearchParams(window.location.search).get("flow") === "invite" || Boolean(storedInvite));
   const signingUp = mode === "signup";
   const providerSignup = mode === "provider-signup";
   const title = providerSignup ? "Apply as a provider" : signingUp ? "Create your client account" : mode === "forgot-password" ? "Reset your password" : inviteFlow ? "Create your password" : mode === "reset-password" ? "Choose a new password" : "Welcome back";
@@ -71,11 +72,10 @@ export default function AuthAccess({ path }) {
       if (mode === "reset-password") {
         if (form.password !== form.confirm) throw new Error("Passwords do not match.");
         if (!strongPassword(form.password)) throw new Error("Please choose a stronger password with at least 10 characters, mixed case, a number, and a symbol.");
-        const inviteToken = sessionStorage.getItem("thd_invite_token");
         if (inviteFlow) {
-          if (!inviteToken) throw new Error("This invite link is missing or expired. Please use the newest invite email.");
-          await acceptInvite(inviteToken, form.password);
+          await acceptInvite(storedInvite, form.password);
           sessionStorage.removeItem("thd_invite_token");
+          setStoredInvite("");
         } else {
           await updateUser({ password: form.password });
         }
@@ -122,7 +122,7 @@ export default function AuthAccess({ path }) {
         {providerSignup ? <><Field label="Phone" value={form.phone} onChange={set("phone")} /><Field label="Website or profile link" value={form.website} onChange={set("website")} /><Field label="Professional title" value={form.professionalTitle} onChange={set("professionalTitle")} required /><Field label="Tell us about your work" textarea value={form.message} onChange={set("message")} required /></> : null}
         {!mode.includes("forgot") && !providerSignup ? <><Field label="Password" type="password" value={form.password} onChange={set("password")} required autoComplete={mode === "login" ? "current-password" : "new-password"} />{mode !== "login" ? <PasswordRequirements password={form.password} /> : null}</> : null}
         {signingUp || mode === "reset-password" ? <Field label="Confirm password" type="password" value={form.confirm} onChange={set("confirm")} required /> : null}
-        <button className="button full" disabled={busy}>{busy ? "Working..." : providerSignup ? "Submit provider application" : signingUp ? "Create client account" : mode.includes("password") ? "Continue" : "Log in"}</button>
+        <button type="submit" className="button full" disabled={busy}>{busy ? "Working..." : providerSignup ? "Submit provider application" : signingUp ? "Create client account" : mode.includes("password") ? "Continue" : "Log in"}</button>
         <div className="auth-links">{mode === "login" ? <><a href="/forgot-password">Forgot password?</a><a href="/signup">Create an account</a></> : <a href="/login">Back to login</a>}</div>
       </form>
     </section></main>
