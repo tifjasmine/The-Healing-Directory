@@ -6,6 +6,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
 const PROVIDER_APPROVAL_WEBHOOK_SECRET = () => process.env.PROVIDER_APPROVAL_WEBHOOK_SECRET || process.env.AIRTABLE_WEBHOOK_SECRET || "";
 const SITE_URL = () => (process.env.SITE_URL || process.env.URL || process.env.DEPLOY_PRIME_URL || "https://thehealingdirectory.com").replace(/\/+$/, "");
+const STRIPE_SECRET_KEY = () => process.env.STRIPE_SECRET_KEY || "";
 const AIRTABLE_AUTO_CREATE_TABLES = lower(process.env.AIRTABLE_AUTO_CREATE_TABLES || "true") !== "false";
 
 const SUPABASE_SIGNUP_TABLES = {
@@ -236,6 +237,7 @@ export default async function handler(request) {
     if (action === "save-event") return reply(await saveEvent(requireUser(user), body));
     if (action === "save-account") return reply(await saveAccount(requireUser(user), body));
     if (action === "save-profile") return reply(await saveProfile(requireUser(user), body));
+    if (action === "stripe-portal") return reply(await stripePortal(requireUser(user), body));
     if (action === "admin-event") return reply(await updateAdminEvent(requireAdmin(user), body));
     return reply({ error: "Unknown action." }, 404);
   } catch (error) {
@@ -374,6 +376,8 @@ async function toggleEvent(user, body) {
 }
 
 async function saveEvent(user, body) {
+  const uploadedImageUrl = await uploadProviderAsset(body.eventImageUpload, user.email || body.eventName, "event-image");
+  const imageUrl = uploadedImageUrl || clean(body.imageUrl);
   const fields = {
     "Event Name": required(body.eventName, "Event name"),
     "Host Name": publicUser(user)?.name || user.email.split("@")[0],
@@ -387,8 +391,8 @@ async function saveEvent(user, body) {
     "Address/Link": clean(body.addressLink),
     "Description": required(body.description, "Description"),
     "Registration Link": clean(body.registrationLink),
-    "Image": attachmentFromUrl(body.imageUrl),
-    "Event Image URL": clean(body.imageUrl),
+    "Image": attachmentFromUrl(imageUrl),
+    "Event Image URL": imageUrl,
     "Status": "Pending Review"
   };
   removeEmpty(fields);
@@ -399,6 +403,37 @@ async function saveEvent(user, body) {
     return { ok: true, event: normalizeEvent(await updateSafe("events", body.recordId, fields)) };
   }
   return { ok: true, event: normalizeEvent(await createSafe("events", fields)) };
+}
+
+async function stripePortal(user, body = {}) {
+  if (!STRIPE_SECRET_KEY()) throw httpError(501, "Stripe billing portal is not connected yet.");
+  const email = requiredEmail(user.email);
+  const customerResponse = await fetch(`https://api.stripe.com/v1/customers?email=${encodeURIComponent(email)}&limit=1`, {
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY()}`
+    }
+  });
+  const customerPayload = await customerResponse.json().catch(() => ({}));
+  if (!customerResponse.ok) throw httpError(customerResponse.status, customerPayload.error?.message || "Stripe customer lookup failed.");
+  const customer = customerPayload.data?.[0];
+  if (!customer?.id) throw httpError(404, "No Stripe membership was found for this email yet.");
+
+  const returnUrl = clean(body.returnUrl) || `${SITE_URL()}/dashboard`;
+  const sessionBody = new URLSearchParams({
+    customer: customer.id,
+    return_url: returnUrl
+  });
+  const sessionResponse = await fetch("https://api.stripe.com/v1/billing_portal/sessions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY()}`,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: sessionBody
+  });
+  const sessionPayload = await sessionResponse.json().catch(() => ({}));
+  if (!sessionResponse.ok) throw httpError(sessionResponse.status, sessionPayload.error?.message || "Stripe portal session could not be created.");
+  return { url: sessionPayload.url };
 }
 
 async function adminEvents() {
@@ -1169,7 +1204,7 @@ function supabaseBadColumnName(message) {
 
 async function findDirectoryByEmail(email) {
   const records = await list("directory");
-  return records.find((record) => lower(text(pick(record.fields || {}, FIELDS.provider.email))) === lower(email));
+  return records.find((record) => lower(firstEmail(pick(record.fields || {}, FIELDS.provider.email))) === lower(email));
 }
 
 async function findSignupByEmail(accountType, email) {
@@ -1515,7 +1550,22 @@ function firstEmail(value) {
   if (typeof value === "object") return firstEmail(value.email || value.value || value.text || value.name || value.label || "");
   return String(value);
 }
-function pick(fields, names) { for (const name of names) if (Object.prototype.hasOwnProperty.call(fields, name)) return fields[name]; return undefined; }
+function pick(fields, names) {
+  let fallback;
+  for (const name of names) {
+    if (!Object.prototype.hasOwnProperty.call(fields, name)) continue;
+    const value = fields[name];
+    if (fallback === undefined) fallback = value;
+    if (!emptyCell(value)) return value;
+  }
+  return fallback;
+}
+function emptyCell(value) {
+  if (value == null) return true;
+  if (Array.isArray(value)) return !value.length;
+  if (typeof value === "string") return !value.trim();
+  return false;
+}
 function text(value) { if (value == null) return ""; if (Array.isArray(value)) return value.map(text).filter(Boolean).join(", "); if (typeof value === "object") return text(value.name ?? value.label ?? value.value ?? value.text ?? value.url ?? ""); return clean(value); }
 function array(value) { return arrayRaw(value).map(text).flatMap((v) => v.split(/[,;\n]+/)).map(clean).filter(Boolean); }
 function arrayRaw(value) { return value == null ? [] : Array.isArray(value) ? value : [value]; }

@@ -254,6 +254,10 @@ body,
   width: min(1120px, calc(100% - 32px));
 }
 
+.membership-portal-layout {
+  grid-template-columns: minmax(0, 1fr) 300px;
+}
+
 .account-card {
   background: var(--thd-paper);
   border: 1px solid var(--thd-line);
@@ -268,6 +272,38 @@ body,
   display: flex;
   gap: 13px;
   margin-bottom: 20px;
+}
+
+.membership-portal-card {
+  min-height: 360px;
+}
+
+.portal-loading {
+  align-items: center;
+  background: var(--thd-cream);
+  border: 1px solid var(--thd-line);
+  border-radius: 22px;
+  color: var(--thd-green);
+  display: flex;
+  font-weight: 850;
+  gap: 12px;
+  justify-content: center;
+  min-height: 170px;
+}
+
+.portal-fallback {
+  align-items: flex-start;
+}
+
+.portal-fallback p {
+  max-width: 680px;
+}
+
+.portal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
 }
 
 .section-heading h2,

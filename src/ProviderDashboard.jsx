@@ -1,8 +1,8 @@
 import React from "react";
 import { getUser, logout } from "./authClient.js";
 import {
-  ArrowRight, CalendarDays, CircleUserRound, HeartHandshake, LogOut, Plus, RefreshCw, Search,
-  ShieldCheck, Sparkles, Star,
+  ArrowRight, CalendarDays, CircleUserRound, CreditCard, HeartHandshake, LogOut, RefreshCw,
+  ShieldCheck, Star,
 } from "lucide-react";
 
 const API = "/.netlify/functions/app-api";
@@ -34,19 +34,15 @@ export default function ProviderDashboard() {
 
   if (!user || !payload) return <div className="state"><RefreshCw className="spin" /><h2>Loading dashboard...</h2></div>;
 
-  const referralTools = [
-    { eyebrow: "Profile", title: "Edit Directory Profile", text: "Update your public profile, areas of care, referral details, photo URL, and human-side notes.", icon: <CircleUserRound />, path: "/edit-profile" },
-    { eyebrow: "Browse", title: "Provider Directory", text: "Find aligned providers by specialty, support area, location, and availability.", icon: <Search />, path: "/" },
-    { eyebrow: "Bookmarked", title: "Saved Providers", text: "Return to the providers you saved for referrals, collaboration, and warm handoffs.", icon: <Star />, path: "/saved-providers" },
-    { eyebrow: "Community", title: "Referral Room", text: "Request a seat, review your RSVPs, and reconnect with providers you have met.", icon: <HeartHandshake />, path: "/referral-room" },
-  ];
-  const eventTools = [
-    { eyebrow: "Explore", title: "Upcoming Events", text: "Browse workshops, support groups, circles, trainings, retreats, and community offerings.", icon: <Sparkles />, path: "/events" },
-    { eyebrow: "Hosting", title: "My Events", text: "Manage the events and experiences connected to your provider email.", icon: <CalendarDays />, path: "/my-events" },
-    { eyebrow: "Submit", title: "Add an Event", text: "Share a new offering with the community and submit it for review.", icon: <Plus />, path: "/add-event" },
+  const tools = [
+    { eyebrow: "Profile", title: "Directory Profile", text: "Edit your public profile, areas of care, photo, and provider-only referral details.", icon: <CircleUserRound />, path: "/edit-profile" },
+    { eyebrow: "Events", title: "My Events", text: "Create, edit, and review the workshops or offerings connected to your account.", icon: <CalendarDays />, path: "/my-events" },
+    { eyebrow: "Membership", title: "Billing + Access", text: "Open your membership portal for billing, plan, and account access details.", icon: <CreditCard />, path: "/edit-membership" },
+    { eyebrow: "Saved", title: "Saved Providers", text: "Return to providers you saved for referrals, collaboration, and warm handoffs.", icon: <Star />, path: "/saved-providers" },
+    { eyebrow: "Community", title: "Referral Room", text: "Request a seat, review RSVPs, and reconnect with providers you have met.", icon: <HeartHandshake />, path: "/referral-room" },
   ];
   if (user.roles.includes("admin")) {
-    eventTools.push({ eyebrow: "Admin", title: "Event Approvals", text: "Review event submissions and manage publication status.", icon: <ShieldCheck />, path: "/admin/events" });
+    tools.push({ eyebrow: "Admin", title: "Event Approvals", text: "Review event submissions and manage publication status.", icon: <ShieldCheck />, path: "/admin/events" });
   }
 
   return <div className="app-shell">
@@ -59,17 +55,15 @@ export default function ProviderDashboard() {
       <section className="provider-dashboard-hero">
         <div>
           <p className="dashboard-kicker"><span /> Provider Dashboard</p>
-          <h1>Your home base for referrals, connection, and community care.</h1>
-          <p>Build your trusted circle, return to aligned providers, and share the events you are hosting through The Healing Directory.</p>
-          <div className="dashboard-hero-actions"><button className="button event-primary" onClick={() => go("/edit-profile")}>Edit Profile</button><button className="button event-secondary" onClick={() => go("/")}>Browse Providers</button><button className="button event-secondary" onClick={() => go("/my-events")}>My Events</button><button className="button event-secondary" onClick={() => go("/add-event")}>Add Event</button></div>
+          <h1>Your home base for provider connection.</h1>
+          <p>Keep your profile, events, saved providers, and referral spaces in one focused place.</p>
         </div>
         <aside className="dashboard-summary">
           <p>Welcome back</p><h2>{firstName(user.name || user.email)}.</h2>
           <div><span><strong>{payload.counts?.savedProviders || 0}</strong> saved providers</span><span><strong>{payload.counts?.upcomingEvents || 0}</strong> upcoming events</span></div>
         </aside>
       </section>
-      <ToolSection eyebrow="Referral Circle" title="Provider tools" text="Find aligned providers, save trusted referral partners, and stay connected to the professional community." items={referralTools} />
-      <ToolSection eyebrow="Events + Offerings" title="Workshops, circles, trainings, and community events." text="Browse what is coming up or manage the experiences you are hosting." items={eventTools} />
+      <ToolSection eyebrow="Workspace" title="What would you like to manage?" text="A cleaner dashboard for the provider tasks you actually use." items={tools} />
     </main>
   </div>;
 }

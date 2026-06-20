@@ -1,65 +1,112 @@
 import React from "react";
-import { ArrowRight, CreditCard, ExternalLink, ShieldCheck } from "lucide-react";
+import { ArrowRight, CreditCard, ExternalLink, RefreshCw, ShieldCheck } from "lucide-react";
+import { getAccessToken } from "./authClient.js";
 
-const PRICING_TABLE_ID = import.meta.env.VITE_STRIPE_PRICING_TABLE_ID || "";
-const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
+const API = "/.netlify/functions/app-api";
+const DIRECT_PORTAL_URL = import.meta.env.VITE_STRIPE_PORTAL_URL || "";
 
 export default function MembershipPage({ user, navigate }) {
-  const hasStripeEmbed = PRICING_TABLE_ID && STRIPE_KEY;
+  const [loading, setLoading] = React.useState(true);
+  const [message, setMessage] = React.useState("");
 
   React.useEffect(() => {
-    if (!hasStripeEmbed || document.querySelector('script[src="https://js.stripe.com/v3/pricing-table.js"]')) return;
+    let alive = true;
 
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = "https://js.stripe.com/v3/pricing-table.js";
-    document.body.appendChild(script);
-  }, [hasStripeEmbed]);
+    async function openPortal() {
+      setLoading(true);
+      setMessage("");
+      try {
+        if (DIRECT_PORTAL_URL) {
+          window.location.assign(DIRECT_PORTAL_URL);
+          return;
+        }
+        const payload = await api("stripe-portal", {
+          method: "POST",
+          body: { returnUrl: `${window.location.origin}/dashboard` },
+        });
+        if (payload.url) {
+          window.location.assign(payload.url);
+          return;
+        }
+        throw new Error("Stripe did not return a portal link.");
+      } catch (error) {
+        if (!alive) return;
+        setMessage(error.message || "Membership billing could not be opened yet.");
+        setLoading(false);
+      }
+    }
+
+    openPortal();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   return (
     <main className="membership-page">
       <section className="membership-hero soft-hero">
         <p className="brand-pill">Membership</p>
-        <h1>Edit your membership.</h1>
-        <p>Manage provider membership, billing, and access to relationship-based referral tools.</p>
+        <h1>Manage your membership.</h1>
+        <p>Billing and plan changes are handled securely through Stripe.</p>
       </section>
 
-      <section className="membership-layout">
-        <div className="account-card membership-card">
+      <section className="membership-layout membership-portal-layout">
+        <div className="account-card membership-card membership-portal-card">
           <div className="section-heading">
-            <CreditCard size={22} />
+            {loading ? <RefreshCw className="spin" size={22} /> : <CreditCard size={22} />}
             <div>
-              <h2>Stripe membership</h2>
-              <p>Use the secure Stripe embed below for plan changes and billing updates.</p>
+              <h2>{loading ? "Opening Stripe..." : "Stripe billing portal"}</h2>
+              <p>{loading ? "One moment while we create your secure billing session." : "Manage payment methods, invoices, subscriptions, and billing details in Stripe."}</p>
             </div>
           </div>
 
-          {hasStripeEmbed ? (
-            React.createElement("stripe-pricing-table", {
-              "pricing-table-id": PRICING_TABLE_ID,
-              "publishable-key": STRIPE_KEY,
-              "client-reference-id": user?.id || user?.email || "",
-              "customer-email": user?.email || "",
-            })
+          {loading ? (
+            <div className="portal-loading">
+              <RefreshCw className="spin" size={28} />
+              <span>Redirecting to Stripe</span>
+            </div>
           ) : (
-            <div className="stripe-placeholder">
+            <div className="stripe-placeholder portal-fallback">
               <ShieldCheck size={28} />
-              <h3>Stripe embed is ready for your keys.</h3>
-              <p>Add <code>VITE_STRIPE_PRICING_TABLE_ID</code> and <code>VITE_STRIPE_PUBLISHABLE_KEY</code> in Netlify environment variables, then redeploy.</p>
-              <a className="button tertiary" href="https://dashboard.stripe.com/pricing-tables" target="_blank" rel="noreferrer">
-                Open Stripe pricing tables <ExternalLink size={16} />
-              </a>
+              <h3>We could not open billing automatically.</h3>
+              <p>{message}</p>
+              <p>If your membership was just approved, Stripe may still be connecting your customer record.</p>
+              <div className="portal-actions">
+                <button className="button" type="button" onClick={() => window.location.reload()}>
+                  Try again <ArrowRight size={16} />
+                </button>
+                <a className="button tertiary" href="mailto:admin@thehealingdirectory.com">
+                  Email support <ExternalLink size={16} />
+                </a>
+              </div>
             </div>
           )}
         </div>
 
         <aside className="account-card account-quick">
-          <h2>After membership</h2>
-          <p>Providers can finish the public profile, add events, and join referral spaces once their account is ready.</p>
+          <h2>Provider tools</h2>
+          <p>You can keep working on your profile and events while billing is being connected.</p>
           <button onClick={() => navigate("/edit-profile")}>Edit profile <ArrowRight size={16} /></button>
           <button onClick={() => navigate("/dashboard")}>Provider dashboard <ArrowRight size={16} /></button>
         </aside>
       </section>
     </main>
   );
+}
+
+async function api(action, options = {}) {
+  const url = new URL(API, window.location.origin);
+  url.searchParams.set("action", action);
+  const headers = new Headers({ "Content-Type": "application/json" });
+  const token = getAccessToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const response = await fetch(url, {
+    method: options.method || "GET",
+    credentials: "include",
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || "Request failed.");
+  return payload;
 }

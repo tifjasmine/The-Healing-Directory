@@ -1,5 +1,5 @@
 import React from "react";
-import { getUser, logout } from "./authClient.js";
+import { getAccessToken, getUser, logout } from "./authClient.js";
 import {
   ArrowLeft, CalendarDays, CircleUserRound, Clock, ExternalLink, LogOut, Mail,
   Image as ImageIcon, Info, MapPin, Pencil, Plus, RefreshCw, Search, Save, Send, Sparkles,
@@ -86,7 +86,7 @@ function HostedEventCard({ event }) {
 function EventEditor({ user, editing }) {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id") || params.get("recordId");
-  const [form, setForm] = React.useState({ eventName: "", category: "", eventAudience: "Community", eventType: "Workshop", date: "", endTime: "", locationType: "Virtual", addressLink: "", registrationLink: "", imageUrl: "", description: "" });
+  const [form, setForm] = React.useState({ eventName: "", category: "", eventAudience: "Community", eventType: "Workshop", date: "", endTime: "", locationType: "Virtual", addressLink: "", registrationLink: "", imageUrl: "", eventImageUpload: null, description: "" });
   const [options, setOptions] = React.useState(EVENT_OPTION_FALLBACKS);
   const [currentEvent, setCurrentEvent] = React.useState(null);
   const [loading, setLoading] = React.useState(editing);
@@ -115,10 +115,11 @@ function EventEditor({ user, editing }) {
         setMessage("This event belongs to another provider account. Open the event from the account that created it.");
         return;
       }
-      setForm({ eventName: event.name || "", category: event.category || "", eventAudience: event.audience || "Community", eventType: event.eventType || "Workshop", date: localDate(event.start), endTime: localDate(event.end), locationType: event.locationType || "Virtual", addressLink: event.address || "", registrationLink: event.registration || "", imageUrl: event.image || "", description: event.description || "" });
+      setForm({ eventName: event.name || "", category: event.category || "", eventAudience: event.audience || "Community", eventType: event.eventType || "Workshop", date: localDate(event.start), endTime: localDate(event.end), locationType: event.locationType || "Virtual", addressLink: event.address || "", registrationLink: event.registration || "", imageUrl: event.image || "", eventImageUpload: null, description: event.description || "" });
     }).catch((error) => setMessage(error.message)).finally(() => setLoading(false));
   }, [editing, id, user.email]);
   const change = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
+  const setValue = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const canEdit = !editing || !currentEvent?.hostEmail || lower(currentEvent.hostEmail) === lower(user.email);
   async function submit(event) {
     event.preventDefault(); setSaving(true); setMessage("");
@@ -148,7 +149,7 @@ function EventEditor({ user, editing }) {
       <div className="host-email-card"><label>{editing ? "Connected Host Email" : "Host Email"} *</label><strong>{user.email}</strong><p>{editing ? "This is locked to the logged-in provider account so the event stays connected to the correct dashboard." : "This event stays connected to your provider account."}</p></div>
       {editing ? <div className="editor-alert"><Info size={18} /><span><strong>Changes are pending review.</strong><small>When you save edits, this event moves to Pending Review so updated details can be checked before being marked approved again.</small></span></div> : null}
       <EditorSection number="01" title="Basic information" text="Name the event and choose how it should be categorized."><EditorField label="Event Name" value={form.eventName} onChange={change("eventName")} placeholder="Ex: Nervous System Reset Circle" required /><EditorSelect label="Category" value={form.category} onChange={change("category")} options={options.category} placeholder="Choose a category" /><EditorSelect label="Event Audience" value={form.eventAudience} onChange={change("eventAudience")} options={options.audience} /><EditorSelect label="Event Type" value={form.eventType} onChange={change("eventType")} options={options.eventType} /></EditorSection>
-      <EditorSection number="02" title="Time and location" text={editing ? "Update when it is happening and where people should go." : "Add when it is happening and where people should go."}><EditorField label="Start Date + Time" type="datetime-local" value={form.date} onChange={change("date")} required /><EditorField label="End Date + Time" type="datetime-local" value={form.endTime} onChange={change("endTime")} required /><EditorSelect label="Location Type" value={form.locationType} onChange={change("locationType")} options={options.locationType} /><EditorField label="Address or Link" value={form.addressLink} onChange={change("addressLink")} placeholder="Zoom link, registration page, studio address, etc." /><EditorField label="Registration Link" value={form.registrationLink} onChange={change("registrationLink")} placeholder="Optional" /><ImageUrlField value={form.imageUrl} onChange={change("imageUrl")} /></EditorSection>
+      <EditorSection number="02" title="Time and location" text={editing ? "Update when it is happening and where people should go." : "Add when it is happening and where people should go."}><EditorField label="Start Date + Time" type="datetime-local" value={form.date} onChange={change("date")} required /><EditorField label="End Date + Time" type="datetime-local" value={form.endTime} onChange={change("endTime")} required /><EditorSelect label="Location Type" value={form.locationType} onChange={change("locationType")} options={options.locationType} /><EditorField label="Address or Link" value={form.addressLink} onChange={change("addressLink")} placeholder="Zoom link, registration page, studio address, etc." /><EditorField label="Registration Link" value={form.registrationLink} onChange={change("registrationLink")} placeholder="Optional" /><EventImageUpload value={form.eventImageUpload} imageUrl={form.imageUrl} onChange={(value) => setValue("eventImageUpload", value)} /></EditorSection>
       <EditorSection number="03" title="Description" text="Let people know what this event is about, who it's for, what they can expect, and anything important to know before attending." single><EditorField label="Description" value={form.description} onChange={change("description")} textarea placeholder="Share what the event includes, who it's meant for, and what attendees will experience." required /></EditorSection>
       {message && !locked ? <div className="editor-message">{message}</div> : null}<div className="editor-submit split">{editing ? <button type="button" className="button event-outline" onClick={() => go(`/event-details?id=${id}`)}><ExternalLink size={16} /> View Details</button> : null}<button className="button event-gold" disabled={saving || locked}>{saving ? <RefreshCw className="spin" size={17} /> : editing ? <Save size={17} /> : <Send size={17} />}{saving ? "Saving..." : editing ? "Save Changes" : "Submit Event"}</button></div>
     </form>
@@ -157,9 +158,42 @@ function EventEditor({ user, editing }) {
 
 function EditorSection({ number, title, text, children, single }) { return <section className="editor-section"><div className="editor-section-title"><span>{number}</span><div><h3>{title}</h3><p>{text}</p></div></div><div className={single ? "editor-grid single" : "editor-grid"}>{children}</div></section>; }
 function EditorField({ label, textarea, ...props }) { return <label className={textarea ? "editor-field full" : "editor-field"}><span>{label}{props.required ? " *" : ""}</span>{textarea ? <textarea rows="8" {...props} /> : <input {...props} />}</label>; }
-function ImageUrlField({ value, onChange }) {
-  const validImage = /^https?:\/\//i.test(value || "");
-  return <label className="editor-field event-image-field"><span>Event Image URL</span>{validImage ? <div className="image-url-preview"><img src={value} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} /></div> : <div className="image-url-placeholder"><ImageIcon size={22} /><small>Paste a public image link for the event flyer or graphic.</small></div>}<input value={value} onChange={onChange} placeholder="Optional flyer or event image URL" /></label>;
+function EventImageUpload({ value, imageUrl, onChange }) {
+  const [error, setError] = React.useState("");
+  const preview = value?.dataUrl || (/^https?:\/\//i.test(imageUrl || "") ? imageUrl : "");
+
+  async function handleFile(event) {
+    const file = event.target.files?.[0];
+    setError("");
+    if (!file) {
+      onChange(null);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      setError("Please choose an image under 4MB.");
+      return;
+    }
+    const dataUrl = await fileToDataUrl(file);
+    onChange({ name: file.name, type: file.type, size: file.size, dataUrl });
+  }
+
+  return (
+    <label className="editor-field event-image-field">
+      <span>Event image</span>
+      {preview ? (
+        <div className="image-url-preview"><img src={preview} alt="" /></div>
+      ) : (
+        <div className="image-url-placeholder"><ImageIcon size={22} /><small>Upload a flyer or event graphic.</small></div>
+      )}
+      <span className="event-file-control">Choose image<input type="file" accept="image/*" onChange={handleFile} /></span>
+      <small>{value?.name ? `Selected: ${value.name}` : "JPG, PNG, WebP, or GIF under 4MB."}</small>
+      {error ? <small className="field-error">{error}</small> : null}
+    </label>
+  );
 }
 function EditorSelect({ label, options, required = true, placeholder = "Choose one", ...props }) {
   const choices = options?.length ? options : ["Other"];
@@ -179,4 +213,23 @@ function formatTime(value) { const parsed = date(value); return parsed ? new Int
 function formatTimeRange(start, end) { return [formatTime(start), formatTime(end)].filter(Boolean).join(" - ") || "Time TBA"; }
 function localDate(value) { const parsed = date(value); if (!parsed) return ""; return new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
 function withFallback(options, fallback) { return options?.length ? options : fallback; }
-async function api(action, options = {}) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); Object.entries(options.query || {}).forEach(([key, value]) => url.searchParams.set(key, value)); const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: options.body ? JSON.stringify(options.body) : undefined }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed."); return payload; }
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Image could not be read."));
+    reader.readAsDataURL(file);
+  });
+}
+async function api(action, options = {}) {
+  const url = new URL(API, window.location.origin);
+  url.searchParams.set("action", action);
+  Object.entries(options.query || {}).forEach(([key, value]) => url.searchParams.set(key, value));
+  const headers = new Headers({ "Content-Type": "application/json" });
+  const token = getAccessToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers, body: options.body ? JSON.stringify(options.body) : undefined });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || "Request failed.");
+  return payload;
+}

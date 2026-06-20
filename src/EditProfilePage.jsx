@@ -3,11 +3,9 @@ import {
   Camera,
   Check,
   ChevronDown,
-  Mail,
   RefreshCw,
   RotateCcw,
   Save,
-  Send,
   UserRound,
   X,
 } from "lucide-react";
@@ -79,7 +77,14 @@ export default function EditProfilePage({ user, setNotice }) {
   const [options, setOptions] = React.useState(EMPTY_OPTIONS);
 
   React.useEffect(() => {
+    if (!user?.email) {
+      setLoading(false);
+      return undefined;
+    }
+
     let alive = true;
+    setLoading(true);
+    setStatus("");
 
     Promise.all([api("my-profile"), api("directory-options").catch(() => ({ directoryOptions: {} }))])
       .then(([payload, optionPayload]) => {
@@ -100,6 +105,7 @@ export default function EditProfilePage({ user, setNotice }) {
         });
         setForm(next);
         setInitial(next);
+        setStatus("");
       })
       .catch((error) => {
         const message = error.message || "Profile could not load.";
@@ -111,7 +117,7 @@ export default function EditProfilePage({ user, setNotice }) {
     return () => {
       alive = false;
     };
-  }, [setNotice, user]);
+  }, [setNotice, user?.email]);
 
   function update(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -170,17 +176,6 @@ export default function EditProfilePage({ user, setNotice }) {
           <p>{form.profession || "Provider profession"}</p>
           <div className="preview-divider" />
           <span>{form.email || user?.email || "Email connected to this account"}</span>
-
-          <div className="message-card">
-            <Mail size={20} />
-            <strong>Message provider</strong>
-            <p>Preview how contact details will feel on your public profile.</p>
-            <textarea readOnly value="Example: Hi, I found your profile through The Healing Directory and would love to connect about a referral..." />
-            <button type="button">
-              <Send size={16} />
-              Send message
-            </button>
-          </div>
         </aside>
 
         <form className="profile-editor" onSubmit={save}>
