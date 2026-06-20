@@ -1,5 +1,6 @@
 import React from "react";
 import { Check, Plus, RefreshCw, Save, Sparkles } from "lucide-react";
+import { getAccessToken } from "./authClient.js";
 
 const API = "/.netlify/functions/referral-room";
 const SESSION_STATUSES = ["Open", "Draft", "Closed", "Full", "Cancelled"];
@@ -73,7 +74,7 @@ export default function ReferralRoomAdminPage({ setNotice }) {
 function Field({ label, textarea, ...props }) { return <label className={textarea ? "field full-field" : "field"}><span>{label}</span>{textarea ? <textarea rows="5" {...props} /> : <input {...props} />}</label>; }
 function Select({ label, options, ...props }) { return <label className="field"><span>{label}</span><select {...props}>{options.map((option) => <option key={option}>{option}</option>)}</select></label>; }
 function Template({ title, text, onClick }) { return <button type="button" onClick={onClick}><strong>{title}</strong><span>{text}</span></button>; }
-async function api(action, options = {}) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: options.body ? JSON.stringify(options.body) : undefined }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || `Request failed (${response.status}).`); return payload; }
+async function api(action, options = {}) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); const headers = { "Content-Type": "application/json" }; const token = getAccessToken(); if (token) { headers.Authorization = `Bearer ${token}`; headers["X-Supabase-Access-Token"] = token; } const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers, body: options.body ? JSON.stringify(options.body) : undefined }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || `Request failed (${response.status}).`); return payload; }
 function toLocal(value) { const time = new Date(value || 0).getTime(); if (!time) return ""; const date = new Date(time); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
 function defaultDate() { const date = new Date(); date.setDate(date.getDate() + 14); date.setHours(18, 0, 0, 0); return toLocal(date); }
 function formatList(items) { if (!items.length) return ""; if (items.length === 1) return items[0]; if (items.length === 2) return `${items[0]} and ${items[1]}`; return `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`; }

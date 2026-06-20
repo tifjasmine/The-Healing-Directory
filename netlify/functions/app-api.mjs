@@ -339,11 +339,10 @@ async function toggleProvider(user, body) {
   const existing = saves.find((r) => belongsTo(r, user.email, account.id) && providerIds(r).includes(body.providerId));
   const existingByLinkedField = mapped.savedProvider ? saves.find((r) => providerIds(r).includes(body.providerId) && belongsTo(r, user.email, account.id)) : null;
   const active = body.active !== false;
-  const fields = {
-    [mapped.name]: `${user.email} saved ${provider.name}`,
-    [mapped.savedProvider]: [body.providerId],
-    [mapped.active]: active
-  };
+  const fields = {};
+  setMappedField(fields, mapped.name, `${user.email} saved ${provider.name}`);
+  setMappedField(fields, mapped.savedProvider, [body.providerId]);
+  setMappedField(fields, mapped.active, active);
   if (mapped.saverRecord) fields[mapped.saverRecord] = [account.id];
   if (mapped.saverEmail) fields[mapped.saverEmail] = user.email;
   if (body.notes !== undefined && mapped.notes) fields[mapped.notes] = String(body.notes || "");
@@ -362,11 +361,10 @@ async function toggleEvent(user, body) {
   const existing = saves.find((r) => belongsTo(r, user.email, account.id) && eventIds(r).includes(body.eventId));
   const existingByLinkedField = mapped.savedEvent ? saves.find((r) => eventIds(r).includes(body.eventId) && belongsTo(r, user.email, account.id)) : null;
   const active = body.active !== false;
-  const fields = {
-    [mapped.name]: `${user.email} saved ${event.name}`,
-    [mapped.savedEvent]: [body.eventId],
-    [mapped.active]: active
-  };
+  const fields = {};
+  setMappedField(fields, mapped.name, `${user.email} saved ${event.name}`);
+  setMappedField(fields, mapped.savedEvent, [body.eventId]);
+  setMappedField(fields, mapped.active, active);
   if (mapped.saverRecord) fields[mapped.saverRecord] = [account.id];
   if (mapped.saverEmail) fields[mapped.saverEmail] = user.email;
   if (body.notes !== undefined && mapped.notes) fields[mapped.notes] = String(body.notes || "");
@@ -1224,9 +1222,24 @@ function setOptional(fields, fieldName, value) {
   setAlias(fields, [fieldName], value);
 }
 
+function setMappedField(fields, fieldName, value) {
+  if (!fieldName) return;
+  if (Array.isArray(value)) {
+    if (value.length) fields[fieldName] = value;
+    return;
+  }
+  if (value === "" || value === undefined || value === null) return;
+  fields[fieldName] = value;
+}
+
 function setAirtableValue(fields, table, fieldName, value) {
   if (!fieldName) return;
   const field = table?.fields?.find((item) => item.name === fieldName);
+  if (field?.type === "multipleRecordLinks") {
+    const links = arrayRaw(value).map(clean).filter((item) => item.startsWith("rec"));
+    if (links.length) fields[fieldName] = links;
+    return;
+  }
   if (field?.type === "multipleAttachments") {
     const attachments = arrayRaw(value)
       .map((item) => {

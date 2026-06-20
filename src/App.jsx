@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  getAccessToken,
   getUser,
   handleAuthCallback,
   login,
@@ -18,6 +19,9 @@ import AccountSettings from "./AccountSettings.jsx";
 import MembershipPage from "./MembershipPage.jsx";
 import EditProfilePage from "./EditProfilePage.jsx";
 import PwaInstallButton from "./PwaInstallButton.jsx";
+import ProviderDashboard from "./ProviderDashboard.jsx";
+import ClientDashboard from "./ClientDashboard.jsx";
+import ReferralRoomProviderPage from "./ReferralRoomProviderPage.jsx";
 
 const API = "/.netlify/functions/app-api";
 const EVENT_STATUSES = ["Pending Review", "Approved", "Declined", "Draft", "Cancelled"];
@@ -158,11 +162,13 @@ function Page(props) {
   if (path === "/account-settings") return <RequireAuth {...props}><AccountSettings {...props} /></RequireAuth>;
   if (path === "/membership" || path === "/edit-membership") return <RequireAuth {...props}><MembershipPage {...props} /></RequireAuth>;
   if (path === "/edit-profile") return <RequireAuth {...props}><EditProfilePage {...props} /></RequireAuth>;
-  if (path === "/dashboard" || path === "/client-dashboard" || path === "/provider-dashboard") return <RequireAuth {...props}><Dashboard {...props} /></RequireAuth>;
+  if (path === "/client-dashboard") return <RequireAuth {...props}><ClientDashboard {...props} /></RequireAuth>;
+  if (path === "/dashboard" || path === "/provider-dashboard") return <RequireAuth {...props}><ProviderDashboard {...props} /></RequireAuth>;
   if (path === "/add-event") return <RequireAuth {...props}><EventForm {...props} /></RequireAuth>;
   if (path === "/edit-event") return <RequireAuth {...props}><EventForm {...props} editing /></RequireAuth>;
   if (path === "/admin/events") return <RequireAdmin {...props}><AdminEvents {...props} /></RequireAdmin>;
-  if (path === "/referral-room" || path === "/referral-room-admin" || path === "/referral-room-manager" || path === "/provider-connections") return <RequireAuth {...props}><ComingNext {...props} /></RequireAuth>;
+  if (path === "/referral-room") return <RequireAuth {...props}><ReferralRoomProviderPage {...props} /></RequireAuth>;
+  if (path === "/referral-room-admin" || path === "/referral-room-manager" || path === "/provider-connections") return <RequireAuth {...props}><ComingNext {...props} /></RequireAuth>;
   if (path === "/terms" || path === "/privacy") return <LegalPage {...props} />;
   return <DirectoryPage {...props} />;
 }
@@ -754,7 +760,13 @@ async function api(action, options = {}) {
   const url = new URL(API, window.location.origin);
   url.searchParams.set("action", action);
   Object.entries(options.query || {}).forEach(([key, value]) => url.searchParams.set(key, value));
-  const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers: { "Content-Type": "application/json" }, body: options.body ? JSON.stringify(options.body) : undefined });
+  const headers = { "Content-Type": "application/json" };
+  const token = getAccessToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+    headers["X-Supabase-Access-Token"] = token;
+  }
+  const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers, body: options.body ? JSON.stringify(options.body) : undefined });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || `Request failed (${response.status}).`);
   return payload;

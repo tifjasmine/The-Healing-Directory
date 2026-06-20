@@ -4,14 +4,16 @@ const SUPABASE_SERVICE_ROLE_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY ||
 
 export async function getUser(request) {
   const authorization = request?.headers?.get("authorization") || "";
+  const fallbackToken = request?.headers?.get("x-supabase-access-token") || "";
   const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1] || "";
-  if (!token) throw new Error("This endpoint requires a valid Bearer token");
+  const accessToken = token || fallbackToken;
+  if (!accessToken) throw new Error("This endpoint requires a valid Bearer token");
 
   const key = SUPABASE_ANON_KEY() || SUPABASE_SERVICE_ROLE_KEY();
   const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     headers: {
       apikey: key,
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json"
     }
   });

@@ -227,7 +227,10 @@ async function api(action, options = {}) {
   url.searchParams.set("action", action);
   const headers = { "Content-Type": "application/json" };
   const token = getAccessToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+    headers["X-Supabase-Access-Token"] = token;
+  }
 
   const response = await fetch(url, {
     method: options.method || "GET",
