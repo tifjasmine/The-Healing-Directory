@@ -76,11 +76,11 @@ async function requestSeat(user, body) {
   if (existing) throw httpError(409, "You already requested this Referral Room date.");
 
   const session = normalizeSession(sessionRecord, attendanceRecords.map(normalizeAttendance), ruleRecords);
-  const rule = session.rules.find((item) => lower(item.serviceType) === lower(serviceType));
+  const rule = findMatchingRule(session.rules, serviceType);
   const roomFull = session.remaining <= 0;
-  const typeFull = !rule || rule.remaining <= 0 || rule.accepting === false;
+  const typeFull = Boolean(rule && (rule.remaining <= 0 || rule.accepting === false));
   const status = roomFull || typeFull ? "Waitlist" : "Pending";
-  const reason = roomFull ? "Room Full" : typeFull ? (rule ? "Provider Type Full" : "Provider Type Not Open") : "";
+  const reason = roomFull ? "Room Full" : typeFull ? "Provider Type Full" : "";
 
   const fields = {
     "Name": `${user.email} - ${session.name}`,
@@ -168,10 +168,10 @@ function normalizeSession(record, attendance, rules) {
   const f = record.fields || {};
   const id = record.id;
   const linkedAttendance = attendance.filter((item) => item.sessionId === id);
-  const accepted = linkedAttendance.filter((item) => ["accepted", "attended"].includes(lower(item.status))).length;
-  const totalSeats = Number(value(f, ["Total Seats", "Total Seat Cap", "Total Limit"])) || totalSeatsFromNotes(text(value(f, ["Notes"]))) || 8;
+  const accepted = linkedAttendance.filter((item) => countsAsAccepted(item.status)).length;
+  const totalSeats = Number(value(f, ["Total Seats", "Total Seat Cap", "Total Limit", "Seat Limit", "Capacity", "Max Seats", "Seats"])) || totalSeatsFromNotes(text(value(f, ["Notes"]))) || 8;
   const sessionRules = rules.map(normalizeRule).filter((rule) => rule.sessionId === id).map((rule) => {
-    const taken = linkedAttendance.filter((item) => ["accepted", "attended"].includes(lower(item.status)) && lower(item.serviceType) === lower(rule.serviceType)).length;
+    const taken = linkedAttendance.filter((item) => countsAsAccepted(item.status) && providerTypeMatches(item.serviceType, rule.serviceType)).length;
     return { ...rule, taken, remaining: Math.max(rule.seatLimit - taken, 0) };
   });
   return {
@@ -186,10 +186,10 @@ function normalizeSession(record, attendance, rules) {
 function normalizeAttendance(record) {
   const f = record.fields || {};
   return {
-    id: record.id, sessionId: linked(value(f, ["Session", "Referral Room", "Referral Room Session"]))[0] || "",
+    id: record.id, sessionId: linked(value(f, ["Session", "Referral Room", "Referral Room Session", "Room", "Event", "Referral Room Date"]))[0] || "",
     sessionName: text(value(f, ["Session Name", "Referral Room Name"])), sessionDate: text(value(f, ["Session Date"])),
     providerName: text(value(f, ["Provider Name", "Name"])), email: text(value(f, ["Provider Email", "Email"])),
-    serviceType: text(value(f, ["Service Type"])), specialtyFocus: text(value(f, ["Specialty Focus", "Focus"])),
+    serviceType: text(value(f, ["Service Type", "Provider Type", "Provider Type / Service", "Category"])), specialtyFocus: text(value(f, ["Specialty Focus", "Focus"])),
     notes: text(value(f, ["Notes"])), status: text(value(f, ["Signup Status", "Status"])) || "Pending",
     reason: text(value(f, ["Waitlist Reason", "Reason"])), attended: truthy(value(f, ["Attended"])),
     verified: truthy(value(f, ["Verified After Attendance", "Verified"])), created: text(value(f, ["Created", "Created At"])),
@@ -198,7 +198,7 @@ function normalizeAttendance(record) {
 
 function normalizeRule(record) {
   const f = record.fields || {};
-  return { id: record.id, sessionId: linked(value(f, ["Session", "Referral Room"]))[0] || "", serviceType: text(value(f, ["Service Type"])), seatLimit: Number(value(f, ["Seat Limit", "Category Cap"])) || 0, accepting: value(f, ["Accepting"]) === undefined || truthy(value(f, ["Accepting"])) };
+  return { id: record.id, sessionId: linked(value(f, ["Session", "Referral Room", "Referral Room Session", "Room", "Event", "Referral Room Date"]))[0] || "", serviceType: text(value(f, ["Service Type", "Provider Type", "Provider Type / Service", "Category"])), seatLimit: Number(value(f, ["Seat Limit", "Category Cap", "Seats", "Seat Cap", "Limit", "Max Seats"])) || 0, accepting: value(f, ["Accepting"]) === undefined || truthy(value(f, ["Accepting"])) };
 }
 
 async function list(key) { const records = []; let offset = ""; do { const params = new URLSearchParams({ pageSize: "100" }); if (offset) params.set("offset", offset); const result = await airtable(key, "", { params }); records.push(...(result.records || [])); offset = result.offset || ""; } while (offset); return records; }
@@ -223,6 +223,18 @@ function linked(input) { return (Array.isArray(input) ? input : input ? [input] 
 function truthy(input) { return input === true || ["true", "yes", "1", "checked", "accepted", "attended", "verified"].includes(lower(text(input))); }
 function clean(input) { return String(input ?? "").replace(/\s+/g, " ").trim(); }
 function lower(input) { return clean(input).toLowerCase(); }
+function compact(input) { return lower(input).replace(/&/g, "and").replace(/[^a-z0-9]/g, ""); }
+function providerTypeMatches(left, right) {
+  const a = compact(left);
+  const b = compact(right);
+  return Boolean(a && b && (a === b || a.includes(b) || b.includes(a)));
+}
+function findMatchingRule(rules, serviceType) {
+  return rules.find((item) => providerTypeMatches(item.serviceType, serviceType)) || null;
+}
+function countsAsAccepted(status) {
+  return ["accepted", "approved", "confirmed", "attended", "verified"].includes(lower(status));
+}
 function required(input, label) { const result = clean(input); if (!result) throw httpError(400, `${label} is required.`); return result; }
 function removeEmpty(fields, keepEmpty = false) { Object.keys(fields).forEach((key) => { if (fields[key] == null || (!keepEmpty && typeof fields[key] === "string" && !fields[key])) delete fields[key]; }); }
 function totalSeatsFromNotes(notes) { const match = String(notes || "").match(/Total Seats:\s*(\d+)/i); return match ? Number(match[1]) : 0; }

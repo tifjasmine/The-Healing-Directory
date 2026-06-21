@@ -4798,9 +4798,7 @@
 .warm-header .brand > img,
 .warm-header .brand img,
 .auth-root .site-header .brand > img,
-.auth-root .site-header .brand img,
-.referral-root-header .brand > img,
-.referral-root-header .brand img {
+.auth-root .site-header .brand img {
   display: block !important;
   visibility: visible !important;
   width: 46px !important;

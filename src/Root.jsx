@@ -85,7 +85,7 @@ export default function Root() {
   if (!ready || !user) return <div className="state root-auth-state"><h2>Checking account...</h2></div>;
 
   return <div className="app-shell referral-root">
-    <header className="referral-root-header"><a className="brand" href="/"><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></a><nav><a href="/dashboard">Dashboard</a><a href="/events">Events</a>{user.roles.includes("admin") ? <><a href="/referral-room-admin">Create session</a><a href="/referral-room-manager">Manager</a></> : null}</nav></header>
+    <header className="referral-root-header"><a className="brand referral-wordmark" href="/"><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></a><nav><a href="/providers">Providers</a><a href="/events">Events</a><a href="/dashboard">Dashboard</a><a href="/referral-room">Referral Room</a>{user.roles.includes("admin") ? <><a href="/referral-room-admin">Create session</a><a href="/referral-room-manager">Manager</a></> : null}</nav></header>
     {notice ? <div className="global-notice"><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss"><X size={16} /></button></div> : null}
     {path === "/referral-room" ? <ReferralRoomProviderPage user={user} setNotice={setNotice} /> : null}
     {path === "/referral-room-admin" ? <ReferralRoomAdminPage user={user} setNotice={setNotice} /> : null}
