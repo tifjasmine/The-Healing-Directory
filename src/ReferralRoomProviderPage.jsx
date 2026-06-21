@@ -51,12 +51,25 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
 
   const upcoming = data.attendance.filter((item) => !item.attended);
   const attended = data.attendance.filter((item) => item.attended);
+  const openSeats = data.sessions.flatMap((session) => {
+    const rules = session.rules.length ? session.rules : [{ id: `${session.id}-open`, serviceType: "Open provider mix", remaining: session.remaining, taken: session.accepted, accepting: true }];
+    return rules
+      .filter((rule) => rule.accepting !== false && rule.remaining > 0 && session.remaining > 0)
+      .map((rule) => ({ ...rule, sessionId: session.id, sessionName: session.name, sessionDate: session.date, sessionFocus: session.focus }));
+  });
+  function openSession(sessionId, serviceType = "") {
+    setExpanded(sessionId);
+    if (serviceType && serviceType !== "Open provider mix") setForm((current) => ({ ...current, serviceType }));
+    setTab("dates");
+    window.setTimeout(() => document.getElementById(`room-${sessionId}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+  }
 
   return <main className="referral-provider-page">
     <ReferralTitle />
     <section className="content-shell referral-shell">
       <div className="segmented referral-tabs">
         <button className={tab === "dates" ? "active" : ""} onClick={() => setTab("dates")}>Upcoming Dates</button>
+        <button className={tab === "open" ? "active" : ""} onClick={() => setTab("open")}>Open Seats ({openSeats.length})</button>
         <button className={tab === "rsvps" ? "active" : ""} onClick={() => setTab("rsvps")}>My RSVPs ({upcoming.length})</button>
         <button className={tab === "attended" ? "active" : ""} onClick={() => setTab("attended")}>Attended ({attended.length})</button>
       </div>
@@ -70,7 +83,7 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
           </div>
         </section>
         <div className="room-list">{data.sessions.length ? data.sessions.map((session) => <SessionCard key={session.id} session={session} attendance={data.attendance} form={form} expanded={expanded} setExpanded={setExpanded} busy={busy} requestSeat={requestSeat} />) : <RoomEmpty title="No upcoming dates yet" text="New Referral Room sessions will appear here when registration opens." />}</div>
-      </> : <AttendanceList items={tab === "attended" ? attended : upcoming} empty={tab === "attended" ? "No attended rooms yet" : "No upcoming RSVPs yet"} />}
+      </> : tab === "open" ? <OpenSeatsList seats={openSeats} onOpen={openSession} /> : <AttendanceList items={tab === "attended" ? attended : upcoming} empty={tab === "attended" ? "No attended rooms yet" : "No upcoming RSVPs yet"} />}
     </section>
   </main>;
 }
@@ -87,6 +100,7 @@ function SessionCard({ session, attendance, form, expanded, setExpanded, busy, r
   const fullRules = session.rules.filter((item) => item.remaining <= 0 || session.remaining <= 0);
   const available = rule ? Math.min(rule.remaining, session.remaining) : session.remaining;
   return <article className="room-card">
+    <span id={`room-${session.id}`} className="room-anchor" />
     <button className="room-card-header" onClick={() => setExpanded(open ? "" : session.id)}><div><h2>{session.name}</h2><p>{formatDate(session.date)}</p></div><div className="room-header-meta">{myRequest ? <Status value={myRequest.status} /> : null}<span className="room-focus">{session.focus || "Referral Room"}</span><span className="room-remaining">{session.remaining} left</span><span className="room-toggle">{open ? "−" : "+"}</span></div></button>
     {open ? <div className="room-card-body">
       <p className="room-description">{session.description || "A curated referral circle for aligned healing professionals."}</p>
@@ -96,6 +110,23 @@ function SessionCard({ session, attendance, form, expanded, setExpanded, busy, r
       <div className="room-request"><div><strong>{myRequest ? "Your RSVP Status" : "Request this date"}</strong><p>{session.name} · {formatDate(session.date)}</p></div><button className={waitlist ? "button warm" : "button"} disabled={busy === session.id || Boolean(myRequest) || !form.serviceType} onClick={() => requestSeat(session)}>{busy === session.id ? <RefreshCw className="spin" size={16} /> : null}{myRequest ? myRequest.status : !form.serviceType ? "Choose Provider Type First" : waitlist ? "Join Waitlist" : "Request This Date"}</button></div>
     </div> : null}
   </article>;
+}
+
+function OpenSeatsList({ seats, onOpen }) {
+  if (!seats.length) return <RoomEmpty title="No open seats right now" text="Open provider-type seats will appear here as soon as they are available." />;
+  return <div className="open-seat-list">
+    {seats.map((seat) => (
+      <article className="open-seat-card" key={`${seat.sessionId}-${seat.id || seat.serviceType}`}>
+        <div>
+          <strong>{seat.serviceType || "Provider type"}</strong>
+          <span><CalendarDays size={15} />{formatDate(seat.sessionDate)}</span>
+          {seat.sessionFocus ? <small>{seat.sessionFocus}</small> : null}
+        </div>
+        <b>{seat.remaining} open</b>
+        <button className="button tertiary" type="button" onClick={() => onOpen(seat.sessionId, seat.serviceType)}>View date</button>
+      </article>
+    ))}
+  </div>;
 }
 
 function SeatRules({ rules, hasRules, openRules, fullRules }) {
