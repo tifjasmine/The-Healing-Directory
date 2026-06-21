@@ -98,6 +98,7 @@ async function requestSeat(user, body) {
     "Verified After Attendance": false,
   };
   const optionalFields = {
+    "Referral Room Event": [sessionId],
     "Provider Type": serviceType,
     "Referral Room Seat Rule": rule ? [rule.id] : undefined,
     "Seat Rule": rule ? [rule.id] : undefined,
@@ -131,12 +132,16 @@ async function createSession(user, body) {
   const session = await create("sessions", fields);
   for (let index = 0; index < rules.length; index += 1) {
     const rule = rules[index];
-    await create("rules", {
+    await createWithOptionalFields("rules", {
       "Name": `${name} - ${rule.serviceType}`,
-      "Session": [session.id],
       "Service Type": rule.serviceType,
+    }, {
+      "Session": [session.id],
+      "Referral Room Event": [session.id],
       "Seat Limit": Number(rule.seatLimit),
+      "# Seat Limit": Number(rule.seatLimit),
       "Accepting": true,
+      "Accepting This Type": true,
       "Display Order": index + 1,
     });
   }
@@ -204,7 +209,7 @@ function normalizeSession(record, attendance, rules) {
 function normalizeAttendance(record) {
   const f = record.fields || {};
   return {
-    id: record.id, sessionId: linked(value(f, ["Session", "Referral Room", "Referral Room Session", "Room", "Event", "Referral Room Date"]))[0] || "",
+    id: record.id, sessionId: linked(value(f, ["Session", "Referral Room Event", "Referral Room", "Referral Room Session", "Room", "Event", "Referral Room Date"]))[0] || "",
     seatRuleId: linked(value(f, ["Referral Room Seat Rule", "Seat Rule", "Provider Type Rule"]))[0] || text(value(f, ["Seat Rule ID"])),
     sessionName: text(value(f, ["Session Name", "Referral Room Name"])), sessionDate: text(value(f, ["Session Date"])),
     providerName: text(value(f, ["Provider Name", "Name"])), email: text(value(f, ["Provider Email", "Email"])),
@@ -217,7 +222,14 @@ function normalizeAttendance(record) {
 
 function normalizeRule(record) {
   const f = record.fields || {};
-  return { id: record.id, sessionId: linked(value(f, ["Session", "Referral Room", "Referral Room Session", "Room", "Event", "Referral Room Date"]))[0] || "", serviceType: text(value(f, ["Service Type", "Provider Type", "Provider Type / Service", "Category"])), seatLimit: Number(value(f, ["Seat Limit", "Category Cap", "Seats", "Seat Cap", "Limit", "Max Seats"])) || 0, accepting: value(f, ["Accepting"]) === undefined || truthy(value(f, ["Accepting"])) };
+  const acceptingValue = value(f, ["Accepting This Type", "Accepting", "Accepting Requests", "Open"]);
+  return {
+    id: record.id,
+    sessionId: linked(value(f, ["Referral Room Event", "Session", "Referral Room", "Referral Room Session", "Room", "Event", "Referral Room Date"]))[0] || "",
+    serviceType: text(value(f, ["Service Type", "Provider Type", "Provider Type / Service", "Category", "Name"])),
+    seatLimit: Number(value(f, ["# Seat Limit", "Seat Limit", "Category Cap", "Seats", "Seat Cap", "Limit", "Max Seats"])) || 0,
+    accepting: acceptingValue === undefined || truthy(acceptingValue),
+  };
 }
 
 async function list(key) { const records = []; let offset = ""; do { const params = new URLSearchParams({ pageSize: "100" }); if (offset) params.set("offset", offset); const result = await airtable(key, "", { params }); records.push(...(result.records || [])); offset = result.offset || ""; } while (offset); return records; }
