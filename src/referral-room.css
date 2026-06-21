@@ -405,6 +405,98 @@
   text-decoration: none;
 }
 
+.referral-provider-page .seat-rule-panel {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid #e5d8ca;
+  border-radius: 18px;
+  background: #fffdf8;
+}
+
+.referral-provider-page .seat-rule-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.referral-provider-page .seat-rule-heading strong {
+  color: #b56f50;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.referral-provider-page .seat-rule-heading span {
+  color: #756a61;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.referral-provider-page .seat-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.referral-provider-page .seat-rule-card {
+  padding: 14px;
+  border: 1px solid #c9dfd3;
+  border-radius: 14px;
+  background: #f7fbf8;
+}
+
+.referral-provider-page .seat-rule-card.full {
+  border-color: #ded2c4;
+  background: #faf6ef;
+}
+
+.referral-provider-page .seat-rule-card > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.referral-provider-page .seat-rule-card strong {
+  color: #24493d;
+  font-size: 14px;
+}
+
+.referral-provider-page .seat-rule-card small {
+  color: #7d7268;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.referral-provider-page .seat-rule-counts {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+
+.referral-provider-page .seat-rule-counts span {
+  padding: 7px 9px;
+  border-radius: 999px;
+  background: #fff;
+  color: #5f564f;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.referral-provider-page .seat-rule-counts b {
+  color: #2b654f;
+}
+
+.referral-provider-page .seat-rule-card p {
+  margin: 0;
+  color: #756a61;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .referral-provider-page .availability {
   margin-top: 20px;
   padding: 20px;
@@ -551,6 +643,16 @@
 
   .referral-provider-page .room-stats strong {
     font-size: 22px;
+  }
+
+  .referral-provider-page .seat-rule-heading,
+  .referral-provider-page .seat-rule-card > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .referral-provider-page .seat-rule-grid {
+    grid-template-columns: 1fr;
   }
 
   .referral-provider-page .room-request {

@@ -58,8 +58,8 @@ export default function ProviderDashboard() {
   const tabs = [
     { key: "providers", label: "Saved Providers", count: payload.savedProviderItems.length, icon: <Star size={16} /> },
     { key: "events", label: "Saved Events", count: payload.savedEvents.length, icon: <Bookmark size={16} /> },
-    { key: "mine", label: "My Events", count: payload.myEvents.length, icon: <CalendarDays size={16} /> },
-    { key: "referral", label: "Referral Room", count: null, icon: <HeartHandshake size={16} /> },
+    { key: "mine", label: "My Events", count: payload.myEvents.length + payload.referralRequests.length, icon: <CalendarDays size={16} /> },
+    { key: "referral", label: "Referral Room", count: payload.referralRequests.length, icon: <HeartHandshake size={16} /> },
   ];
 
   async function saveProviderNote(item) {
@@ -114,8 +114,8 @@ export default function ProviderDashboard() {
 
         {tab === "providers" ? <SavedProviderPanel items={payload.savedProviderItems} noteDrafts={noteDrafts} setNoteDrafts={setNoteDrafts} savingNote={savingNote} savedNotes={savedNotes} openNotes={openNotes} setOpenNotes={setOpenNotes} onSaveNote={saveProviderNote} /> : null}
         {tab === "events" ? <SavedEventPanel items={payload.savedEvents} /> : null}
-        {tab === "mine" ? <MyEventsPanel items={payload.myEvents} /> : null}
-        {tab === "referral" ? <ReferralPanel /> : null}
+        {tab === "mine" ? <MyEventsPanel items={payload.myEvents} referralRequests={payload.referralRequests} /> : null}
+        {tab === "referral" ? <ReferralPanel items={payload.referralRequests} /> : null}
       </section>
     </main>
   </div>;
@@ -162,18 +162,23 @@ function SavedEventPanel({ items }) {
   return <div className="simple-dashboard-list">{items.map((event) => <button key={event.id} className="client-saved-row saved-event-row" type="button" onClick={() => go(`/event-details?id=${event.id}`)}>{event.image ? <img src={event.image} alt="" /> : <span className="client-saved-mark"><CalendarDays size={19} /></span>}<span><strong>{event.name || "Saved event"}</strong><small>{formatDate(event.start || event.date)}</small></span><ArrowRight size={18} /></button>)}</div>;
 }
 
-function MyEventsPanel({ items }) {
+function MyEventsPanel({ items, referralRequests }) {
   return <div>
     <div className="simple-dashboard-actions"><button className="button provider-dashboard-primary" type="button" onClick={() => go("/add-event")}>Add event</button><button className="button provider-dashboard-secondary" type="button" onClick={() => go("/my-events")}>Manage all events <ArrowRight size={16} /></button></div>
     {!items.length ? <EmptyPanel title="No hosted events yet" text="Create your first event listing when you are ready." action="Add event" path="/add-event" inline /> : <div className="simple-dashboard-list">{items.slice(0, 6).map((event) => <button key={event.id} className="client-saved-row" type="button" onClick={() => go(`/edit-event?id=${event.id}`)}><span className="client-saved-mark"><CalendarDays size={19} /></span><span><strong>{event.name || "Hosted event"}</strong><small>{formatDate(event.start || event.date)}</small></span><ArrowRight size={18} /></button>)}</div>}
+    {referralRequests.length ? <section className="dashboard-referral-events">
+      <h2>Referral Room requests</h2>
+      <div className="simple-dashboard-list">{referralRequests.map((item) => <button key={item.id} className="client-saved-row referral-event-row" type="button" onClick={() => go("/referral-room")}><span className="client-saved-mark"><HeartHandshake size={19} /></span><span><strong>{item.sessionName || "Referral Room"}</strong><small>{formatDate(item.sessionDate)} · {item.status || "Pending"}</small></span><ArrowRight size={18} /></button>)}</div>
+    </section> : null}
   </div>;
 }
 
-function ReferralPanel() {
+function ReferralPanel({ items }) {
   return <div className="referral-dashboard-card">
     <HeartHandshake size={26} />
     <h2>Referral Room</h2>
     <p>Request a seat, review your RSVPs, and return to referral room details from one place.</p>
+    {items.length ? <div className="referral-dashboard-list">{items.map((item) => <span key={item.id}><strong>{item.sessionName || "Referral Room"}</strong><small>{item.status || "Pending"}</small></span>)}</div> : null}
     <button className="button provider-dashboard-primary" type="button" onClick={() => go("/referral-room")}>Request a seat <ArrowRight size={16} /></button>
   </div>;
 }
@@ -188,19 +193,36 @@ function providerTypeLabel(provider) { return Array.isArray(provider.providerTyp
 function go(path) { window.location.assign(path); }
 async function signOut() { await logout().catch(() => null); window.location.assign("/"); }
 function formatDate(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(time); }
-function emptyPayload() { return { counts: {}, savedProviders: [], savedProviderItems: [], savedEvents: [], myEvents: [] }; }
+function emptyPayload() { return { counts: {}, savedProviders: [], savedProviderItems: [], savedEvents: [], myEvents: [], referralRequests: [] }; }
 async function loadDashboard() {
-  const [dashboard, savedProviders, myEvents] = await Promise.all([
+  const [dashboard, savedProviders, myEvents, referralRoom] = await Promise.all([
     api("dashboard").catch(() => ({})),
     api("saved-providers").catch(() => ({ items: [] })),
     api("my-events").catch(() => ({ hosted: [] })),
+    referralApi("provider-data").catch(() => ({ attendance: [] })),
   ]);
   return {
     ...emptyPayload(),
     ...dashboard,
     savedProviderItems: (savedProviders.items || []).filter((item) => item.active !== false),
     myEvents: myEvents.hosted || [],
+    referralRequests: (referralRoom.attendance || []).filter((item) => !item.attended),
   };
+}
+async function referralApi(action) {
+  const url = new URL("/.netlify/functions/referral-room", window.location.origin);
+  url.searchParams.set("action", action);
+  let token = getAccessToken();
+  if (!token) token = (await refreshSession().catch(() => null))?.access_token || getAccessToken();
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+    headers["X-Supabase-Access-Token"] = token;
+  }
+  const response = await fetch(url, { credentials: "include", headers });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || "Referral Room request failed.");
+  return payload;
 }
 async function api(action, options = {}) {
   const url = new URL(API, window.location.origin);

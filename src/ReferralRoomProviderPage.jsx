@@ -90,12 +90,39 @@ function SessionCard({ session, attendance, form, expanded, setExpanded, busy, r
     <button className="room-card-header" onClick={() => setExpanded(open ? "" : session.id)}><div><h2>{session.name}</h2><p>{formatDate(session.date)}</p></div><div className="room-header-meta">{myRequest ? <Status value={myRequest.status} /> : null}<span className="room-focus">{session.focus || "Referral Room"}</span><span className="room-remaining">{session.remaining} left</span><span className="room-toggle">{open ? "−" : "+"}</span></div></button>
     {open ? <div className="room-card-body">
       <p className="room-description">{session.description || "A curated referral circle for aligned healing professionals."}</p>
-      <div className="room-stats"><RoomStat label="Total seats" value={session.totalSeats} /><RoomStat label="Accepted" value={session.accepted} /><RoomStat label="Remaining" value={session.remaining} /></div>
-      <div className="room-types"><strong>This room is open to</strong><div className="tag-row large-tags">{openRules.length ? openRules.map((item) => <span key={item.id}>{item.serviceType}</span>) : <span>{hasRules ? "Provider mix is being reviewed." : "Open provider mix"}</span>}</div>{fullRules.length ? <><b>Waitlist only</b><div className="tag-row large-tags waitlist-tags">{fullRules.map((item) => <span className="closed" key={item.id}>{item.serviceType}</span>)}</div></> : null}</div>
+      <div className="room-stats"><RoomStat label="Total seats" value={session.totalSeats} /><RoomStat label="Approved" value={session.accepted} /><RoomStat label="Open seats" value={session.remaining} /></div>
+      <SeatRules rules={session.rules} hasRules={hasRules} openRules={openRules} fullRules={fullRules} />
       <div className={form.serviceType && waitlist ? "availability warm" : "availability good"}><strong>{form.serviceType ? `Your selected type: ${form.serviceType}` : "Choose your provider type above"}</strong><span>{form.serviceType ? waitlist ? roomFull ? "This room is waitlist-only because the room is full." : "This provider type is waitlist-only for this room." : rule ? `${available} spot${available === 1 ? "" : "s"} may be available for this provider type.` : `${available} room spot${available === 1 ? "" : "s"} may be available. The team will review your provider type for group balance.` : "Once you select your provider type, this section will show whether a seat appears open for this date."}</span></div>
       <div className="room-request"><div><strong>{myRequest ? "Your RSVP Status" : "Request this date"}</strong><p>{session.name} · {formatDate(session.date)}</p></div><button className={waitlist ? "button warm" : "button"} disabled={busy === session.id || Boolean(myRequest) || !form.serviceType} onClick={() => requestSeat(session)}>{busy === session.id ? <RefreshCw className="spin" size={16} /> : null}{myRequest ? myRequest.status : !form.serviceType ? "Choose Provider Type First" : waitlist ? "Join Waitlist" : "Request This Date"}</button></div>
     </div> : null}
   </article>;
+}
+
+function SeatRules({ rules, hasRules, openRules, fullRules }) {
+  if (!hasRules) {
+    return <div className="room-types"><strong>This room is open to</strong><div className="tag-row large-tags"><span>Open provider mix</span></div></div>;
+  }
+  return <section className="seat-rule-panel">
+    <div className="seat-rule-heading">
+      <strong>Seat mix from Airtable</strong>
+      <span>{openRules.length} open type{openRules.length === 1 ? "" : "s"} · {fullRules.length} waitlist-only</span>
+    </div>
+    <div className="seat-rule-grid">
+      {rules.map((rule) => (
+        <article className={rule.remaining > 0 && rule.accepting !== false ? "seat-rule-card" : "seat-rule-card full"} key={rule.id || rule.serviceType}>
+          <div>
+            <strong>{rule.serviceType || "Provider type"}</strong>
+            <small>{rule.accepting === false ? "Not accepting" : rule.remaining > 0 ? "Accepting requests" : "Waitlist only"}</small>
+          </div>
+          <div className="seat-rule-counts">
+            <span><b>{rule.taken || 0}</b> approved</span>
+            <span><b>{rule.remaining || 0}</b> open</span>
+          </div>
+          {rule.approvedProviders?.length ? <p>Approved: {rule.approvedProviders.join(", ")}</p> : <p>No approved providers in this seat yet.</p>}
+        </article>
+      ))}
+    </div>
+  </section>;
 }
 
 function ReferralTitle() { return <section className="page-title referral-title"><div className="content-shell title-inner"><div><p className="eyebrow ink">Provider referral circle</p><h1>Referral Room Dates</h1><p>Request a seat in a small, curated referral circle for relationship-based collaboration across New Jersey and Pennsylvania providers.</p><div className="verification-callout"><CheckCircle2 size={20} /><span><strong>How verification works</strong><small>Attend, participate, and The Healing Directory team can mark your provider profile as verified after the room.</small></span></div></div></div></section>; }

@@ -97,8 +97,17 @@ async function requestSeat(user, body) {
     "Attended": false,
     "Verified After Attendance": false,
   };
+  const optionalFields = {
+    "Provider Type": serviceType,
+    "Referral Room Seat Rule": rule ? [rule.id] : undefined,
+    "Seat Rule": rule ? [rule.id] : undefined,
+    "Seat Rule ID": rule?.id,
+    "Session Name": session.name,
+    "Session Date": session.date,
+  };
   removeEmpty(fields);
-  const record = await create("attendance", fields);
+  removeEmpty(optionalFields);
+  const record = await createWithOptionalFields("attendance", fields, optionalFields);
   return { ok: true, request: normalizeAttendance(record) };
 }
 
@@ -169,17 +178,26 @@ function normalizeSession(record, attendance, rules) {
   const id = record.id;
   const linkedAttendance = attendance.filter((item) => item.sessionId === id);
   const accepted = linkedAttendance.filter((item) => countsAsAccepted(item.status)).length;
-  const totalSeats = Number(value(f, ["Total Seats", "Total Seat Cap", "Total Limit", "Seat Limit", "Capacity", "Max Seats", "Seats"])) || totalSeatsFromNotes(text(value(f, ["Notes"]))) || 8;
-  const sessionRules = rules.map(normalizeRule).filter((rule) => rule.sessionId === id).map((rule) => {
-    const taken = linkedAttendance.filter((item) => countsAsAccepted(item.status) && providerTypeMatches(item.serviceType, rule.serviceType)).length;
-    return { ...rule, taken, remaining: Math.max(rule.seatLimit - taken, 0) };
+  const rawRules = rules.map(normalizeRule).filter((rule) => rule.sessionId === id);
+  const explicitTotalSeats = Number(value(f, ["Total Seats", "Total Seat Cap", "Total Limit", "Seat Limit", "Capacity", "Max Seats", "Seats"])) || totalSeatsFromNotes(text(value(f, ["Notes"])));
+  const totalSeats = explicitTotalSeats || rawRules.reduce((sum, rule) => sum + rule.seatLimit, 0) || 8;
+  const sessionRules = rawRules.map((rule) => {
+    const acceptedForRule = linkedAttendance.filter((item) => countsAsAccepted(item.status) && providerTypeMatches(item.serviceType, rule.serviceType));
+    return {
+      ...rule,
+      taken: acceptedForRule.length,
+      remaining: Math.max(rule.seatLimit - acceptedForRule.length, 0),
+      approvedProviders: acceptedForRule.map((item) => item.providerName || item.email).filter(Boolean),
+    };
   });
+  const ruleRemaining = sessionRules.length ? sessionRules.filter((rule) => rule.accepting !== false).reduce((sum, rule) => sum + rule.remaining, 0) : null;
   return {
     id, name: text(value(f, ["Session Name", "Name"])) || "Referral Room",
     date: text(value(f, ["Session Date", "Date"])), focus: text(value(f, ["Focus", "Theme"])),
     status: text(value(f, ["Status"])) || "Open", description: text(value(f, ["Description"])),
     notes: text(value(f, ["Notes", "Internal Notes"])), totalSeats, accepted,
-    remaining: Math.max(totalSeats - accepted, 0), rules: sessionRules,
+    remaining: ruleRemaining == null ? Math.max(totalSeats - accepted, 0) : Math.max(Math.min(totalSeats - accepted, ruleRemaining), 0),
+    rules: sessionRules,
   };
 }
 
@@ -187,6 +205,7 @@ function normalizeAttendance(record) {
   const f = record.fields || {};
   return {
     id: record.id, sessionId: linked(value(f, ["Session", "Referral Room", "Referral Room Session", "Room", "Event", "Referral Room Date"]))[0] || "",
+    seatRuleId: linked(value(f, ["Referral Room Seat Rule", "Seat Rule", "Provider Type Rule"]))[0] || text(value(f, ["Seat Rule ID"])),
     sessionName: text(value(f, ["Session Name", "Referral Room Name"])), sessionDate: text(value(f, ["Session Date"])),
     providerName: text(value(f, ["Provider Name", "Name"])), email: text(value(f, ["Provider Email", "Email"])),
     serviceType: text(value(f, ["Service Type", "Provider Type", "Provider Type / Service", "Category"])), specialtyFocus: text(value(f, ["Specialty Focus", "Focus"])),
@@ -204,6 +223,27 @@ function normalizeRule(record) {
 async function list(key) { const records = []; let offset = ""; do { const params = new URLSearchParams({ pageSize: "100" }); if (offset) params.set("offset", offset); const result = await airtable(key, "", { params }); records.push(...(result.records || [])); offset = result.offset || ""; } while (offset); return records; }
 async function get(key, id) { return airtable(key, id); }
 async function create(key, fields) { return airtable(key, "", { method: "POST", body: { records: [{ fields }], typecast: true } }).then((result) => result.records[0]); }
+async function createWithOptionalFields(key, requiredFields, optionalFields) {
+  const optionalNames = Object.keys(optionalFields);
+  let fields = { ...requiredFields, ...optionalFields };
+  for (let attempt = 0; attempt <= optionalNames.length + 1; attempt += 1) {
+    try {
+      return await create(key, fields);
+    } catch (error) {
+      const missing = optionalNames.find((name) => Object.prototype.hasOwnProperty.call(fields, name) && error.message.includes(name));
+      if (missing) {
+        delete fields[missing];
+        continue;
+      }
+      if (attempt === 0 && optionalNames.length) {
+        fields = { ...requiredFields };
+        continue;
+      }
+      throw error;
+    }
+  }
+  return create(key, requiredFields);
+}
 async function update(key, id, fields) { return airtable(key, id, { method: "PATCH", body: { fields, typecast: true } }); }
 async function airtable(key, id = "", options = {}) {
   const query = options.params ? `?${options.params}` : "";
