@@ -79,11 +79,14 @@ async function requestSeat(user, body) {
   const rule = findMatchingRule(session.rules, serviceType);
   const roomFull = session.remaining <= 0;
   const typeFull = Boolean(rule && (rule.remaining <= 0 || rule.accepting === false));
-  const status = roomFull || typeFull ? "Waitlist" : "Pending";
+  const status = "Pending";
   const reason = roomFull ? "Room Full" : typeFull ? "Provider Type Full" : "";
 
   const fields = {
     "Name": `${user.email} - ${session.name}`,
+  };
+  const optionalFields = {
+    "Referral Room Event": [sessionId],
     "Session": [sessionId],
     "Provider Email": user.email,
     "Email": user.email,
@@ -96,9 +99,6 @@ async function requestSeat(user, body) {
     "Waitlist Reason": reason,
     "Attended": false,
     "Verified After Attendance": false,
-  };
-  const optionalFields = {
-    "Referral Room Event": [sessionId],
     "Provider Type": serviceType,
     "Referral Room Seat Rule": rule ? [rule.id] : undefined,
     "Seat Rule": rule ? [rule.id] : undefined,
