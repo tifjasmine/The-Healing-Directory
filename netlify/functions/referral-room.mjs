@@ -183,11 +183,15 @@ function normalizeSession(record, attendance, rules) {
   const id = record.id;
   const linkedAttendance = attendance.filter((item) => item.sessionId === id);
   const accepted = linkedAttendance.filter((item) => countsAsAccepted(item.status)).length;
-  const rawRules = rules.map(normalizeRule).filter((rule) => rule.sessionId === id);
+  const rawRules = rules.map(normalizeRule)
+    .filter((rule) => rule.sessionId === id && rule.seatLimit > 0)
+    .sort((a, b) => (a.displayOrder || 999) - (b.displayOrder || 999) || a.serviceType.localeCompare(b.serviceType));
   const explicitTotalSeats = Number(value(f, ["Total Seats", "Total Seat Cap", "Total Limit", "Seat Limit", "Capacity", "Max Seats", "Seats"])) || totalSeatsFromNotes(text(value(f, ["Notes"])));
   const totalSeats = explicitTotalSeats || rawRules.reduce((sum, rule) => sum + rule.seatLimit, 0) || 8;
   const sessionRules = rawRules.map((rule) => {
-    const acceptedForRule = linkedAttendance.filter((item) => countsAsAccepted(item.status) && providerTypeMatches(item.serviceType, rule.serviceType));
+    const acceptedForRule = linkedAttendance.filter((item) => countsAsAccepted(item.status) && (
+      (item.seatRuleId && item.seatRuleId === rule.id) || providerTypeMatches(item.serviceType, rule.serviceType)
+    ));
     return {
       ...rule,
       taken: acceptedForRule.length,
@@ -229,6 +233,7 @@ function normalizeRule(record) {
     serviceType: text(value(f, ["Service Type", "Provider Type", "Provider Type / Service", "Category", "Name"])),
     seatLimit: Number(value(f, ["# Seat Limit", "Seat Limit", "Category Cap", "Seats", "Seat Cap", "Limit", "Max Seats"])) || 0,
     accepting: acceptingValue === undefined || truthy(acceptingValue),
+    displayOrder: Number(value(f, ["Display Order", "Order", "Sort"])) || 999,
   };
 }
 

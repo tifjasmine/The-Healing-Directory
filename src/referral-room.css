@@ -187,6 +187,57 @@
   line-height: 1.55;
 }
 
+.referral-provider-page .referral-seat-guide {
+  display: grid;
+  gap: 22px;
+}
+
+.referral-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.referral-steps > div {
+  min-width: 0;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  border: 1px solid #dce6df;
+  border-radius: 18px;
+  background: #f8fbf8;
+}
+
+.referral-steps > div > strong {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #2b654f;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.referral-steps b,
+.referral-steps small {
+  display: block;
+}
+
+.referral-steps b {
+  color: #24493d;
+  font-size: 14px;
+}
+
+.referral-steps small {
+  margin-top: 4px;
+  color: #756a61;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .referral-provider-page .provider-details-panel .form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
@@ -214,6 +265,12 @@
   border-color: #ded2c4;
   border-radius: 16px;
   background: #fffdf8;
+}
+
+.referral-provider-page .field small {
+  color: #756a61;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .referral-provider-page .field input,
@@ -368,6 +425,13 @@
   background: #fffaf1;
 }
 
+.referral-provider-page .room-types p {
+  margin: 10px 0 0;
+  color: #5f564f;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
 .referral-provider-page .room-types > strong,
 .referral-provider-page .room-types > b {
   display: block;
@@ -471,6 +535,13 @@
   white-space: nowrap;
 }
 
+.referral-provider-page .seat-rule-limit {
+  margin: 10px 0 0;
+  color: #5f564f;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .referral-provider-page .seat-rule-counts {
   display: flex;
   gap: 8px;
@@ -503,6 +574,11 @@
   border: 1px solid #c9dfd3;
   border-radius: 22px;
   font-size: 14px;
+}
+
+.referral-provider-page .availability.neutral {
+  border-color: #ded2c4;
+  background: #fffaf1;
 }
 
 .referral-provider-page .availability strong,
@@ -552,6 +628,10 @@
 @media (max-width: 900px) {
   .referral-provider-page .referral-title h1 {
     font-size: 56px;
+  }
+
+  .referral-steps {
+    grid-template-columns: 1fr;
   }
 
   .referral-provider-page .room-card-header {
@@ -607,6 +687,10 @@
   .referral-provider-page .provider-details-panel,
   .referral-provider-page .room-card-body {
     padding: 22px 18px;
+  }
+
+  .referral-steps > div {
+    padding: 13px;
   }
 
   .referral-provider-page .provider-details-panel .form-grid {
