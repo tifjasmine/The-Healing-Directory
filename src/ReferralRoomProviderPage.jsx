@@ -39,7 +39,7 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
       });
       setNotice(result.request.status === "Waitlist"
         ? `Your request was added to the waitlist: ${result.request.reason}.`
-        : "Your Referral Room request was received.");
+        : `Request received for ${session.name}. Your RSVP is pending review and will stay visible in My RSVPs.`);
       await load();
       setTab("rsvps");
     } catch (error) {
@@ -62,16 +62,16 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
       </div>
       {loading ? <RoomLoading /> : tab === "dates" ? <>
         <section className="referral-form-panel provider-details-panel referral-seat-guide">
-          <div><h2>Find a room that fits your work</h2><p>Each date shows which provider types are being invited into the room. Choose your provider type once, then review the seat mix below before requesting a spot.</p></div>
+          <div><h2>Find your best-fit room</h2><p>Choose your provider type, then compare it with the seat mix shown on each date.</p></div>
           <div className="referral-steps" aria-label="How Referral Room requests work">
             <div><strong>1</strong><span><b>Review the mix</b><small>See which provider types have open seats for each date.</small></span></div>
             <div><strong>2</strong><span><b>Choose your type</b><small>Pick the closest provider type for this request.</small></span></div>
-            <div><strong>3</strong><span><b>Request a seat</b><small>Your RSVP shows as pending until Tiffany approves it.</small></span></div>
+            <div><strong>3</strong><span><b>Request a seat</b><small>Your RSVP stays pending until The Healing Directory reviews it.</small></span></div>
           </div>
           <div className="form-grid">
             <RoomSelect label="Your provider type" value={form.serviceType} onChange={(event) => setForm({ ...form, serviceType: event.target.value })} options={data.serviceTypes} placeholder="Select the closest fit" help="This is used to compare your request with the seat options listed on each room." />
             <RoomField label="Specialty / focus area" value={form.specialtyFocus} onChange={(event) => setForm({ ...form, specialtyFocus: event.target.value })} placeholder="Postpartum, trauma, pelvic health, nervous system..." />
-            <RoomField label="Optional note for Tiffany" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Anything helpful about your work, fit for the theme, or referral interests." textarea />
+            <RoomField label="Optional note to The Healing Directory" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Anything helpful about your work, fit for the theme, or referral interests." textarea />
           </div>
         </section>
         <div className="room-list">{data.sessions.length ? data.sessions.map((session) => <SessionCard key={session.id} session={session} attendance={data.attendance} form={form} expanded={expanded} setExpanded={setExpanded} busy={busy} requestSeat={requestSeat} />) : <RoomEmpty title="No upcoming dates yet" text="New Referral Room sessions will appear here when registration opens." />}</div>
@@ -108,11 +108,15 @@ function SeatRules({ rules, hasRules, openRules, fullRules }) {
   if (!hasRules) {
     return <div className="room-types"><strong>Who this room is inviting</strong><p>This room does not have specific provider-type seats set yet, so requests will be reviewed for overall group balance.</p></div>;
   }
+  const approvedSummary = rules
+    .filter((rule) => Number(rule.taken || 0) > 0)
+    .map((rule) => `${rule.serviceType || "Provider type"} (${rule.taken})`);
   return <section className="seat-rule-panel">
     <div className="seat-rule-heading">
       <strong>Who this room is inviting</strong>
       <span>{openRules.length} provider type{openRules.length === 1 ? "" : "s"} with open seats · {fullRules.length} waitlist-only</span>
     </div>
+    {approvedSummary.length ? <p className="seat-approved-summary"><strong>Approved RSVPs:</strong> {approvedSummary.join(" · ")}</p> : null}
     <div className="seat-rule-grid">
       {rules.map((rule) => (
         <article className={rule.remaining > 0 && rule.accepting !== false ? "seat-rule-card" : "seat-rule-card full"} key={rule.id || rule.serviceType}>
@@ -125,16 +129,32 @@ function SeatRules({ rules, hasRules, openRules, fullRules }) {
             <span><b>{rule.taken || 0}</b> approved</span>
             <span><b>{rule.remaining || 0}</b> open</span>
           </div>
-          {rule.approvedProviders?.length ? <p>Already approved: {rule.approvedProviders.join(", ")}</p> : <p>No approved providers in this seat yet.</p>}
+          <ApprovedProviderList providers={rule.approvedProviders} fallbackType={rule.serviceType} />
         </article>
       ))}
     </div>
   </section>;
 }
 
+function ApprovedProviderList({ providers = [], fallbackType }) {
+  if (!providers.length) return <p>No approved providers in this seat yet.</p>;
+  return <div className="seat-rsvps">
+    <strong>RSVPs</strong>
+    <div>
+      {providers.map((provider, index) => {
+        const item = typeof provider === "string" ? { name: provider, serviceType: fallbackType } : provider;
+        const label = `${item.serviceType || fallbackType || "Provider"} · ${item.name || item.email || "Approved provider"}`;
+        return item.profileUrl
+          ? <a key={`${item.profileUrl}-${index}`} href={item.profileUrl}>{label}</a>
+          : <span key={`${label}-${index}`}>{label}</span>;
+      })}
+    </div>
+  </div>;
+}
+
 function ReferralTitle() { return <section className="page-title referral-title"><div className="content-shell title-inner"><div><p className="eyebrow ink">Provider referral circle</p><h1>Referral Room Dates</h1><p>Request a seat in a small, curated referral circle for relationship-based collaboration across New Jersey and Pennsylvania providers.</p><div className="verification-callout"><CheckCircle2 size={20} /><span><strong>How verification works</strong><small>Attend, participate, and The Healing Directory team can mark your provider profile as verified after the room.</small></span></div></div></div></section>; }
 function AttendanceList({ items, empty }) { return items.length ? <div className="room-list">{items.map((item) => <article className="attendance-card" key={item.id}><div><h3>{item.sessionName || "Referral Room"}</h3><p><CalendarDays size={15} />{formatDate(item.sessionDate)}</p></div><Status value={item.status} /><div className="attendance-meta"><span><strong>Service type</strong>{item.serviceType || "Not listed"}</span><span><strong>Attendance</strong>{item.attended ? "Attended" : "Not attended yet"}</span><span><strong>Verification</strong>{item.verified ? "Verified" : "Pending attendance"}</span></div></article>)}</div> : <RoomEmpty title={empty} text="Your Referral Room activity will appear here." />; }
-function RoomField({ label, textarea, ...props }) { return <label className={textarea ? "field full-field" : "field"}><span>{label}</span>{textarea ? <textarea rows="5" {...props} /> : <input {...props} />}</label>; }
+function RoomField({ label, textarea, ...props }) { return <label className={textarea ? "field full-field" : "field"}><span>{label}</span>{textarea ? <textarea rows="3" {...props} /> : <input {...props} />}</label>; }
 function RoomSelect({ label, options, placeholder, help, ...props }) { return <label className="field"><span>{label}</span><select {...props}><option value="">{placeholder}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select>{help ? <small>{help}</small> : null}</label>; }
 function RoomStat({ label, value }) { return <div><small>{label}</small><strong>{value}</strong></div>; }
 function Status({ value }) { const clean = normalize(value); const tone = clean.includes("accept") || clean.includes("attended") ? "good" : clean.includes("declin") || clean.includes("cancel") ? "bad" : "warm"; return <span className={`status ${tone}`}>{value || "Pending"}</span>; }

@@ -3,6 +3,7 @@ import { getUser } from "./supabase-user.mjs";
 const BASE_ID = process.env.AIRTABLE_BASE_ID || "appACV3Zz7ngug6yt";
 const TOKEN = () => process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "";
 const TABLES = {
+  directory: process.env.AIRTABLE_DIRECTORY_TABLE_ID || "Directory",
   sessions: process.env.AIRTABLE_REFERRAL_ROOM_TABLE_ID || "The Referral Room",
   attendance: process.env.AIRTABLE_ATTENDANCE_TABLE_ID || "The Referral Room Attendance",
   rules: process.env.AIRTABLE_SEAT_RULES_TABLE_ID || "Referral Room Seat Rules",
@@ -43,11 +44,12 @@ export default async function handler(request) {
 }
 
 async function providerData(user) {
-  const [sessionRecords, attendanceRecords, ruleRecords] = await Promise.all([
-    list("sessions"), list("attendance"), list("rules"),
+  const [sessionRecords, attendanceRecords, ruleRecords, providerRecords] = await Promise.all([
+    list("sessions"), list("attendance"), list("rules"), list("directory").catch(() => []),
   ]);
   const attendance = attendanceRecords.map(normalizeAttendance);
-  const sessions = sessionRecords.map((record) => normalizeSession(record, attendance, ruleRecords))
+  const providersByEmail = providerMap(providerRecords);
+  const sessions = sessionRecords.map((record) => normalizeSession(record, attendance, ruleRecords, providersByEmail))
     .filter((session) => !["draft", "closed", "cancelled", "canceled"].includes(lower(session.status)))
     .filter((session) => !session.date || dateValue(session.date) >= startOfToday())
     .sort((a, b) => dateValue(a.date) - dateValue(b.date));
@@ -59,11 +61,12 @@ async function providerData(user) {
 }
 
 async function managerData() {
-  const [sessionRecords, attendanceRecords, ruleRecords] = await Promise.all([
-    list("sessions"), list("attendance"), list("rules"),
+  const [sessionRecords, attendanceRecords, ruleRecords, providerRecords] = await Promise.all([
+    list("sessions"), list("attendance"), list("rules"), list("directory").catch(() => []),
   ]);
+  const providersByEmail = providerMap(providerRecords);
   const requests = attendanceRecords.map(normalizeAttendance).sort((a, b) => dateValue(b.created) - dateValue(a.created));
-  const sessions = sessionRecords.map((record) => normalizeSession(record, requests, ruleRecords)).sort((a, b) => dateValue(a.date) - dateValue(b.date));
+  const sessions = sessionRecords.map((record) => normalizeSession(record, requests, ruleRecords, providersByEmail)).sort((a, b) => dateValue(a.date) - dateValue(b.date));
   return { requests, sessions, serviceTypes: SERVICE_TYPES };
 }
 
@@ -103,7 +106,8 @@ async function requestSeat(user, body) {
     "Referral Room Seat Rule": rule ? [rule.id] : undefined,
     "Seat Rule": rule ? [rule.id] : undefined,
     "Seat Rule ID": rule?.id,
-    "Session Name": session.name,
+    "Session Name": [sessionId],
+    "Referral Room Name": session.name,
     "Session Date": session.date,
   };
   removeEmpty(fields);
@@ -178,7 +182,7 @@ async function updateSession(user, body) {
   return { ok: true, session: normalizeSession(await update("sessions", id, fields), [], []), admin: user.email };
 }
 
-function normalizeSession(record, attendance, rules) {
+function normalizeSession(record, attendance, rules, providersByEmail = new Map()) {
   const f = record.fields || {};
   const id = record.id;
   const linkedAttendance = attendance.filter((item) => item.sessionId === id);
@@ -196,7 +200,7 @@ function normalizeSession(record, attendance, rules) {
       ...rule,
       taken: acceptedForRule.length,
       remaining: Math.max(rule.seatLimit - acceptedForRule.length, 0),
-      approvedProviders: acceptedForRule.map((item) => item.providerName || item.email).filter(Boolean),
+      approvedProviders: acceptedForRule.map((item) => approvedProviderSummary(item, rule, providersByEmail)).filter(Boolean),
     };
   });
   const ruleRemaining = sessionRules.length ? sessionRules.filter((rule) => rule.accepting !== false).reduce((sum, rule) => sum + rule.remaining, 0) : null;
@@ -212,15 +216,63 @@ function normalizeSession(record, attendance, rules) {
 
 function normalizeAttendance(record) {
   const f = record.fields || {};
+  const linkedSessionId = linked(value(f, ["Session", "Referral Room Event", "Session Name", "Referral Room", "Referral Room Session", "Room", "Event", "Referral Room Date"]))[0] || "";
+  const sessionName = text(value(f, [
+    "Session Name (from Session Name)",
+    "Session Name (from Referral Room Event)",
+    "Session Name (from Referral Room)",
+    "Session Name Lookup",
+    "Session",
+    "Referral Room Name",
+    "Room Name",
+  ])) || readableLinkedName(value(f, ["Session Name", "Referral Room Event"]));
+  const sessionDate = text(value(f, [
+    "Session Date (from Session Name)",
+    "Session Date (from Referral Room Event)",
+    "Session Date (from Referral Room)",
+    "Session Date Lookup",
+    "Session Date",
+  ]));
   return {
-    id: record.id, sessionId: linked(value(f, ["Session", "Referral Room Event", "Referral Room", "Referral Room Session", "Room", "Event", "Referral Room Date"]))[0] || "",
+    id: record.id, sessionId: linkedSessionId,
     seatRuleId: linked(value(f, ["Referral Room Seat Rule", "Seat Rule", "Provider Type Rule"]))[0] || text(value(f, ["Seat Rule ID"])),
-    sessionName: text(value(f, ["Session Name", "Referral Room Name"])), sessionDate: text(value(f, ["Session Date"])),
+    sessionName, sessionDate,
     providerName: text(value(f, ["Provider Name", "Name"])), email: text(value(f, ["Provider Email", "Email"])),
+    providerRecordId: linked(value(f, ["Provider", "Directory Provider", "Provider Profile", "Directory Profile"]))[0] || "",
     serviceType: text(value(f, ["Service Type", "Provider Type", "Provider Type / Service", "Category"])), specialtyFocus: text(value(f, ["Specialty Focus", "Focus"])),
     notes: text(value(f, ["Notes"])), status: text(value(f, ["Signup Status", "Status"])) || "Pending",
     reason: text(value(f, ["Waitlist Reason", "Reason"])), attended: truthy(value(f, ["Attended"])),
     verified: truthy(value(f, ["Verified After Attendance", "Verified"])), created: text(value(f, ["Created", "Created At"])),
+  };
+}
+
+function normalizeProvider(record) {
+  const f = record.fields || {};
+  const email = text(value(f, ["Email", "Provider Email", "Contact Email"]));
+  const name = text(value(f, ["Name", "Full Name", "Provider Name", "Practice Name"])) || email;
+  return {
+    id: record.id,
+    email,
+    name,
+    serviceType: text(value(f, ["Provider Type", "Service Type", "Profession", "Profession / Title"])),
+  };
+}
+
+function providerMap(records) {
+  return new Map(records.map(normalizeProvider).filter((item) => item.email).map((item) => [lower(item.email), item]));
+}
+
+function approvedProviderSummary(item, rule, providersByEmail) {
+  const profile = providersByEmail.get(lower(item.email));
+  const id = item.providerRecordId || profile?.id || "";
+  const name = profile?.name || item.providerName || item.email;
+  if (!name) return null;
+  return {
+    name,
+    email: item.email,
+    serviceType: item.serviceType || profile?.serviceType || rule.serviceType,
+    profileId: id,
+    profileUrl: id ? `/provider-details?id=${encodeURIComponent(id)}` : "",
   };
 }
 
@@ -277,6 +329,16 @@ function displayName(user) { return user.user_metadata?.full_name || user.userMe
 function value(fields, names) { for (const name of names) if (Object.prototype.hasOwnProperty.call(fields, name)) return fields[name]; return undefined; }
 function text(input) { if (input == null) return ""; if (Array.isArray(input)) return input.map(text).filter(Boolean).join(", "); if (typeof input === "object") return text(input.name ?? input.label ?? input.value ?? input.text ?? ""); return clean(input); }
 function linked(input) { return (Array.isArray(input) ? input : input ? [input] : []).map((item) => typeof item === "object" ? clean(item.id || item.value) : clean(item)).filter((item) => item.startsWith("rec")); }
+function readableLinkedName(input) {
+  return (Array.isArray(input) ? input : input ? [input] : [])
+    .map((item) => {
+      if (typeof item === "object") return clean(item.name || item.label || item.value || item.text || "");
+      const candidate = clean(item);
+      return candidate.startsWith("rec") ? "" : candidate;
+    })
+    .filter(Boolean)
+    .join(", ");
+}
 function truthy(input) { return input === true || ["true", "yes", "1", "checked", "accepted", "attended", "verified"].includes(lower(text(input))); }
 function clean(input) { return String(input ?? "").replace(/\s+/g, " ").trim(); }
 function lower(input) { return clean(input).toLowerCase(); }
@@ -290,7 +352,8 @@ function findMatchingRule(rules, serviceType) {
   return rules.find((item) => providerTypeMatches(item.serviceType, serviceType)) || null;
 }
 function countsAsAccepted(status) {
-  return ["accepted", "approved", "confirmed", "attended", "verified"].includes(lower(status));
+  const value = lower(status);
+  return Boolean(value && ["accept", "approv", "confirm", "attend", "verified"].some((word) => value.includes(word)));
 }
 function required(input, label) { const result = clean(input); if (!result) throw httpError(400, `${label} is required.`); return result; }
 function removeEmpty(fields, keepEmpty = false) { Object.keys(fields).forEach((key) => { if (fields[key] == null || (!keepEmpty && typeof fields[key] === "string" && !fields[key])) delete fields[key]; }); }

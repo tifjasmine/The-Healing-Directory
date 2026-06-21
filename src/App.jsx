@@ -143,7 +143,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <SiteHeader route={route} user={user} authReady={authReady} navigate={navigate} onLogout={signOut} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
-      {notice ? <div className="global-notice"><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss"><X size={16} /></button></div> : null}
+      {notice ? <div className={notice.startsWith("Request received") ? "global-notice success" : "global-notice"}><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss"><X size={16} /></button></div> : null}
       <Page {...pageProps} />
       <SiteFooter navigate={navigate} />
     </div>
@@ -162,8 +162,8 @@ function Page(props) {
   if (path === "/account-settings") return <RequireAuth {...props}><AccountSettings {...props} /></RequireAuth>;
   if (path === "/membership" || path === "/edit-membership") return <RequireAuth {...props}><MembershipPage {...props} /></RequireAuth>;
   if (path === "/edit-profile") return <RequireAuth {...props}><EditProfilePage {...props} /></RequireAuth>;
-  if (path === "/client-dashboard") return <RequireAuth {...props}><ClientDashboard {...props} /></RequireAuth>;
-  if (path === "/dashboard" || path === "/provider-dashboard") return <RequireAuth {...props}><ProviderDashboard {...props} /></RequireAuth>;
+  if (path === "/client-dashboard") return <RequireAuth {...props}><ClientDashboard {...props} hideHeader /></RequireAuth>;
+  if (path === "/dashboard" || path === "/provider-dashboard") return <RequireAuth {...props}><ProviderDashboard {...props} hideHeader /></RequireAuth>;
   if (path === "/add-event") return <RequireAuth {...props}><EventForm {...props} /></RequireAuth>;
   if (path === "/edit-event") return <RequireAuth {...props}><EventForm {...props} editing /></RequireAuth>;
   if (path === "/admin/events") return <RequireAdmin {...props}><AdminEvents {...props} /></RequireAdmin>;

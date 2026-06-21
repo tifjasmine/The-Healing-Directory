@@ -15,7 +15,7 @@ import {
 
 const API = "/.netlify/functions/app-api";
 
-export default function ProviderDashboard() {
+export default function ProviderDashboard({ hideHeader = false }) {
   const [user, setUser] = React.useState(null);
   const [payload, setPayload] = React.useState(null);
   const [tab, setTab] = React.useState("providers");
@@ -85,11 +85,11 @@ export default function ProviderDashboard() {
   }
 
   return <div className="app-shell">
-    <header className="site-header warm-header">
+    {!hideHeader ? <header className="site-header warm-header">
       <button className="brand" onClick={() => go("/")}><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></button>
       <nav className="site-nav"><button onClick={() => go("/")}>Providers</button><button onClick={() => go("/events")}>Events</button><button onClick={() => go("/dashboard")}>Dashboard</button></nav>
       <div className="account-actions"><button className="account-chip" onClick={() => go("/account-settings")}><CircleUserRound size={17} /><span>{firstName(user.name || user.email)}</span></button><button className="icon-button logout-arrow" onClick={signOut} title="Log out"><LogOut size={18} /></button></div>
-    </header>
+    </header> : null}
 
     <main className="provider-dashboard-page simple-dashboard-page">
       <section className="simple-dashboard-hero">
