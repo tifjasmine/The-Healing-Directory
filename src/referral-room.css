@@ -277,13 +277,6 @@
   border-left-color: #b56f50;
 }
 
-.referral-provider-page .room-anchor {
-  display: block;
-  position: relative;
-  top: -96px;
-  visibility: hidden;
-}
-
 .referral-provider-page .room-card-header {
   min-height: 128px;
   padding: 26px 30px;
@@ -410,65 +403,6 @@
   background: #f8f3eb;
   color: #7d7268;
   text-decoration: none;
-}
-
-.referral-provider-page .open-seat-list {
-  display: grid;
-  gap: 12px;
-}
-
-.referral-provider-page .open-seat-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 14px;
-  padding: 18px;
-  border: 1px solid #e2d6ca;
-  border-left: 5px solid #438a6d;
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(24, 54, 44, .045);
-}
-
-.referral-provider-page .open-seat-card > div {
-  display: grid;
-  gap: 5px;
-}
-
-.referral-provider-page .open-seat-card strong {
-  color: #24493d;
-  font-size: 17px;
-}
-
-.referral-provider-page .open-seat-card span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #756a61;
-  font-size: 13px;
-  font-weight: 750;
-}
-
-.referral-provider-page .open-seat-card small {
-  color: #b56f50;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-
-.referral-provider-page .open-seat-card > b {
-  padding: 9px 12px;
-  border-radius: 999px;
-  background: #eff7f1;
-  color: #2b654f;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.referral-provider-page .open-seat-card .button {
-  min-height: 42px;
-  border-radius: 999px;
 }
 
 .referral-provider-page .seat-rule-panel {
@@ -690,16 +624,6 @@
 
   .referral-provider-page .room-card-header h2 {
     font-size: 22px;
-  }
-
-  .referral-provider-page .open-seat-card {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  .referral-provider-page .open-seat-card > b,
-  .referral-provider-page .open-seat-card .button {
-    width: fit-content;
   }
 
   .referral-provider-page .room-focus {
