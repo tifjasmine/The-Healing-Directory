@@ -465,7 +465,7 @@ function Dashboard({ user, navigate }) {
         <section>
           <h2>Provider connections</h2>
           <p>Connections on provider pages stay private to peers and support aligned collaboration.</p>
-          <button className="button" onClick={() => navigate("/referral-room")}>Referral room</button>
+          <button className="button" onClick={() => navigate("/referral-room")}>The Referral Room</button>
         </section>
       </aside>
     </section>
@@ -738,7 +738,7 @@ function LegalPage({ route }) {
   );
 }
 
-function ComingNext({ route }) { const names = { "/referral-room": "Referral Room Dates", "/referral-room-admin": "Referral Room Admin", "/referral-room-manager": "Referral Room Manager", "/provider-connections": "Provider Connections" }; return <main><PageTitle eyebrow="Authenticated workspace" title={names[route.path] || "Coming next"} text="This workflow is being connected to the new shared Airtable and authentication foundation." /><section className="content-shell"><div className="progress-panel"><Sparkles size={28} /><h2>The foundation is ready.</h2><p>This area is the next build slice: live sessions, seat rules, RSVPs, manager decisions, attendance, verification, and provider connections.</p></div></section></main>; }
+function ComingNext({ route }) { const names = { "/referral-room": "The Referral Room", "/referral-room-admin": "The Referral Room Admin", "/referral-room-manager": "The Referral Room Manager", "/provider-connections": "Provider Connections" }; return <main><PageTitle eyebrow="Authenticated workspace" title={names[route.path] || "Coming next"} text="This workflow is being connected to the new shared Airtable and authentication foundation." /><section className="content-shell"><div className="progress-panel"><Sparkles size={28} /><h2>The foundation is ready.</h2><p>This area is the next build slice: live sessions, seat rules, RSVPs, manager decisions, attendance, verification, and provider connections.</p></div></section></main>; }
 
 function RequireAuth({ user, authReady, navigate, children }) {
   React.useEffect(() => {

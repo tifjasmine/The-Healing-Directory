@@ -5741,6 +5741,18 @@
   line-height: 1.45;
 }
 
+.referral-session-action {
+  padding: 0 18px 18px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.referral-session-action .button {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+}
+
 .dashboard-approved-providers {
   display: grid;
   gap: 8px;

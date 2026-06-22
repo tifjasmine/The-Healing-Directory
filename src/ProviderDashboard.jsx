@@ -59,7 +59,7 @@ export default function ProviderDashboard({ hideHeader = false }) {
     { key: "providers", label: "Saved Providers", count: payload.savedProviderItems.length, icon: <Star size={16} /> },
     { key: "events", label: "Saved Events", count: payload.savedEvents.length, icon: <Bookmark size={16} /> },
     { key: "mine", label: "My Events", count: payload.myEvents.length + payload.referralRequests.length, icon: <CalendarDays size={16} /> },
-    { key: "referral", label: "Referral Room", count: payload.referralSessions.length, icon: <HeartHandshake size={16} /> },
+    { key: "referral", label: "The Referral Room", count: payload.referralSessions.length, icon: <HeartHandshake size={16} /> },
   ];
 
   async function saveProviderNote(item) {
@@ -96,7 +96,7 @@ export default function ProviderDashboard({ hideHeader = false }) {
         <div>
           <p className="dashboard-kicker"><span /> Provider Dashboard</p>
           <h1>Welcome back, {firstName(user.name || user.email)}.</h1>
-          <p>Saved providers, workshops, your events, and Referral Room requests live here.</p>
+          <p>Saved providers, workshops, your events, and The Referral Room requests live here.</p>
         </div>
         <button className="button provider-dashboard-primary" type="button" onClick={() => go("/edit-profile")}>Edit profile <ArrowRight size={16} /></button>
       </section>
@@ -167,8 +167,8 @@ function MyEventsPanel({ items, referralRequests }) {
     <div className="simple-dashboard-actions"><button className="button provider-dashboard-primary" type="button" onClick={() => go("/add-event")}>Add event</button><button className="button provider-dashboard-secondary" type="button" onClick={() => go("/my-events")}>Manage all events <ArrowRight size={16} /></button></div>
     {!items.length ? <EmptyPanel title="No hosted events yet" text="Create your first event listing when you are ready." action="Add event" path="/add-event" inline /> : <div className="simple-dashboard-list">{items.slice(0, 6).map((event) => <button key={event.id} className="client-saved-row" type="button" onClick={() => go(`/edit-event?id=${event.id}`)}><span className="client-saved-mark"><CalendarDays size={19} /></span><span><strong>{event.name || "Hosted event"}</strong><small>{formatDate(event.start || event.date)}</small></span><ArrowRight size={18} /></button>)}</div>}
     {referralRequests.length ? <section className="dashboard-referral-events">
-      <h2>Referral Room requests</h2>
-      <div className="simple-dashboard-list">{referralRequests.map((item) => <button key={item.id} className="client-saved-row referral-event-row" type="button" onClick={() => go("/referral-room")}><span className="client-saved-mark"><HeartHandshake size={19} /></span><span><strong>{item.sessionName || "Referral Room"}</strong><small>{formatDate(item.sessionDate)} · {item.status || "Pending"}</small></span><ArrowRight size={18} /></button>)}</div>
+      <h2>The Referral Room requests</h2>
+      <div className="simple-dashboard-list">{referralRequests.map((item) => <button key={item.id} className="client-saved-row referral-event-row" type="button" onClick={() => go(`/referral-room?room=${encodeURIComponent(item.sessionId || "")}`)}><span className="client-saved-mark"><HeartHandshake size={19} /></span><span><strong>{item.sessionName || "The Referral Room"}</strong><small>{formatDate(item.sessionDate)} · {item.status || "Pending"}</small></span><ArrowRight size={18} /></button>)}</div>
     </section> : null}
   </div>;
 }
@@ -181,12 +181,10 @@ function ReferralPanel({ items, sessions }) {
   }, [openSessionId, sessions]);
   return <div className="referral-dashboard-card">
     <HeartHandshake size={26} />
-    <h2>Referral Room</h2>
-    <p>Choose an upcoming room to see the invited provider mix, open seats, and approved RSVPs.</p>
+    <h2>The Referral Room</h2>
     <div className="referral-dashboard-sessions">
-      {sessions.length ? sessions.map((session) => <ReferralSessionSummary key={session.id} session={session} requests={activeRequests} open={openSessionId === session.id} onToggle={() => setOpenSessionId((current) => current === session.id ? "" : session.id)} />) : <div className="client-empty inline-empty"><h2>No upcoming rooms yet</h2><p>New Referral Room dates will appear here when seats open.</p></div>}
+      {sessions.length ? sessions.map((session) => <ReferralSessionSummary key={session.id} session={session} requests={activeRequests} open={openSessionId === session.id} onToggle={() => setOpenSessionId((current) => current === session.id ? "" : session.id)} />) : <div className="client-empty inline-empty"><h2>No upcoming rooms yet</h2><p>New dates for The Referral Room will appear here when seats open.</p></div>}
     </div>
-    <button className="button provider-dashboard-primary" type="button" onClick={() => go("/referral-room")}>{activeRequests.length ? "Manage my RSVP" : "Request a seat"} <ArrowRight size={16} /></button>
   </div>;
 }
 
@@ -206,7 +204,7 @@ function ReferralSessionSummary({ session, requests = [], open, onToggle }) {
   return <article className={open ? "referral-session-summary" : "referral-session-summary collapsed"}>
     <button className="referral-session-heading" type="button" aria-expanded={open} onClick={onToggle}>
       <div>
-        <strong>{session.name || "Referral Room"}</strong>
+        <strong>{session.name || "The Referral Room"}</strong>
         <small>{formatDateTime(session.date)}{session.focus ? ` · ${session.focus}` : ""}</small>
       </div>
       <span>{myRequest?.status || `${session.remaining || 0} open`} <ChevronDown size={16} /></span>
@@ -218,11 +216,16 @@ function ReferralSessionSummary({ session, requests = [], open, onToggle }) {
           <div className={rule.displayRemaining > 0 && rule.accepting !== false ? "referral-seat-summary" : "referral-seat-summary full"} key={rule.id || rule.serviceType}>
             <div>
               <strong>{rule.serviceType || "Provider type"}</strong>
-              <small>{rule.displayRemaining || 0}/{rule.seatLimit || 0} seats open · {rule.displayTaken || 0} approved</small>
+              <small>{rule.displayRemaining || 0}/{rule.seatLimit || 0} seats open</small>
             </div>
             <ApprovedProviderPreview providers={rule.displayProviders} fallbackType={rule.serviceType} />
           </div>
         )) : <div className="referral-seat-summary"><strong>Open provider mix</strong><small>{session.remaining || 0} open seats</small><p>This room is not limited to specific provider types yet.</p></div>}
+      </div>
+      <div className="referral-session-action">
+        <button className={myRequest ? "button provider-dashboard-secondary" : "button provider-dashboard-primary"} type="button" onClick={() => go(`/referral-room?room=${encodeURIComponent(session.id || "")}`)}>
+          {myRequest ? "Manage this RSVP" : "Request a seat"} <ArrowRight size={16} />
+        </button>
       </div>
     </> : null}
   </article>;
@@ -240,9 +243,9 @@ function ApprovedProviderPreview({ providers = [], fallbackType }) {
   return <div className="dashboard-approved-providers">
     {providers.map((provider, index) => {
       const item = typeof provider === "string" ? { name: provider, serviceType: fallbackType } : provider;
-      const name = displayText(item.name) || displayText(item.email) || "Approved provider";
-      const serviceType = displayText(item.serviceType) || fallbackType || "Provider";
-      const photo = displayText(item.photo);
+      const name = displayText(item.name) || displayText(item.fullName) || displayText(item.providerName) || displayText(item.email) || displayText(item) || "Approved provider";
+      const serviceType = displayText(item.serviceType) || displayText(item.providerType) || fallbackType || "Provider";
+      const photo = displayText(item.photo) || displayText(item.photoUrl) || displayText(item.profilePhoto);
       const content = <>
         {photo ? <img src={photo} alt="" /> : <span>{initials(name)}</span>}
         <span className="dashboard-approved-text"><b>{name}</b><small>{serviceType}</small></span>
@@ -261,7 +264,18 @@ function EmptyPanel({ title, text, action, path, inline }) {
 function firstName(value) { return String(value || "there").split(/[ @._-]/).filter(Boolean)[0] || "there"; }
 function initials(value) { return String(value || "Provider").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "P"; }
 function providerTypeLabel(provider) { return Array.isArray(provider.providerType) ? provider.providerType.join(", ") : String(provider.providerType || ""); }
-function displayText(value) { if (value == null) return ""; if (typeof value === "string" || typeof value === "number") return String(value); if (Array.isArray(value)) return value.map(displayText).filter(Boolean).join(", "); if (typeof value === "object") return displayText(value.name ?? value.label ?? value.value ?? value.text ?? value.email ?? ""); return String(value); }
+function displayText(value) {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (Array.isArray(value)) return value.map(displayText).filter(Boolean).join(", ");
+  if (typeof value === "object") {
+    const direct = value.name ?? value.fullName ?? value.providerName ?? value.title ?? value.label ?? value.value ?? value.text ?? value.email;
+    if (direct != null) return displayText(direct);
+    if (value.fields) return displayText(value.fields.Name ?? value.fields.name ?? value.fields.Email ?? value.fields.email);
+    return "";
+  }
+  return String(value);
+}
 function normalize(value) { return String(value || "").trim().toLowerCase(); }
 function compact(value) { return normalize(value).replace(/&/g, "and").replace(/[^a-z0-9]/g, ""); }
 function isCancelled(value) { const clean = normalize(value); return clean.includes("cancel") || clean.includes("declin") || clean.includes("remove"); }
@@ -300,7 +314,7 @@ async function referralApi(action) {
   }
   const response = await fetch(url, { credentials: "include", headers });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "Referral Room request failed.");
+  if (!response.ok) throw new Error(payload.error || "The Referral Room request failed.");
   return payload;
 }
 async function api(action, options = {}) {

@@ -616,6 +616,38 @@
   line-height: 1.45;
 }
 
+.referral-provider-page .room-request-details {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #e5d8ca;
+  border-radius: 18px;
+  background: #fffaf1;
+}
+
+.referral-provider-page .room-request-details h3 {
+  margin: 0 0 4px;
+  color: #24493d;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.referral-provider-page .room-request-details p {
+  margin: 0 0 14px;
+  color: #756a61;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.referral-provider-page .room-request-details .form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.referral-provider-page .room-request-details .full-field {
+  grid-column: 1 / -1;
+}
+
 .referral-provider-page .seat-rsvps {
   margin-top: 10px;
   display: grid;
@@ -874,6 +906,10 @@
   }
 
   .referral-provider-page .seat-rule-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .referral-provider-page .room-request-details .form-grid {
     grid-template-columns: 1fr;
   }
 
