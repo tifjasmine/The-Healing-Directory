@@ -50,12 +50,14 @@ async function providerData(user) {
   ]);
   const attendance = attendanceRecords.map(normalizeAttendance);
   const providers = providerIndex(providerRecords);
+  const provider = providers.byEmail?.get(lower(user.email)) || null;
   const sessions = sessionRecords.map((record) => normalizeSession(record, attendance, ruleRecords, providers))
     .filter((session) => !["draft", "closed", "cancelled", "canceled"].includes(lower(session.status)))
     .filter((session) => !session.date || dateValue(session.date) >= startOfToday())
     .sort((a, b) => dateValue(a.date) - dateValue(b.date));
   return {
     serviceTypes: SERVICE_TYPES,
+    provider,
     sessions,
     attendance: attendance.filter((item) => lower(item.email) === lower(user.email)),
   };

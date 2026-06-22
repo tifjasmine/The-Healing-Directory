@@ -7,7 +7,7 @@ const API = "/.netlify/functions/referral-room";
 export default function ReferralRoomProviderPage({ user, setNotice }) {
   const query = React.useMemo(() => new URLSearchParams(window.location.search), []);
   const requestedRoomId = query.get("room") || "";
-  const [data, setData] = React.useState({ sessions: [], attendance: [], serviceTypes: [] });
+  const [data, setData] = React.useState({ sessions: [], attendance: [], serviceTypes: [], provider: null });
   const [loading, setLoading] = React.useState(true);
   const [expanded, setExpanded] = React.useState("");
   const [form, setForm] = React.useState({ serviceType: "", specialtyFocus: "", notes: "" });
@@ -30,9 +30,10 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
   async function requestSeat(session) {
     setBusy(session.id);
     try {
+      const providerType = displayText(data.provider?.serviceType) || form.serviceType || "";
       const result = await api("request-seat", {
         method: "POST",
-        body: { sessionId: session.id, providerName: user?.name || "", ...form },
+        body: { sessionId: session.id, providerName: user?.name || "", ...form, serviceType: providerType },
       });
       setNotice(result.request.status === "Waitlist"
         ? `Your request was added to the waitlist: ${result.request.reason}.`
@@ -68,26 +69,25 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
     <ReferralTitle />
     <section className="content-shell referral-shell">
       {loading ? <RoomLoading />
-        : <div className="room-list">{data.sessions.length ? data.sessions.map((session) => <SessionCard key={session.id} session={session} attendance={activeAttendance} form={form} setForm={setForm} serviceTypes={data.serviceTypes} expanded={expanded} setExpanded={setExpanded} busy={busy} requestSeat={requestSeat} cancelSeat={cancelSeat} />) : <RoomEmpty title="No upcoming dates yet" text="New dates for The Referral Room will appear here when registration opens." />}</div>}
+        : <div className="room-list">{data.sessions.length ? data.sessions.map((session) => <SessionCard key={session.id} session={session} attendance={activeAttendance} form={form} setForm={setForm} provider={data.provider} expanded={expanded} setExpanded={setExpanded} busy={busy} requestSeat={requestSeat} cancelSeat={cancelSeat} />) : <RoomEmpty title="No upcoming dates yet" text="New dates for The Referral Room will appear here when registration opens." />}</div>}
     </section>
   </main>;
 }
 
-function SessionCard({ session, attendance, form, setForm, serviceTypes, expanded, setExpanded, busy, requestSeat, cancelSeat }) {
+function SessionCard({ session, attendance, form, setForm, provider, expanded, setExpanded, busy, requestSeat, cancelSeat }) {
   const myRequest = attendance.find((item) => item.sessionId === session.id);
-  const rule = findMatchingRule(session.rules, form.serviceType);
+  const providerType = displayText(provider?.serviceType) || form.serviceType || "";
+  const rule = findMatchingRule(session.rules, providerType);
   const hasRules = session.rules.length > 0;
   const roomFull = session.remaining <= 0;
   const typeFull = Boolean(rule && (rule.remaining <= 0 || rule.accepting === false));
   const waitlist = roomFull || typeFull;
   const open = expanded === session.id;
-  const openRules = session.rules.filter((item) => item.remaining > 0 && session.remaining > 0);
-  const fullRules = session.rules.filter((item) => item.remaining <= 0 || session.remaining <= 0);
   return <article className={open ? "room-card open" : "room-card"}>
     <button className="room-card-header" aria-expanded={open} onClick={() => setExpanded(open ? "" : session.id)}><div><h2>{session.name || "The Referral Room"}</h2><p>{formatDate(session.date)}</p></div><div className="room-header-meta">{myRequest ? <Status value={myRequest.status} /> : null}<span className="room-remaining">{session.remaining} open</span><span className="room-toggle" aria-hidden="true">{open ? "−" : "+"}</span></div></button>
     {open ? <div className="room-card-body">
       <p className="room-description">{session.description || "A curated referral circle for aligned healing professionals."}</p>
-      <SeatRules rules={session.rules} hasRules={hasRules} openRules={openRules} fullRules={fullRules} approvedProviders={session.approvedProviders || []} />
+      <SeatRules rules={session.rules} hasRules={hasRules} approvedProviders={session.approvedProviders || []} providerType={providerType} />
       {!myRequest ? <section className="room-request-details">
         <div className="room-request-copy">
           <h3>Request this room</h3>
@@ -105,36 +105,81 @@ function SessionCard({ session, attendance, form, setForm, serviceTypes, expande
   </article>;
 }
 
-function SeatRules({ rules, hasRules, openRules, fullRules, approvedProviders = [] }) {
+function SeatRules({ rules, hasRules, approvedProviders = [], providerType = "" }) {
   if (!hasRules) {
-    return <div className="room-types"><strong>Who this room is inviting</strong><p>This room does not have specific provider-type seats set yet, so requests will be reviewed for overall group balance.</p></div>;
+    return <section className="seat-rule-panel seat-rule-summary">
+      <div className="seat-summary-main">
+        <div>
+          <strong>Provider mix</strong>
+          <p>This room is open for review across provider types. Requests are balanced by The Healing Directory.</p>
+        </div>
+        {providerType ? <div className="your-seat-match available"><span>Your provider type</span><strong>{providerType}</strong><small>Reviewed for room fit</small></div> : null}
+      </div>
+      <ApprovedSummary providers={approvedProviders} />
+    </section>;
   }
   const displayRules = rules.map((rule) => {
     const ruleProviders = providersForRule(rule, approvedProviders);
     const taken = Math.max(Number(rule.taken || 0), ruleProviders.length);
     return { ...rule, displayProviders: ruleProviders, displayTaken: taken, displayRemaining: Math.max(Number(rule.seatLimit || 0) - taken, 0) };
-  });
+  }).sort((a, b) => Number(b.displayRemaining || 0) - Number(a.displayRemaining || 0) || displayText(a.serviceType).localeCompare(displayText(b.serviceType)));
   const matchedProviderKeys = new Set(displayRules.flatMap((rule) => rule.displayProviders.map(providerKey)));
   const unmatchedProviders = approvedProviders.filter((provider) => !matchedProviderKeys.has(providerKey(provider)));
-  return <section className="seat-rule-panel">
-    <div className="seat-rule-heading">
-      <strong>Who this room is inviting</strong>
-      <span>{openRules.length} provider type{openRules.length === 1 ? "" : "s"} with open seats · {fullRules.length} waitlist-only</span>
+  const approvedList = approvedProvidersForSummary(displayRules, unmatchedProviders);
+  const capacity = displayRules.reduce((sum, rule) => sum + Number(rule.seatLimit || 0), 0);
+  const openSeats = displayRules.reduce((sum, rule) => sum + Number(rule.displayRemaining || 0), 0);
+  const openRules = displayRules.filter((rule) => rule.displayRemaining > 0 && rule.accepting !== false);
+  const waitlistRules = displayRules.filter((rule) => rule.displayRemaining <= 0 || rule.accepting === false);
+  const yourRule = findMatchingRule(displayRules, providerType);
+  return <section className="seat-rule-panel seat-rule-summary">
+    <div className="seat-summary-main">
+      <div>
+        <strong>Provider mix</strong>
+        <p>{capacity ? `${openSeats}/${capacity} seats are open across ${displayRules.length} provider type${displayRules.length === 1 ? "" : "s"}. Approved RSVPs are listed below so you can see who is already joining.` : "Requests are balanced across provider types."}</p>
+      </div>
+      {yourRule ? <div className={yourRule.displayRemaining > 0 && yourRule.accepting !== false ? "your-seat-match available" : "your-seat-match waitlist"}>
+        <span>Your provider type</span>
+        <strong>{yourRule.serviceType}</strong>
+        <small>{yourRule.displayRemaining}/{yourRule.seatLimit} seats open</small>
+      </div> : providerType ? <div className="your-seat-match waitlist">
+        <span>Your provider type</span>
+        <strong>{providerType}</strong>
+        <small>Reviewed for fit</small>
+      </div> : null}
     </div>
-    {unmatchedProviders.length ? <div className="seat-approved-summary"><strong>Approved, not matched to a seat type yet:</strong><ApprovedProviderList providers={unmatchedProviders} fallbackType="Provider" /></div> : null}
-    <div className="seat-rule-grid">
-      {displayRules.map((rule) => (
-        <article className={rule.displayRemaining > 0 && rule.accepting !== false ? "seat-rule-card" : "seat-rule-card full"} key={rule.id || rule.serviceType}>
-          <div>
-            <strong>{rule.serviceType || "Provider type"}</strong>
-            <small>{rule.accepting === false ? "Not accepting" : rule.displayRemaining > 0 ? "Accepting requests" : "Waitlist only"}</small>
-          </div>
-          <p className="seat-rule-limit"><strong>{rule.displayRemaining || 0}/{rule.seatLimit || 0}</strong> seats open</p>
-          <ApprovedProviderList providers={rule.displayProviders} fallbackType={rule.serviceType} />
-        </article>
-      ))}
-    </div>
+    <ApprovedSummary providers={approvedList} />
+    <details className="seat-availability-details">
+      <summary>View provider type availability <span>{openRules.length} open · {waitlistRules.length} waitlist-only</span></summary>
+      <div className="seat-chip-grid">
+        {displayRules.map((rule) => <span className={rule.displayRemaining > 0 && rule.accepting !== false ? "seat-chip" : "seat-chip full"} key={rule.id || rule.serviceType}>
+          <b>{rule.serviceType || "Provider type"}</b>
+          <small>{rule.displayRemaining || 0}/{rule.seatLimit || 0} open</small>
+        </span>)}
+      </div>
+    </details>
   </section>;
+}
+
+function approvedProvidersForSummary(displayRules, unmatchedProviders = []) {
+  const seen = new Set();
+  const list = [];
+  const add = (provider, fallbackType) => {
+    const item = typeof provider === "string" ? { name: provider, serviceType: fallbackType } : { ...provider, serviceType: displayText(provider?.serviceType) || fallbackType };
+    const key = providerKey(item);
+    if (seen.has(key)) return;
+    seen.add(key);
+    list.push(item);
+  };
+  displayRules.forEach((rule) => rule.displayProviders.forEach((provider) => add(provider, rule.serviceType)));
+  unmatchedProviders.forEach((provider) => add(provider, "Provider"));
+  return list;
+}
+
+function ApprovedSummary({ providers }) {
+  return <div className="seat-approved-compact">
+    <strong>Approved RSVPs</strong>
+    <ApprovedProviderList providers={providers} fallbackType="Provider" emptyText="No providers have been approved for this room yet." />
+  </div>;
 }
 
 function providersForRule(rule, approvedProviders = []) {
@@ -144,8 +189,8 @@ function providersForRule(rule, approvedProviders = []) {
   return [...existing, ...inferred];
 }
 
-function ApprovedProviderList({ providers = [], fallbackType }) {
-  if (!providers.length) return <p className="seat-empty">No approved providers in this seat yet.</p>;
+function ApprovedProviderList({ providers = [], fallbackType, emptyText = "No approved providers in this seat yet." }) {
+  if (!providers.length) return <p className="seat-empty">{emptyText}</p>;
   return <div className="seat-rsvps">
     <strong>RSVPs</strong>
     <div>
@@ -176,7 +221,7 @@ function ReferralTitle() {
       </div>
       <aside className="verification-callout">
         <CheckCircle2 size={20} />
-        <span><strong>Verification</strong><small>Attendance and participation may help your provider profile become verified.</small></span>
+        <span><strong>Verified status</strong><small>Verified means a provider has been personally introduced within The Healing Directory referral community. Attend and participate in The Referral Room to become eligible.</small></span>
       </aside>
     </div>
   </section>;

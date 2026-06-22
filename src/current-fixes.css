@@ -6164,28 +6164,44 @@
 }
 
 .referral-provider-page .referral-title h1 {
-  max-width: 700px;
-  color: #24634e;
-  font-size: clamp(42px, 5.2vw, 68px);
-  font-weight: 850;
-  line-height: 1;
+  max-width: 760px;
+  color: #24493d;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(50px, 6vw, 84px);
+  font-weight: 700;
+  line-height: .93;
+  letter-spacing: 0;
 }
 
 .referral-provider-page .referral-title p:not(.eyebrow) {
-  max-width: 720px;
+  max-width: 760px;
   margin-top: 14px;
   color: #655d55;
-  font-size: clamp(16px, 1.8vw, 20px);
+  font-size: clamp(17px, 1.8vw, 21px);
+  font-weight: 400;
   line-height: 1.45;
 }
 
 .referral-provider-page .verification-callout {
   align-self: center;
   min-height: 0;
-  padding: 18px;
+  padding: 18px 20px;
   border-radius: 18px;
   background: rgba(255, 255, 255, .78);
   box-shadow: none;
+}
+
+.referral-provider-page .verification-callout strong {
+  color: #24493d;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.referral-provider-page .verification-callout small {
+  color: #665d55;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
 }
 
 .referral-provider-page .referral-shell {
@@ -6400,5 +6416,213 @@
 
   .referral-provider-page .room-request {
     padding: 13px;
+  }
+}
+
+/* The Referral Room provider mix: compact enough for broad seat rules. */
+.referral-provider-page .seat-rule-panel.seat-rule-summary {
+  display: grid;
+  gap: 13px;
+  padding: 15px;
+  border-color: #c8e4d8;
+  background: #f7fcf8;
+}
+
+.referral-provider-page .seat-summary-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 14px;
+  align-items: start;
+}
+
+.referral-provider-page .seat-summary-main > div:first-child > strong {
+  display: block;
+  color: #24493d;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.referral-provider-page .seat-summary-main p {
+  max-width: 680px;
+  margin: 5px 0 0;
+  color: #6f665e;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.referral-provider-page .your-seat-match {
+  padding: 12px 13px;
+  border: 1px solid #d9e8df;
+  border-radius: 14px;
+  background: #fffdf8;
+}
+
+.referral-provider-page .your-seat-match span {
+  display: block;
+  margin-bottom: 4px;
+  color: #a56b58;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.referral-provider-page .your-seat-match strong {
+  display: block;
+  color: #24493d;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.referral-provider-page .your-seat-match small {
+  display: block;
+  margin-top: 4px;
+  color: #60756b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.referral-provider-page .your-seat-match.waitlist {
+  border-color: #eadbc7;
+  background: #fff8ea;
+}
+
+.referral-provider-page .seat-approved-compact,
+.referral-provider-page .seat-availability-details {
+  padding-top: 12px;
+  border-top: 1px solid #dde9e2;
+}
+
+.referral-provider-page .seat-approved-compact > strong {
+  display: block;
+  margin-bottom: 9px;
+  color: #24493d;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.referral-provider-page .seat-approved-compact .seat-rsvps {
+  margin-top: 0;
+}
+
+.referral-provider-page .seat-approved-compact .seat-rsvps > strong {
+  display: none;
+}
+
+.referral-provider-page .seat-approved-compact .seat-rsvps > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.referral-provider-page .seat-approved-compact .seat-rsvp {
+  min-width: min(260px, 100%);
+  max-width: 340px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #fffefa;
+}
+
+.referral-provider-page .seat-availability-details summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  cursor: pointer;
+  color: #24493d;
+  font-size: 14px;
+  font-weight: 900;
+  list-style: none;
+}
+
+.referral-provider-page .seat-availability-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.referral-provider-page .seat-availability-details summary::after {
+  content: "+";
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 28px;
+  border: 1px solid #ddcfc0;
+  border-radius: 999px;
+  color: #24493d;
+  font-size: 18px;
+}
+
+.referral-provider-page .seat-availability-details[open] summary::after {
+  content: "-";
+}
+
+.referral-provider-page .seat-availability-details summary span {
+  margin-left: auto;
+  color: #736b63;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.referral-provider-page .seat-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.referral-provider-page .seat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #cfe7dc;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #24493d;
+}
+
+.referral-provider-page .seat-chip.full {
+  border-color: #eadfd2;
+  background: #fff8ee;
+  color: #6f665e;
+}
+
+.referral-provider-page .seat-chip b {
+  max-width: 230px;
+  overflow: hidden;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.referral-provider-page .seat-chip small {
+  color: #5d766b;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .referral-provider-page .seat-summary-main {
+    grid-template-columns: 1fr;
+  }
+
+  .referral-provider-page .seat-availability-details summary {
+    align-items: start;
+  }
+
+  .referral-provider-page .seat-availability-details summary span {
+    margin-left: 0;
+  }
+
+  .referral-provider-page .seat-chip {
+    width: 100%;
+    justify-content: space-between;
+    border-radius: 13px;
   }
 }
