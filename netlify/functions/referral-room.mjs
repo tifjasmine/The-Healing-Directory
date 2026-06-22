@@ -34,6 +34,7 @@ export default async function handler(request) {
     if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
     const body = await request.json().catch(() => ({}));
     if (action === "request-seat") return json(await requestSeat(user, body));
+    if (action === "cancel-seat") return json(await cancelSeat(user, body));
     if (action === "create-session") return json(await createSession(requireAdmin(user), body));
     if (action === "update-request") return json(await updateRequest(requireAdmin(user), body));
     if (action === "update-session") return json(await updateSession(requireAdmin(user), body));
@@ -75,7 +76,7 @@ async function requestSeat(user, body) {
   const serviceType = required(body.serviceType, "Service type");
   const sessionRecord = await get("sessions", sessionId);
   const [attendanceRecords, ruleRecords] = await Promise.all([list("attendance"), list("rules")]);
-  const existing = attendanceRecords.map(normalizeAttendance).find((item) => item.sessionId === sessionId && lower(item.email) === lower(user.email));
+  const existing = attendanceRecords.map(normalizeAttendance).find((item) => item.sessionId === sessionId && lower(item.email) === lower(user.email) && !countsAsCancelled(item.status));
   if (existing) throw httpError(409, "You already requested this Referral Room date.");
 
   const session = normalizeSession(sessionRecord, attendanceRecords.map(normalizeAttendance), ruleRecords);
@@ -114,6 +115,20 @@ async function requestSeat(user, body) {
   removeEmpty(optionalFields);
   const record = await createWithOptionalFields("attendance", fields, optionalFields);
   return { ok: true, request: normalizeAttendance(record) };
+}
+
+async function cancelSeat(user, body) {
+  const requestId = required(body.requestId, "Request ID");
+  const record = await get("attendance", requestId);
+  const request = normalizeAttendance(record);
+  if (lower(request.email) !== lower(user.email)) throw httpError(403, "This RSVP belongs to another account.");
+  if (request.attended || request.verified) throw httpError(400, "This room has already been attended, so the RSVP cannot be removed here.");
+  const fields = {
+    "Signup Status": "Cancelled",
+    "Status": "Cancelled",
+    "Waitlist Reason": "Removed by provider",
+  };
+  return { ok: true, request: normalizeAttendance(await update("attendance", requestId, fields)) };
 }
 
 async function createSession(user, body) {
@@ -257,6 +272,7 @@ function normalizeProvider(record) {
     email,
     name,
     serviceType: text(value(f, ["Provider Type", "Service Type", "Profession", "Profession / Title"])),
+    photo: imageUrl(value(f, ["Profile Photo URL", "Profile Photo", "Photo", "Headshot", "Image"])),
   };
 }
 
@@ -281,6 +297,7 @@ function approvedProviderSummary(item, rule, providers) {
     name,
     email: item.email,
     serviceType: providerTypeForAttendance(item, providers) || rule.serviceType,
+    photo: profile?.photo || "",
     profileId: id,
     profileUrl: id ? `/provider-details?id=${encodeURIComponent(id)}` : "",
   };
@@ -370,7 +387,18 @@ function countsAsAccepted(status) {
   const value = lower(status);
   return Boolean(value && ["accept", "approv", "confirm", "attend", "verified"].some((word) => value.includes(word)));
 }
+function countsAsCancelled(status) {
+  const value = lower(status);
+  return Boolean(value && ["cancel", "declin", "remove"].some((word) => value.includes(word)));
+}
 function required(input, label) { const result = clean(input); if (!result) throw httpError(400, `${label} is required.`); return result; }
+function imageUrl(input) {
+  const first = Array.isArray(input) ? input[0] : input;
+  if (!first) return "";
+  if (typeof first === "string") return clean(first);
+  if (typeof first === "object") return clean(first.url || first.thumbnails?.full?.url || first.thumbnails?.large?.url || first.thumbnails?.small?.url || "");
+  return "";
+}
 function removeEmpty(fields, keepEmpty = false) { Object.keys(fields).forEach((key) => { if (fields[key] == null || (!keepEmpty && typeof fields[key] === "string" && !fields[key])) delete fields[key]; }); }
 function totalSeatsFromNotes(notes) { const match = String(notes || "").match(/Total Seats:\s*(\d+)/i); return match ? Number(match[1]) : 0; }
 function dateValue(input) { const time = new Date(input || 0).getTime(); return Number.isNaN(time) ? 0 : time; }

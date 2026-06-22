@@ -49,8 +49,26 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
     }
   }
 
-  const upcoming = data.attendance.filter((item) => !item.attended);
-  const attended = data.attendance.filter((item) => item.attended);
+  async function cancelSeat(request) {
+    if (!request?.id) return;
+    setBusy(`cancel-${request.id}`);
+    try {
+      const result = await api("cancel-seat", {
+        method: "POST",
+        body: { requestId: request.id },
+      });
+      setNotice(`Your RSVP for ${result.request?.sessionName || "this Referral Room"} was removed.`);
+      await load();
+    } catch (error) {
+      setNotice(error.message);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  const activeAttendance = data.attendance.filter((item) => !isCancelled(item.status));
+  const upcoming = activeAttendance.filter((item) => !item.attended);
+  const attended = activeAttendance.filter((item) => item.attended);
 
   return <main className="referral-provider-page">
     <ReferralTitle />
@@ -69,13 +87,13 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
             <RoomField label="Optional note to The Healing Directory" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Anything helpful about your work, fit for the theme, or referral interests." textarea />
           </div>
         </section>
-        <div className="room-list">{data.sessions.length ? data.sessions.map((session) => <SessionCard key={session.id} session={session} attendance={data.attendance} form={form} expanded={expanded} setExpanded={setExpanded} busy={busy} requestSeat={requestSeat} />) : <RoomEmpty title="No upcoming dates yet" text="New Referral Room sessions will appear here when registration opens." />}</div>
+        <div className="room-list">{data.sessions.length ? data.sessions.map((session) => <SessionCard key={session.id} session={session} attendance={activeAttendance} form={form} expanded={expanded} setExpanded={setExpanded} busy={busy} requestSeat={requestSeat} cancelSeat={cancelSeat} />) : <RoomEmpty title="No upcoming dates yet" text="New Referral Room sessions will appear here when registration opens." />}</div>
       </> : <AttendanceList items={tab === "attended" ? attended : upcoming} empty={tab === "attended" ? "No attended rooms yet" : "No upcoming RSVPs yet"} />}
     </section>
   </main>;
 }
 
-function SessionCard({ session, attendance, form, expanded, setExpanded, busy, requestSeat }) {
+function SessionCard({ session, attendance, form, expanded, setExpanded, busy, requestSeat, cancelSeat }) {
   const myRequest = attendance.find((item) => item.sessionId === session.id);
   const rule = findMatchingRule(session.rules, form.serviceType);
   const hasRules = session.rules.length > 0;
@@ -93,8 +111,11 @@ function SessionCard({ session, attendance, form, expanded, setExpanded, busy, r
       <p className="room-description">{session.description || "A curated referral circle for aligned healing professionals."}</p>
       <div className="room-stats"><RoomStat label="Total room seats" value={session.totalSeats} /><RoomStat label="Approved" value={session.accepted} /><RoomStat label="Open now" value={session.remaining} /></div>
       <SeatRules rules={session.rules} hasRules={hasRules} openRules={openRules} fullRules={fullRules} approvedProviders={session.approvedProviders || []} />
-      <div className={`availability ${fit.tone}`}><strong>{fit.title}</strong><span>{fit.text}</span></div>
-      <div className="room-request"><div><strong>{myRequest ? "Your RSVP status" : waitlist ? "Request waitlist review" : "Request this seat"}</strong><p>{session.name} · {formatDate(session.date)}</p></div><button className={waitlist ? "button warm" : "button"} disabled={busy === session.id || Boolean(myRequest) || !form.serviceType} onClick={() => requestSeat(session)}>{busy === session.id ? <RefreshCw className="spin" size={16} /> : null}{myRequest ? myRequest.status : !form.serviceType ? "Choose your provider type first" : waitlist ? "Join waitlist" : "Request this seat"}</button></div>
+      {!myRequest ? <div className={`availability ${fit.tone}`}><strong>{fit.title}</strong><span>{fit.text}</span></div> : null}
+      {myRequest ? <div className="room-request existing-request">
+        <div><strong>You already have an RSVP for this room</strong><p>{session.name} · {formatDate(session.date)} · {myRequest.status || "Pending"}</p></div>
+        <button className="button subtle" disabled={busy === `cancel-${myRequest.id}`} onClick={() => cancelSeat(myRequest)}>{busy === `cancel-${myRequest.id}` ? <RefreshCw className="spin" size={16} /> : null}Remove my RSVP</button>
+      </div> : <div className="room-request"><div><strong>{waitlist ? "Request waitlist review" : "Request this seat"}</strong><p>{session.name} · {formatDate(session.date)}</p></div><button className={waitlist ? "button warm" : "button"} disabled={busy === session.id || !form.serviceType} onClick={() => requestSeat(session)}>{busy === session.id ? <RefreshCw className="spin" size={16} /> : null}{!form.serviceType ? "Choose your provider type first" : waitlist ? "Join waitlist" : "Request this seat"}</button></div>}
     </div> : null}
   </article>;
 }
@@ -127,11 +148,8 @@ function SeatRules({ rules, hasRules, openRules, fullRules, approvedProviders = 
             <strong>{rule.serviceType || "Provider type"}</strong>
             <small>{rule.accepting === false ? "Not accepting" : rule.displayRemaining > 0 ? "Accepting requests" : "Waitlist only"}</small>
           </div>
-          <p className="seat-rule-limit">{rule.seatLimit} total {rule.serviceType || "provider"} seat{rule.seatLimit === 1 ? "" : "s"} for this room</p>
-          <div className="seat-rule-counts">
-            <span><b>{rule.displayTaken || 0}</b> approved</span>
-            <span><b>{rule.displayRemaining || 0}</b> open</span>
-          </div>
+          <p className="seat-rule-limit"><strong>{rule.displayRemaining || 0}/{rule.seatLimit || 0}</strong> seats open</p>
+          <p className="seat-rule-approved">{rule.displayTaken || 0} approved</p>
           <ApprovedProviderList providers={rule.displayProviders} fallbackType={rule.serviceType} />
         </article>
       ))}
@@ -147,16 +165,22 @@ function providersForRule(rule, approvedProviders = []) {
 }
 
 function ApprovedProviderList({ providers = [], fallbackType }) {
-  if (!providers.length) return <p>No approved providers in this seat yet.</p>;
+  if (!providers.length) return <p className="seat-empty">No approved providers in this seat yet.</p>;
   return <div className="seat-rsvps">
     <strong>RSVPs</strong>
     <div>
       {providers.map((provider, index) => {
         const item = typeof provider === "string" ? { name: provider, serviceType: fallbackType } : provider;
-        const label = `${item.serviceType || fallbackType || "Provider"} · ${item.name || item.email || "Approved provider"}`;
+        const name = displayText(item.name) || displayText(item.email) || "Approved provider";
+        const serviceType = displayText(item.serviceType) || fallbackType || "Provider";
+        const photo = displayText(item.photo);
+        const content = <>
+          {photo ? <img src={photo} alt="" /> : <span className="seat-rsvp-avatar">{initials(name)}</span>}
+          <span><b>{name}</b><small>{serviceType}</small></span>
+        </>;
         return item.profileUrl
-          ? <a key={`${item.profileUrl}-${index}`} href={item.profileUrl}>{label}</a>
-          : <span key={`${label}-${index}`}>{label}</span>;
+          ? <a className="seat-rsvp" key={`${item.profileUrl}-${index}`} href={item.profileUrl}>{content}</a>
+          : <span className="seat-rsvp" key={`${name}-${index}`}>{content}</span>;
       })}
     </div>
   </div>;
@@ -172,7 +196,10 @@ function RoomLoading() { return <div className="state"><RefreshCw className="spi
 function RoomEmpty({ title, text }) { return <div className="state"><Sparkles /><h2>{title}</h2><p>{text}</p></div>; }
 async function api(action, options = {}) { const url = new URL(API, window.location.origin); url.searchParams.set("action", action); const headers = { "Content-Type": "application/json" }; const token = getAccessToken(); if (token) { headers.Authorization = `Bearer ${token}`; headers["X-Supabase-Access-Token"] = token; } const response = await fetch(url, { method: options.method || "GET", credentials: "include", headers, body: options.body ? JSON.stringify(options.body) : undefined }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || `Request failed (${response.status}).`); return payload; }
 function normalize(value) { return String(value || "").trim().toLowerCase(); }
+function displayText(value) { if (value == null) return ""; if (typeof value === "string" || typeof value === "number") return String(value); if (Array.isArray(value)) return value.map(displayText).filter(Boolean).join(", "); if (typeof value === "object") return displayText(value.name ?? value.label ?? value.value ?? value.text ?? value.email ?? ""); return String(value); }
 function compact(value) { return normalize(value).replace(/&/g, "and").replace(/[^a-z0-9]/g, ""); }
+function isCancelled(value) { const clean = normalize(value); return clean.includes("cancel") || clean.includes("declin") || clean.includes("remove"); }
+function initials(value) { return displayText(value).split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "HD"; }
 function providerKey(provider) { return `${normalize(provider?.profileId || "")}|${normalize(provider?.email || "")}|${normalize(provider?.name || "")}`; }
 function providerTypeMatches(left, right) { const a = compact(left); const b = compact(right); return Boolean(a && b && (a === b || a.includes(b) || b.includes(a))); }
 function findMatchingRule(rules, serviceType) {
