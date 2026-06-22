@@ -174,41 +174,79 @@ function MyEventsPanel({ items, referralRequests }) {
 }
 
 function ReferralPanel({ items, sessions }) {
+  const activeRequests = items.filter((item) => !isCancelled(item.status));
   return <div className="referral-dashboard-card">
     <HeartHandshake size={26} />
     <h2>Referral Room</h2>
     <p>See which provider types are being invited into each room, how many seats are open, and who has already been approved to attend.</p>
-    {items.length ? <div className="referral-dashboard-list">{items.map((item) => <span key={item.id}><strong>{item.sessionName || "Referral Room"}</strong><small>{item.status || "Pending"}</small></span>)}</div> : null}
+    {activeRequests.length ? <div className="referral-dashboard-list">{activeRequests.map((item) => <span key={item.id}><strong>{item.sessionName || "Referral Room"}</strong><small>{item.status || "Pending"}</small></span>)}</div> : null}
     <div className="referral-dashboard-sessions">
-      {sessions.length ? sessions.map((session) => <ReferralSessionSummary key={session.id} session={session} />) : <div className="client-empty inline-empty"><h2>No upcoming rooms yet</h2><p>New Referral Room dates will appear here when seats open.</p></div>}
+      {sessions.length ? sessions.map((session) => <ReferralSessionSummary key={session.id} session={session} requests={activeRequests} />) : <div className="client-empty inline-empty"><h2>No upcoming rooms yet</h2><p>New Referral Room dates will appear here when seats open.</p></div>}
     </div>
-    <button className="button provider-dashboard-primary" type="button" onClick={() => go("/referral-room")}>Request a seat <ArrowRight size={16} /></button>
+    <button className="button provider-dashboard-primary" type="button" onClick={() => go("/referral-room")}>{activeRequests.length ? "Manage my RSVP" : "Request a seat"} <ArrowRight size={16} /></button>
   </div>;
 }
 
-function ReferralSessionSummary({ session }) {
-  const rules = session.rules || [];
+function ReferralSessionSummary({ session, requests = [] }) {
+  const rules = (session.rules || []).map((rule) => {
+    const providers = providersForRule(rule, session.approvedProviders || []);
+    const taken = Math.max(Number(rule.taken || 0), providers.length);
+    const seatLimit = Number(rule.seatLimit || 0);
+    return {
+      ...rule,
+      displayProviders: providers,
+      displayTaken: taken,
+      displayRemaining: Math.max(seatLimit - taken, 0),
+    };
+  });
+  const myRequest = requests.find((item) => item.sessionId === session.id);
   return <article className="referral-session-summary">
     <div className="referral-session-heading">
       <div>
         <strong>{session.name || "Referral Room"}</strong>
         <small>{formatDateTime(session.date)}{session.focus ? ` · ${session.focus}` : ""}</small>
       </div>
-      <span>{session.remaining || 0} open</span>
+      <span>{myRequest?.status || `${session.remaining || 0} open`}</span>
     </div>
     {session.description ? <p>{session.description}</p> : null}
     <div className="referral-seat-summary-grid">
       {rules.length ? rules.map((rule) => (
-        <div className={rule.remaining > 0 && rule.accepting !== false ? "referral-seat-summary" : "referral-seat-summary full"} key={rule.id || rule.serviceType}>
+        <div className={rule.displayRemaining > 0 && rule.accepting !== false ? "referral-seat-summary" : "referral-seat-summary full"} key={rule.id || rule.serviceType}>
           <div>
             <strong>{rule.serviceType || "Provider type"}</strong>
-            <small>{rule.seatLimit || 0} total · {rule.remaining || 0} open · {rule.taken || 0} approved</small>
+            <small>{rule.displayRemaining || 0}/{rule.seatLimit || 0} seats open · {rule.displayTaken || 0} approved</small>
           </div>
-          <p>{rule.approvedProviders?.length ? `Joining: ${rule.approvedProviders.join(", ")}` : "No approved providers in this seat yet."}</p>
+          <ApprovedProviderPreview providers={rule.displayProviders} fallbackType={rule.serviceType} />
         </div>
       )) : <div className="referral-seat-summary"><strong>Open provider mix</strong><small>{session.remaining || 0} open seats</small><p>This room is not limited to specific provider types yet.</p></div>}
     </div>
   </article>;
+}
+
+function providersForRule(rule, approvedProviders = []) {
+  const existing = Array.isArray(rule.approvedProviders) ? rule.approvedProviders : [];
+  const seen = new Set(existing.map(providerKey));
+  const inferred = approvedProviders.filter((provider) => providerTypeMatches(displayText(provider?.serviceType), displayText(rule?.serviceType)) && !seen.has(providerKey(provider)));
+  return [...existing, ...inferred];
+}
+
+function ApprovedProviderPreview({ providers = [], fallbackType }) {
+  if (!providers.length) return <p>No approved providers in this seat yet.</p>;
+  return <div className="dashboard-approved-providers">
+    {providers.map((provider, index) => {
+      const item = typeof provider === "string" ? { name: provider, serviceType: fallbackType } : provider;
+      const name = displayText(item.name) || displayText(item.email) || "Approved provider";
+      const serviceType = displayText(item.serviceType) || fallbackType || "Provider";
+      const photo = displayText(item.photo);
+      const content = <>
+        {photo ? <img src={photo} alt="" /> : <span>{initials(name)}</span>}
+        <span className="dashboard-approved-text"><b>{name}</b><small>{serviceType}</small></span>
+      </>;
+      return item.profileUrl
+        ? <a href={item.profileUrl} key={`${item.profileUrl}-${index}`}>{content}</a>
+        : <span key={`${name}-${index}`}>{content}</span>;
+    })}
+  </div>;
 }
 
 function EmptyPanel({ title, text, action, path, inline }) {
@@ -218,6 +256,12 @@ function EmptyPanel({ title, text, action, path, inline }) {
 function firstName(value) { return String(value || "there").split(/[ @._-]/).filter(Boolean)[0] || "there"; }
 function initials(value) { return String(value || "Provider").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "P"; }
 function providerTypeLabel(provider) { return Array.isArray(provider.providerType) ? provider.providerType.join(", ") : String(provider.providerType || ""); }
+function displayText(value) { if (value == null) return ""; if (typeof value === "string" || typeof value === "number") return String(value); if (Array.isArray(value)) return value.map(displayText).filter(Boolean).join(", "); if (typeof value === "object") return displayText(value.name ?? value.label ?? value.value ?? value.text ?? value.email ?? ""); return String(value); }
+function normalize(value) { return String(value || "").trim().toLowerCase(); }
+function compact(value) { return normalize(value).replace(/&/g, "and").replace(/[^a-z0-9]/g, ""); }
+function isCancelled(value) { const clean = normalize(value); return clean.includes("cancel") || clean.includes("declin") || clean.includes("remove"); }
+function providerKey(provider) { if (typeof provider === "string") return normalize(provider); return `${normalize(provider?.profileId || "")}|${normalize(provider?.email || "")}|${normalize(displayText(provider?.name))}`; }
+function providerTypeMatches(left, right) { const a = compact(left); const b = compact(right); return Boolean(a && b && (a === b || a.includes(b) || b.includes(a))); }
 function go(path) { window.location.assign(path); }
 async function signOut() { await logout().catch(() => null); window.location.assign("/"); }
 function formatDate(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(time); }

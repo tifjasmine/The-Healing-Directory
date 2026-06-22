@@ -5747,6 +5747,70 @@
   line-height: 1.45;
 }
 
+.dashboard-approved-providers {
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-approved-providers > a,
+.dashboard-approved-providers > span {
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 9px;
+  border: 1px solid rgba(36, 73, 61, .12);
+  border-radius: 12px;
+  background: #fffdfa;
+  color: #24493d;
+  text-decoration: none;
+}
+
+.dashboard-approved-providers img,
+.dashboard-approved-providers > a > span:first-child:not(.dashboard-approved-text),
+.dashboard-approved-providers > span > span:first-child:not(.dashboard-approved-text) {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.dashboard-approved-providers > a > span:first-child:not(.dashboard-approved-text),
+.dashboard-approved-providers > span > span:first-child:not(.dashboard-approved-text) {
+  display: grid;
+  place-items: center;
+  background: #e8f4ef;
+  color: #1f5948;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.dashboard-approved-text {
+  min-width: 0;
+}
+
+.dashboard-approved-providers b {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #24493d;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-approved-providers small {
+  display: block;
+  min-width: 0;
+  margin-top: 1px;
+  overflow: hidden;
+  color: #756a61;
+  font-size: 11px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Final logo cleanup: text-only navigation and no boxed logo in auth/login hero. */
 .site-header .brand > img,
 .site-header .brand img,
