@@ -5844,3 +5844,281 @@
     width: fit-content;
   }
 }
+
+/* The Referral Room: align the provider page with the Events page rhythm. */
+.referral-provider-page .referral-title {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 16% 12%, rgba(238, 170, 48, .18), transparent 34%),
+    linear-gradient(135deg, #fff3dc 0%, #f4faf6 100%);
+  box-shadow: none;
+}
+
+.referral-provider-page .referral-title .title-inner,
+.referral-provider-page .referral-title .content-shell {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(42px, 6vw, 78px) 28px;
+}
+
+.referral-provider-page .referral-title .title-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  gap: clamp(24px, 4vw, 48px);
+  align-items: end;
+}
+
+.referral-provider-page .referral-title h1 {
+  max-width: 760px;
+  color: #2b654f;
+  font-family: inherit;
+  font-size: clamp(50px, 7vw, 92px);
+  font-weight: 900;
+  line-height: .96;
+  letter-spacing: 0;
+}
+
+.referral-provider-page .referral-title p:not(.eyebrow) {
+  max-width: 760px;
+  margin-top: 18px;
+  color: #5f564f;
+  font-size: clamp(17px, 2vw, 23px);
+  line-height: 1.45;
+}
+
+.referral-provider-page .referral-title .eyebrow {
+  margin-bottom: 18px;
+}
+
+.referral-provider-page .verification-callout {
+  margin: 0;
+  padding: 22px;
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 14px;
+  border: 1px solid rgba(67, 138, 109, .22);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .74);
+  color: #24493d;
+}
+
+.referral-provider-page .verification-callout svg {
+  margin-top: 2px;
+  color: #2b654f;
+}
+
+.referral-provider-page .verification-callout strong,
+.referral-provider-page .verification-callout small {
+  display: block;
+}
+
+.referral-provider-page .verification-callout strong {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.referral-provider-page .verification-callout small {
+  margin-top: 6px;
+  color: #6f655d;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.referral-provider-page .referral-shell {
+  width: 100%;
+  max-width: 1180px;
+  margin: 34px auto 0;
+  padding: 0 28px 72px;
+}
+
+.referral-provider-page .room-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 18px;
+}
+
+.referral-provider-page .room-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #ded6ca;
+  border-left: 6px solid #438a6d;
+  border-radius: 24px;
+  background: #fffdf8;
+  box-shadow: 0 16px 40px rgba(57, 39, 22, .07);
+}
+
+.referral-provider-page .room-card:nth-child(even) {
+  border-left-color: #b56f50;
+}
+
+.referral-provider-page .room-card.open {
+  grid-column: 1 / -1;
+}
+
+.referral-provider-page .room-card-header {
+  min-height: 118px;
+  padding: 24px 28px;
+  align-items: center;
+  border: 0;
+}
+
+.referral-provider-page .room-card-header h2 {
+  color: #24493d;
+  font-family: inherit;
+  font-size: clamp(27px, 3vw, 36px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.referral-provider-page .room-card-header p {
+  margin-top: 8px;
+  color: #b56f50;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.referral-provider-page .room-header-meta {
+  align-items: center;
+  gap: 10px;
+}
+
+.referral-provider-page .room-remaining {
+  padding: 9px 13px;
+  font-size: 12px;
+}
+
+.referral-provider-page .room-toggle {
+  width: 44px;
+  height: 44px;
+  font-size: 24px;
+}
+
+.referral-provider-page .room-card-body {
+  padding: 0 28px 28px;
+  border-top: 1px solid #eadfd2;
+}
+
+.referral-provider-page .room-description {
+  max-width: 760px;
+  margin: 22px 0;
+  color: #5f564f;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.referral-provider-page .seat-rule-panel {
+  margin-top: 0;
+  padding: 18px;
+  border-radius: 20px;
+}
+
+.referral-provider-page .seat-rule-grid {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.referral-provider-page .seat-rule-card {
+  padding: 16px;
+  border-radius: 16px;
+}
+
+.referral-provider-page .room-request-details {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px;
+  border-radius: 20px;
+}
+
+.referral-provider-page .room-request-details .form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.referral-provider-page .availability,
+.referral-provider-page .room-request {
+  padding: 16px 18px;
+  border-radius: 18px;
+}
+
+.referral-provider-page .room-request .button {
+  min-height: 48px;
+}
+
+@media (max-width: 760px) {
+  .referral-provider-page .referral-title .title-inner,
+  .referral-provider-page .referral-title .content-shell {
+    padding: 36px 18px 30px;
+  }
+
+  .referral-provider-page .referral-title .title-inner {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .referral-provider-page .referral-title h1 {
+    font-size: clamp(42px, 13vw, 62px);
+  }
+
+  .referral-provider-page .verification-callout {
+    padding: 18px;
+  }
+
+  .referral-provider-page .referral-shell {
+    margin-top: 22px;
+    padding: 0 14px 48px;
+  }
+
+  .referral-provider-page .room-list {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .referral-provider-page .room-card {
+    border-left-width: 5px;
+    border-radius: 20px;
+  }
+
+  .referral-provider-page .room-card-header {
+    min-height: 104px;
+    padding: 20px;
+  }
+
+  .referral-provider-page .room-header-meta {
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-start;
+  }
+
+  .referral-provider-page .room-card-body {
+    padding: 0 18px 20px;
+  }
+
+  .referral-provider-page .seat-rule-heading,
+  .referral-provider-page .seat-rule-card > div:first-child {
+    display: grid;
+  }
+
+  .referral-provider-page .seat-rule-grid,
+  .referral-provider-page .room-request-details,
+  .referral-provider-page .room-request-details .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .referral-provider-page .room-request {
+    display: grid;
+    gap: 14px;
+  }
+
+  .referral-provider-page .room-request .button {
+    width: 100%;
+    min-width: 0;
+  }
+}

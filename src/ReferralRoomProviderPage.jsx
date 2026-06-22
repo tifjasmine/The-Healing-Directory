@@ -89,7 +89,7 @@ function SessionCard({ session, attendance, form, setForm, serviceTypes, expande
   const fullRules = session.rules.filter((item) => item.remaining <= 0 || session.remaining <= 0);
   const available = rule ? Math.min(rule.remaining, session.remaining) : session.remaining;
   const fit = seatFitMessage({ serviceType: form.serviceType, rule, session, available, roomFull, typeFull, hasRules });
-  return <article className="room-card">
+  return <article className={open ? "room-card open" : "room-card"}>
     <button className="room-card-header" aria-expanded={open} onClick={() => setExpanded(open ? "" : session.id)}><div><h2>{session.name || "The Referral Room"}</h2><p>{formatDate(session.date)}</p></div><div className="room-header-meta">{myRequest ? <Status value={myRequest.status} /> : null}<span className="room-remaining">{session.remaining} open</span><span className="room-toggle" aria-hidden="true">{open ? "−" : "+"}</span></div></button>
     {open ? <div className="room-card-body">
       <p className="room-description">{session.description || "A curated referral circle for aligned healing professionals."}</p>
@@ -175,7 +175,21 @@ function ApprovedProviderList({ providers = [], fallbackType }) {
   </div>;
 }
 
-function ReferralTitle() { return <section className="page-title referral-title"><div className="content-shell title-inner"><div><p className="eyebrow ink">Provider referral circle</p><h1>The Referral Room</h1><p>Request a seat in a small, curated referral circle for relationship-based collaboration across New Jersey and Pennsylvania providers.</p><div className="verification-callout"><CheckCircle2 size={20} /><span><strong>How verification works</strong><small>Attend, participate, and The Healing Directory team can mark your provider profile as verified after the room.</small></span></div></div></div></section>; }
+function ReferralTitle() {
+  return <section className="page-title referral-title">
+    <div className="content-shell title-inner">
+      <div>
+        <p className="eyebrow ink">Provider referral circle</p>
+        <h1>The Referral Room</h1>
+        <p>Browse upcoming referral circles, review the provider mix, and request the room that fits your work.</p>
+      </div>
+      <aside className="verification-callout">
+        <CheckCircle2 size={20} />
+        <span><strong>How verification works</strong><small>Attend, participate, and The Healing Directory team can mark your provider profile as verified after the room.</small></span>
+      </aside>
+    </div>
+  </section>;
+}
 function RoomField({ label, textarea, ...props }) { return <label className={textarea ? "field full-field" : "field"}><span>{label}</span>{textarea ? <textarea rows="3" {...props} /> : <input {...props} />}</label>; }
 function RoomSelect({ label, options, placeholder, help, ...props }) { return <label className="field"><span>{label}</span><select {...props}><option value="">{placeholder}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select>{help ? <small>{help}</small> : null}</label>; }
 function RoomStat({ label, value }) { return <div><small>{label}</small><strong>{value}</strong></div>; }
