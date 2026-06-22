@@ -175,19 +175,22 @@ function MyEventsPanel({ items, referralRequests }) {
 
 function ReferralPanel({ items, sessions }) {
   const activeRequests = items.filter((item) => !isCancelled(item.status));
+  const [openSessionId, setOpenSessionId] = React.useState("");
+  React.useEffect(() => {
+    if (!openSessionId && sessions[0]?.id) setOpenSessionId(sessions[0].id);
+  }, [openSessionId, sessions]);
   return <div className="referral-dashboard-card">
     <HeartHandshake size={26} />
     <h2>Referral Room</h2>
-    <p>See which provider types are being invited into each room, how many seats are open, and who has already been approved to attend.</p>
-    {activeRequests.length ? <div className="referral-dashboard-list">{activeRequests.map((item) => <span key={item.id}><strong>{item.sessionName || "Referral Room"}</strong><small>{item.status || "Pending"}</small></span>)}</div> : null}
+    <p>Choose an upcoming room to see the invited provider mix, open seats, and approved RSVPs.</p>
     <div className="referral-dashboard-sessions">
-      {sessions.length ? sessions.map((session) => <ReferralSessionSummary key={session.id} session={session} requests={activeRequests} />) : <div className="client-empty inline-empty"><h2>No upcoming rooms yet</h2><p>New Referral Room dates will appear here when seats open.</p></div>}
+      {sessions.length ? sessions.map((session) => <ReferralSessionSummary key={session.id} session={session} requests={activeRequests} open={openSessionId === session.id} onToggle={() => setOpenSessionId((current) => current === session.id ? "" : session.id)} />) : <div className="client-empty inline-empty"><h2>No upcoming rooms yet</h2><p>New Referral Room dates will appear here when seats open.</p></div>}
     </div>
     <button className="button provider-dashboard-primary" type="button" onClick={() => go("/referral-room")}>{activeRequests.length ? "Manage my RSVP" : "Request a seat"} <ArrowRight size={16} /></button>
   </div>;
 }
 
-function ReferralSessionSummary({ session, requests = [] }) {
+function ReferralSessionSummary({ session, requests = [], open, onToggle }) {
   const rules = (session.rules || []).map((rule) => {
     const providers = providersForRule(rule, session.approvedProviders || []);
     const taken = Math.max(Number(rule.taken || 0), providers.length);
@@ -200,26 +203,28 @@ function ReferralSessionSummary({ session, requests = [] }) {
     };
   });
   const myRequest = requests.find((item) => item.sessionId === session.id);
-  return <article className="referral-session-summary">
-    <div className="referral-session-heading">
+  return <article className={open ? "referral-session-summary" : "referral-session-summary collapsed"}>
+    <button className="referral-session-heading" type="button" aria-expanded={open} onClick={onToggle}>
       <div>
         <strong>{session.name || "Referral Room"}</strong>
         <small>{formatDateTime(session.date)}{session.focus ? ` · ${session.focus}` : ""}</small>
       </div>
-      <span>{myRequest?.status || `${session.remaining || 0} open`}</span>
-    </div>
-    {session.description ? <p>{session.description}</p> : null}
-    <div className="referral-seat-summary-grid">
-      {rules.length ? rules.map((rule) => (
-        <div className={rule.displayRemaining > 0 && rule.accepting !== false ? "referral-seat-summary" : "referral-seat-summary full"} key={rule.id || rule.serviceType}>
-          <div>
-            <strong>{rule.serviceType || "Provider type"}</strong>
-            <small>{rule.displayRemaining || 0}/{rule.seatLimit || 0} seats open · {rule.displayTaken || 0} approved</small>
+      <span>{myRequest?.status || `${session.remaining || 0} open`} <ChevronDown size={16} /></span>
+    </button>
+    {open ? <>
+      {session.description ? <p>{session.description}</p> : null}
+      <div className="referral-seat-summary-grid">
+        {rules.length ? rules.map((rule) => (
+          <div className={rule.displayRemaining > 0 && rule.accepting !== false ? "referral-seat-summary" : "referral-seat-summary full"} key={rule.id || rule.serviceType}>
+            <div>
+              <strong>{rule.serviceType || "Provider type"}</strong>
+              <small>{rule.displayRemaining || 0}/{rule.seatLimit || 0} seats open · {rule.displayTaken || 0} approved</small>
+            </div>
+            <ApprovedProviderPreview providers={rule.displayProviders} fallbackType={rule.serviceType} />
           </div>
-          <ApprovedProviderPreview providers={rule.displayProviders} fallbackType={rule.serviceType} />
-        </div>
-      )) : <div className="referral-seat-summary"><strong>Open provider mix</strong><small>{session.remaining || 0} open seats</small><p>This room is not limited to specific provider types yet.</p></div>}
-    </div>
+        )) : <div className="referral-seat-summary"><strong>Open provider mix</strong><small>{session.remaining || 0} open seats</small><p>This room is not limited to specific provider types yet.</p></div>}
+      </div>
+    </> : null}
   </article>;
 }
 
