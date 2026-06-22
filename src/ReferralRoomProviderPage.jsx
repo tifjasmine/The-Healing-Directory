@@ -28,10 +28,6 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
   }, [load]);
 
   async function requestSeat(session) {
-    if (!form.serviceType) {
-      setNotice("Choose your service type before requesting a seat.");
-      return;
-    }
     setBusy(session.id);
     try {
       const result = await api("request-seat", {
@@ -40,7 +36,7 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
       });
       setNotice(result.request.status === "Waitlist"
         ? `Your request was added to the waitlist: ${result.request.reason}.`
-        : `Request received for ${session.name}. Your RSVP is pending review and will stay visible under this room.`);
+        : `Your request for ${session.name} was received. It will stay visible here as pending review.`);
       await load();
     } catch (error) {
       setNotice(error.message);
@@ -87,29 +83,24 @@ function SessionCard({ session, attendance, form, setForm, serviceTypes, expande
   const open = expanded === session.id;
   const openRules = session.rules.filter((item) => item.remaining > 0 && session.remaining > 0);
   const fullRules = session.rules.filter((item) => item.remaining <= 0 || session.remaining <= 0);
-  const available = rule ? Math.min(rule.remaining, session.remaining) : session.remaining;
-  const fit = seatFitMessage({ serviceType: form.serviceType, rule, session, available, roomFull, typeFull, hasRules });
   return <article className={open ? "room-card open" : "room-card"}>
     <button className="room-card-header" aria-expanded={open} onClick={() => setExpanded(open ? "" : session.id)}><div><h2>{session.name || "The Referral Room"}</h2><p>{formatDate(session.date)}</p></div><div className="room-header-meta">{myRequest ? <Status value={myRequest.status} /> : null}<span className="room-remaining">{session.remaining} open</span><span className="room-toggle" aria-hidden="true">{open ? "−" : "+"}</span></div></button>
     {open ? <div className="room-card-body">
       <p className="room-description">{session.description || "A curated referral circle for aligned healing professionals."}</p>
       <SeatRules rules={session.rules} hasRules={hasRules} openRules={openRules} fullRules={fullRules} approvedProviders={session.approvedProviders || []} />
       {!myRequest ? <section className="room-request-details">
-        <div>
+        <div className="room-request-copy">
           <h3>Request this room</h3>
-          <p>Choose the provider type that best fits your work. Your request stays pending until The Healing Directory reviews it.</p>
+          <p>Your provider type is matched from your profile. Add an optional note if there is anything helpful for review.</p>
         </div>
-        <div className="form-grid">
-          <RoomSelect label="Your provider type" value={form.serviceType} onChange={(event) => setForm({ ...form, serviceType: event.target.value })} options={serviceTypes} placeholder="Select the closest fit" />
-          <RoomField label="Specialty / focus area" value={form.specialtyFocus} onChange={(event) => setForm({ ...form, specialtyFocus: event.target.value })} placeholder="Postpartum, trauma, pelvic health, nervous system..." />
+        <div className="form-grid compact">
           <RoomField label="Optional note to The Healing Directory" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Anything helpful about your work, fit for the theme, or referral interests." textarea />
         </div>
       </section> : null}
-      {!myRequest ? <div className={`availability ${fit.tone}`}><strong>{fit.title}</strong><span>{fit.text}</span></div> : null}
       {myRequest ? <div className="room-request existing-request">
         <div><strong>You already have an RSVP for this room</strong><p>{session.name} · {formatDate(session.date)} · {myRequest.status || "Pending"}</p></div>
         <button className="button subtle" disabled={busy === `cancel-${myRequest.id}`} onClick={() => cancelSeat(myRequest)}>{busy === `cancel-${myRequest.id}` ? <RefreshCw className="spin" size={16} /> : null}Remove my RSVP</button>
-      </div> : <div className="room-request"><div><strong>{waitlist ? "Request waitlist review" : "Request this seat"}</strong><p>{session.name} · {formatDate(session.date)}</p></div><button className={waitlist ? "button warm" : "button"} disabled={busy === session.id || !form.serviceType} onClick={() => requestSeat(session)}>{busy === session.id ? <RefreshCw className="spin" size={16} /> : null}{!form.serviceType ? "Choose your provider type first" : waitlist ? "Join waitlist" : "Request this seat"}</button></div>}
+      </div> : <div className="room-request"><div><strong>{waitlist ? "Request waitlist review" : "Request this seat"}</strong><p>{session.name} · {formatDate(session.date)}</p></div><button className={waitlist ? "button warm" : "button"} disabled={busy === session.id} onClick={() => requestSeat(session)}>{busy === session.id ? <RefreshCw className="spin" size={16} /> : null}{waitlist ? "Join waitlist" : "Request this seat"}</button></div>}
     </div> : null}
   </article>;
 }
@@ -179,19 +170,18 @@ function ReferralTitle() {
   return <section className="page-title referral-title">
     <div className="content-shell title-inner">
       <div>
-        <p className="eyebrow ink">Provider referral circle</p>
+        <p className="eyebrow ink">Provider referral circles</p>
         <h1>The Referral Room</h1>
-        <p>Browse upcoming referral circles, review the provider mix, and request the room that fits your work.</p>
+        <p>Small, curated rooms for providers to meet, exchange thoughtful referrals, and build aligned community across New Jersey and Pennsylvania.</p>
       </div>
       <aside className="verification-callout">
         <CheckCircle2 size={20} />
-        <span><strong>How verification works</strong><small>Attend, participate, and The Healing Directory team can mark your provider profile as verified after the room.</small></span>
+        <span><strong>Verification</strong><small>Attendance and participation may help your provider profile become verified.</small></span>
       </aside>
     </div>
   </section>;
 }
 function RoomField({ label, textarea, ...props }) { return <label className={textarea ? "field full-field" : "field"}><span>{label}</span>{textarea ? <textarea rows="3" {...props} /> : <input {...props} />}</label>; }
-function RoomSelect({ label, options, placeholder, help, ...props }) { return <label className="field"><span>{label}</span><select {...props}><option value="">{placeholder}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select>{help ? <small>{help}</small> : null}</label>; }
 function RoomStat({ label, value }) { return <div><small>{label}</small><strong>{value}</strong></div>; }
 function Status({ value }) { const clean = normalize(value); const tone = clean.includes("accept") || clean.includes("attended") ? "good" : clean.includes("declin") || clean.includes("cancel") ? "bad" : "warm"; return <span className={`status ${tone}`}>{value || "Pending"}</span>; }
 function RoomLoading() { return <div className="state"><RefreshCw className="spin" /><h2>Loading The Referral Room...</h2></div>; }
@@ -225,32 +215,5 @@ function findMatchingRule(rules, serviceType) {
     const key = compact(item.serviceType);
     return key === selected || key.includes(selected) || selected.includes(key);
   }) || null;
-}
-function seatFitMessage({ serviceType, rule, session, available, roomFull, typeFull, hasRules }) {
-  if (!serviceType) return {
-    tone: "neutral",
-    title: "Choose your provider type above",
-    text: "After you choose your provider type, this room will show whether there appears to be an open seat for that type.",
-  };
-  if (!hasRules) return {
-    tone: "good",
-    title: `${serviceType} can request review`,
-    text: "This room is not limited to a specific provider mix yet. The Healing Directory will review requests for fit and balance.",
-  };
-  if (rule && !roomFull && !typeFull && available > 0) return {
-    tone: "good",
-    title: `${available} open ${rule.serviceType} seat${available === 1 ? "" : "s"}`,
-    text: "Your provider type matches this room's current seat options.",
-  };
-  if (rule && (roomFull || typeFull)) return {
-    tone: "warm",
-    title: `${rule.serviceType} is waitlist-only right now`,
-    text: roomFull ? "The room is full, but you can still ask to join the waitlist." : "This provider-type seat is currently full or closed, but you can still ask to join the waitlist.",
-  };
-  return {
-    tone: "warm",
-    title: `${serviceType} is not listed for this room`,
-    text: "You can still request review, but this room is currently prioritizing the provider types shown above.",
-  };
 }
 function formatDate(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date and time coming soon" : new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(time); }

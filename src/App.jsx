@@ -143,7 +143,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <SiteHeader route={route} user={user} authReady={authReady} navigate={navigate} onLogout={signOut} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
-      {notice ? <div className={notice.startsWith("Request received") ? "global-notice success" : "global-notice"}><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss"><X size={16} /></button></div> : null}
+      {notice ? <div className={notice.startsWith("Request received") || notice.includes("was received") ? "global-notice success" : "global-notice"}><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss"><X size={16} /></button></div> : null}
       <Page {...pageProps} />
       <SiteFooter navigate={navigate} />
     </div>

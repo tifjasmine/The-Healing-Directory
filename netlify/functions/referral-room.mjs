@@ -73,13 +73,19 @@ async function managerData() {
 
 async function requestSeat(user, body) {
   const sessionId = required(body.sessionId, "Session");
-  const serviceType = required(body.serviceType, "Service type");
   const sessionRecord = await get("sessions", sessionId);
-  const [attendanceRecords, ruleRecords] = await Promise.all([list("attendance"), list("rules")]);
+  const [attendanceRecords, ruleRecords, providerRecords] = await Promise.all([
+    list("attendance"),
+    list("rules"),
+    list("directory").catch(() => []),
+  ]);
+  const providers = providerIndex(providerRecords);
+  const providerProfile = providers.byEmail?.get(lower(user.email));
+  const serviceType = clean(body.serviceType) || providerProfile?.serviceType || "";
   const existing = attendanceRecords.map(normalizeAttendance).find((item) => item.sessionId === sessionId && lower(item.email) === lower(user.email) && !countsAsCancelled(item.status));
   if (existing) throw httpError(409, "You already requested this Referral Room date.");
 
-  const session = normalizeSession(sessionRecord, attendanceRecords.map(normalizeAttendance), ruleRecords);
+  const session = normalizeSession(sessionRecord, attendanceRecords.map(normalizeAttendance), ruleRecords, providers);
   const rule = findMatchingRule(session.rules, serviceType);
   const roomFull = session.remaining <= 0;
   const typeFull = Boolean(rule && (rule.remaining <= 0 || rule.accepting === false));
@@ -94,7 +100,9 @@ async function requestSeat(user, body) {
     "Session": [sessionId],
     "Provider Email": user.email,
     "Email": user.email,
-    "Provider Name": clean(body.providerName) || displayName(user),
+    "Provider Name": providerProfile?.name || clean(body.providerName) || displayName(user),
+    "Provider": providerProfile?.id ? [providerProfile.id] : undefined,
+    "Directory Provider": providerProfile?.id ? [providerProfile.id] : undefined,
     "Service Type": serviceType,
     "Specialty Focus": clean(body.specialtyFocus),
     "Notes": clean(body.notes),
