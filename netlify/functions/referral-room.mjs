@@ -48,8 +48,8 @@ async function providerData(user) {
     list("sessions"), list("attendance"), list("rules"), list("directory").catch(() => []),
   ]);
   const attendance = attendanceRecords.map(normalizeAttendance);
-  const providersByEmail = providerMap(providerRecords);
-  const sessions = sessionRecords.map((record) => normalizeSession(record, attendance, ruleRecords, providersByEmail))
+  const providers = providerIndex(providerRecords);
+  const sessions = sessionRecords.map((record) => normalizeSession(record, attendance, ruleRecords, providers))
     .filter((session) => !["draft", "closed", "cancelled", "canceled"].includes(lower(session.status)))
     .filter((session) => !session.date || dateValue(session.date) >= startOfToday())
     .sort((a, b) => dateValue(a.date) - dateValue(b.date));
@@ -64,9 +64,9 @@ async function managerData() {
   const [sessionRecords, attendanceRecords, ruleRecords, providerRecords] = await Promise.all([
     list("sessions"), list("attendance"), list("rules"), list("directory").catch(() => []),
   ]);
-  const providersByEmail = providerMap(providerRecords);
+  const providers = providerIndex(providerRecords);
   const requests = attendanceRecords.map(normalizeAttendance).sort((a, b) => dateValue(b.created) - dateValue(a.created));
-  const sessions = sessionRecords.map((record) => normalizeSession(record, requests, ruleRecords, providersByEmail)).sort((a, b) => dateValue(a.date) - dateValue(b.date));
+  const sessions = sessionRecords.map((record) => normalizeSession(record, requests, ruleRecords, providers)).sort((a, b) => dateValue(a.date) - dateValue(b.date));
   return { requests, sessions, serviceTypes: SERVICE_TYPES };
 }
 
@@ -182,11 +182,12 @@ async function updateSession(user, body) {
   return { ok: true, session: normalizeSession(await update("sessions", id, fields), [], []), admin: user.email };
 }
 
-function normalizeSession(record, attendance, rules, providersByEmail = new Map()) {
+function normalizeSession(record, attendance, rules, providers = providerIndex([])) {
   const f = record.fields || {};
   const id = record.id;
   const linkedAttendance = attendance.filter((item) => item.sessionId === id);
-  const accepted = linkedAttendance.filter((item) => countsAsAccepted(item.status)).length;
+  const acceptedItems = linkedAttendance.filter((item) => countsAsAccepted(item.status));
+  const accepted = acceptedItems.length;
   const rawRules = rules.map(normalizeRule)
     .filter((rule) => rule.sessionId === id && rule.seatLimit > 0)
     .sort((a, b) => (a.displayOrder || 999) - (b.displayOrder || 999) || a.serviceType.localeCompare(b.serviceType));
@@ -194,13 +195,13 @@ function normalizeSession(record, attendance, rules, providersByEmail = new Map(
   const totalSeats = explicitTotalSeats || rawRules.reduce((sum, rule) => sum + rule.seatLimit, 0) || 8;
   const sessionRules = rawRules.map((rule) => {
     const acceptedForRule = linkedAttendance.filter((item) => countsAsAccepted(item.status) && (
-      (item.seatRuleId && item.seatRuleId === rule.id) || providerTypeMatches(item.serviceType, rule.serviceType)
+      (item.seatRuleId && item.seatRuleId === rule.id) || providerTypeMatches(providerTypeForAttendance(item, providers), rule.serviceType)
     ));
     return {
       ...rule,
       taken: acceptedForRule.length,
       remaining: Math.max(rule.seatLimit - acceptedForRule.length, 0),
-      approvedProviders: acceptedForRule.map((item) => approvedProviderSummary(item, rule, providersByEmail)).filter(Boolean),
+      approvedProviders: acceptedForRule.map((item) => approvedProviderSummary(item, rule, providers)).filter(Boolean),
     };
   });
   const ruleRemaining = sessionRules.length ? sessionRules.filter((rule) => rule.accepting !== false).reduce((sum, rule) => sum + rule.remaining, 0) : null;
@@ -210,6 +211,7 @@ function normalizeSession(record, attendance, rules, providersByEmail = new Map(
     status: text(value(f, ["Status"])) || "Open", description: text(value(f, ["Description"])),
     notes: text(value(f, ["Notes", "Internal Notes"])), totalSeats, accepted,
     remaining: ruleRemaining == null ? Math.max(totalSeats - accepted, 0) : Math.max(Math.min(totalSeats - accepted, ruleRemaining), 0),
+    approvedProviders: acceptedItems.map((item) => approvedProviderSummary(item, {}, providers)).filter(Boolean),
     rules: sessionRules,
   };
 }
@@ -258,22 +260,35 @@ function normalizeProvider(record) {
   };
 }
 
-function providerMap(records) {
-  return new Map(records.map(normalizeProvider).filter((item) => item.email).map((item) => [lower(item.email), item]));
+function providerIndex(records) {
+  const providers = records.map(normalizeProvider);
+  return {
+    byEmail: new Map(providers.filter((item) => item.email).map((item) => [lower(item.email), item])),
+    byId: new Map(providers.filter((item) => item.id).map((item) => [item.id, item])),
+  };
 }
 
-function approvedProviderSummary(item, rule, providersByEmail) {
-  const profile = providersByEmail.get(lower(item.email));
+function providerForAttendance(item, providers) {
+  return providers.byId?.get(item.providerRecordId) || providers.byEmail?.get(lower(item.email));
+}
+
+function approvedProviderSummary(item, rule, providers) {
+  const profile = providerForAttendance(item, providers);
   const id = item.providerRecordId || profile?.id || "";
   const name = profile?.name || item.providerName || item.email;
   if (!name) return null;
   return {
     name,
     email: item.email,
-    serviceType: item.serviceType || profile?.serviceType || rule.serviceType,
+    serviceType: providerTypeForAttendance(item, providers) || rule.serviceType,
     profileId: id,
     profileUrl: id ? `/provider-details?id=${encodeURIComponent(id)}` : "",
   };
+}
+
+function providerTypeForAttendance(item, providers) {
+  const profile = providerForAttendance(item, providers);
+  return item.serviceType || profile?.serviceType || "";
 }
 
 function normalizeRule(record) {
