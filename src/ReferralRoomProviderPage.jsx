@@ -122,6 +122,7 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
               setForm={setForm}
               onSelect={(session) => chooseSession(session, "details")}
               onBrowse={() => setPage("browse")}
+              onManage={() => setPage("rsvps")}
               onSubmit={requestSeat}
               onRemove={removeRsvp}
               busy={busy}
@@ -179,7 +180,7 @@ function BrowseView({ sessions, attendance, onDetails, onRequest }) {
         </div>
         <aside>
           <Check size={20} />
-          <p><strong>Verified status</strong> · personally introduced within our community. Attending can help you qualify.</p>
+          <p><strong>Verified</strong> means the provider has been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes.</p>
         </aside>
       </section>
 
@@ -212,7 +213,7 @@ function BrowseView({ sessions, attendance, onDetails, onRequest }) {
   );
 }
 
-function DetailsView({ sessions, session, request, form, setForm, onSelect, onBrowse, onSubmit, onRemove, busy }) {
+function DetailsView({ sessions, session, request, form, setForm, onSelect, onBrowse, onManage, onSubmit, onRemove, busy }) {
   if (!session) return <RoomEmpty title="No room selected" text="Choose a room from Browse to see details." />;
   const fullRules = session.rules.filter((rule) => rule.remaining <= 0 || !rule.accepting);
   const openTypeCount = session.rules.filter((rule) => rule.remaining > 0 && rule.accepting && session.remaining > 0).length;
@@ -241,7 +242,7 @@ function DetailsView({ sessions, session, request, form, setForm, onSelect, onBr
             <RuleLedger rules={session.rules} />
           </section>
         </article>
-        <SideSeatPanel request={request} session={session} form={form} setForm={setForm} onSubmit={onSubmit} onRemove={onRemove} busy={busy} />
+        <SideSeatPanel request={request} session={session} form={form} setForm={setForm} onManage={onManage} onSubmit={onSubmit} onRemove={onRemove} busy={busy} />
       </div>
     </section>
   );
@@ -267,7 +268,7 @@ function RsvpView({ upcoming, attended, onManage, onBrowse }) {
         <Check />
         <div>
           <h2>About verification</h2>
-          <p>Attending and participating in The Referral Room may help your profile become <strong>Verified</strong> within The Healing Directory. You have {attended.length} attended room{attended.length === 1 ? "" : "s"} so far.</p>
+          <p><strong>Verified</strong> means the provider has been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes. You have {attended.length} attended room{attended.length === 1 ? "" : "s"} so far.</p>
         </div>
         <button className="room-solid-button" onClick={onBrowse}>Browse upcoming rooms</button>
       </section>
@@ -291,7 +292,7 @@ function RsvpColumn({ title, items, onManage }) {
   );
 }
 
-function SideSeatPanel({ request, session, form, setForm, onSubmit, onRemove, busy }) {
+function SideSeatPanel({ request, session, form, setForm, onManage, onSubmit, onRemove, busy }) {
   const openRules = (session.rules || []).filter((rule) => rule.accepting !== false && rule.remaining > 0 && session.remaining > 0);
   const selectedRule = (session.rules || []).find((item) => normalize(item.serviceType) === normalize(form?.serviceType));
   const waitlist = form?.serviceType && (session.remaining <= 0 || !selectedRule || selectedRule.remaining <= 0 || selectedRule.accepting === false);
@@ -303,7 +304,7 @@ function SideSeatPanel({ request, session, form, setForm, onSubmit, onRemove, bu
           <>
             <div className="seat-chip"><Status value={request.status} /><strong>{request.serviceType || "Provider type"}</strong></div>
             <p>{request.reason || (normalize(request.status).includes("accept") ? "Reviewed for fit" : "Awaiting manager review")}</p>
-            <button className="room-outline-button" onClick={onRequest || undefined}>Manage RSVP</button>
+            <button className="room-outline-button" type="button" onClick={onManage}>Manage RSVP</button>
             <button className="room-text-button" disabled={busy === request.id} onClick={() => onRemove(request)}>
               {busy === request.id ? "Removing..." : "Remove RSVP"}
             </button>
@@ -339,7 +340,7 @@ function SideSeatPanel({ request, session, form, setForm, onSubmit, onRemove, bu
       </section>
       <section className="verify-card">
         <h2>✓ About verification</h2>
-        <p>Attending and participating may help your profile become <strong>Verified</strong> within The Healing Directory.</p>
+        <p><strong>Verified</strong> means the provider has been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes.</p>
       </section>
     </aside>
   );

@@ -910,6 +910,198 @@
   }
 }
 
+/* Details/request cleanup */
+.room-experience .seat-request-form .room-field input,
+.room-experience .seat-request-form .room-field select {
+  height: 48px;
+  padding-inline: 14px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.room-experience .seat-request-form .room-field textarea {
+  min-height: 104px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.room-experience .seat-request-form .room-solid-button,
+.room-experience .seat-card .room-outline-button,
+.room-experience .seat-card .room-text-button {
+  min-height: 46px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.room-experience .seat-card p,
+.room-experience .verify-card p {
+  font-size: 15px;
+}
+
+@media (max-width: 760px) {
+  .room-experience {
+    padding-bottom: 36px;
+  }
+
+  .room-experience .room-nav {
+    position: static;
+    min-height: 0;
+    justify-content: flex-start;
+    padding: 10px 12px;
+  }
+
+  .room-experience .room-nav-group > span {
+    display: none;
+  }
+
+  .room-experience .room-segment {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .room-experience .room-segment button {
+    min-height: 38px;
+    padding-inline: 12px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+
+  .room-experience .referral-stage {
+    width: calc(100% - 20px);
+    padding-top: 18px;
+  }
+
+  .room-experience .room-back {
+    margin-bottom: 16px;
+  }
+
+  .room-experience .room-pills {
+    margin-bottom: 16px;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 3px;
+  }
+
+  .room-experience .room-pills button {
+    min-height: 40px;
+    padding: 0 14px;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+
+  .room-experience .room-detail-layout {
+    gap: 14px;
+  }
+
+  .room-experience .room-detail-panel,
+  .room-experience .seat-card,
+  .room-experience .verify-card {
+    padding: 18px 16px;
+    border-radius: 16px;
+  }
+
+  .room-experience .room-detail-panel h1 {
+    margin-top: 10px;
+    font-size: 38px;
+  }
+
+  .room-experience .room-date-line {
+    font-size: 12px;
+    letter-spacing: .08em;
+  }
+
+  .room-experience .room-description-large {
+    margin-top: 14px;
+    font-size: 16px;
+    line-height: 1.48;
+  }
+
+  .room-experience .room-detail-rule {
+    margin: 20px 0 14px;
+  }
+
+  .room-experience .room-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .room-experience .room-stat-grid > div {
+    min-height: 72px;
+    padding: 10px 6px;
+    border-radius: 12px;
+  }
+
+  .room-experience .room-stat-grid strong {
+    font-size: 28px;
+  }
+
+  .room-experience .room-stat-grid span {
+    font-size: 11px;
+  }
+
+  .room-experience .approved-panel {
+    margin: 0 -16px -18px;
+    padding: 18px 16px;
+  }
+
+  .room-experience .approved-panel h3,
+  .room-experience .seat-card h2,
+  .room-experience .verify-card h2 {
+    font-size: 12px;
+  }
+
+  .room-experience .approved-panel p {
+    font-size: 14px;
+  }
+
+  .room-experience .rule-ledger {
+    gap: 10px;
+  }
+
+  .room-experience .rule-ledger article {
+    min-height: 0;
+    padding: 14px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 15px;
+  }
+
+  .room-experience .rule-ledger article > span {
+    align-self: flex-start;
+    padding: 7px 11px;
+    font-size: 13px;
+  }
+
+  .room-experience .rule-provider-pills span {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .room-experience .seat-chip {
+    min-height: 0;
+    padding: 10px 12px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  .room-experience .seat-request-form {
+    gap: 12px;
+  }
+
+  .room-experience .room-availability {
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+}
+
 /* Provider-facing Referral Room */
 .referral-provider-page {
   min-height: 100vh;
