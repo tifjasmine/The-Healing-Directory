@@ -48,13 +48,13 @@ async function providerData(user) {
     list("sessions"), list("attendance"), list("rules"),
   ]);
   const attendance = attendanceRecords.map(normalizeAttendance);
-  const sessions = sessionRecords.map((record) => normalizeSession(record, attendance, ruleRecords))
+  const openSessions = sessionRecords.map((record) => normalizeSession(record, attendance, ruleRecords))
     .filter((session) => !["draft", "closed", "cancelled", "canceled"].includes(lower(session.status)))
-    .filter((session) => !session.date || dateValue(session.date) >= startOfToday())
     .sort((a, b) => dateValue(a.date) - dateValue(b.date));
+  const futureSessions = openSessions.filter((session) => !session.date || dateValue(session.date) >= startOfToday());
   return {
     serviceTypes: SERVICE_TYPES,
-    sessions,
+    sessions: futureSessions.length ? futureSessions : openSessions,
     attendance: attendance.filter((item) => lower(item.email) === lower(user.email) && !["cancelled", "canceled"].includes(lower(item.status))),
   };
 }

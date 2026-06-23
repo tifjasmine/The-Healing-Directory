@@ -6,6 +6,7 @@ const API = "/.netlify/functions/referral-room";
 export default function ReferralRoomProviderPage({ user, setNotice }) {
   const [data, setData] = React.useState({ sessions: [], attendance: [], serviceTypes: [] });
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState("");
   const [page, setPage] = React.useState("browse");
   const [selectedId, setSelectedId] = React.useState("");
   const [form, setForm] = React.useState({ serviceType: "", specialtyFocus: "", notes: "" });
@@ -15,9 +16,12 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
     setLoading(true);
     try {
       const payload = await api("provider-data");
-      setData(payload);
-      setSelectedId((current) => current || payload.sessions?.[0]?.id || "");
+      const nextData = normalizePayload(payload);
+      setData(nextData);
+      setLoadError("");
+      setSelectedId((current) => current || nextData.sessions?.[0]?.id || "");
     } catch (error) {
+      setLoadError(error.message || "Referral Room data could not load.");
       setNotice(error.message);
     } finally {
       setLoading(false);
@@ -91,6 +95,10 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
 
       {loading ? (
         <section className="referral-stage"><RoomLoading /></section>
+      ) : loadError ? (
+        <section className="referral-stage">
+          <RoomEmpty title="Referral Room could not load" text={loadError} />
+        </section>
       ) : (
         <>
           {page === "browse" ? (
@@ -443,6 +451,14 @@ async function api(action, options = {}) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || `Request failed (${response.status}).`);
   return payload;
+}
+
+function normalizePayload(payload) {
+  return {
+    sessions: Array.isArray(payload?.sessions) ? payload.sessions : Array.isArray(payload?.rooms) ? payload.rooms : [],
+    attendance: Array.isArray(payload?.attendance) ? payload.attendance : Array.isArray(payload?.requests) ? payload.requests : [],
+    serviceTypes: Array.isArray(payload?.serviceTypes) ? payload.serviceTypes : [],
+  };
 }
 
 function hydrateAttendance(items, sessions) {
