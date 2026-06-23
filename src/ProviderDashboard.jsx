@@ -175,17 +175,50 @@ function MyEventsPanel({ items, referralRequests }) {
 
 function ReferralPanel({ items, sessions }) {
   const activeRequests = items.filter((item) => !isCancelled(item.status));
-  const [openSessionId, setOpenSessionId] = React.useState("");
-  React.useEffect(() => {
-    if (!openSessionId && sessions[0]?.id) setOpenSessionId(sessions[0].id);
-  }, [openSessionId, sessions]);
   return <div className="referral-dashboard-card">
-    <HeartHandshake size={26} />
-    <h2>The Referral Room</h2>
+    <section className="referral-dashboard-hero">
+      <div>
+        <p className="dashboard-kicker"><span /> Provider Referral Circles</p>
+        <h2>The Referral Room</h2>
+        <p>Small, curated rooms for providers to meet, exchange thoughtful referrals, and build aligned community across New Jersey and Pennsylvania.</p>
+      </div>
+      <aside>
+        <HeartHandshake size={22} />
+        <p><strong>Verified status</strong> · attending and participating may help your profile become verified.</p>
+      </aside>
+    </section>
     <div className="referral-dashboard-sessions">
-      {sessions.length ? sessions.map((session) => <ReferralSessionSummary key={session.id} session={session} requests={activeRequests} open={openSessionId === session.id} onToggle={() => setOpenSessionId((current) => current === session.id ? "" : session.id)} />) : <div className="client-empty inline-empty"><h2>No upcoming rooms yet</h2><p>New dates for The Referral Room will appear here when seats open.</p></div>}
+      {sessions.length ? sessions.map((session) => <ReferralSessionCard key={session.id} session={session} requests={activeRequests} />) : <div className="client-empty inline-empty"><h2>No upcoming rooms yet</h2><p>New dates for The Referral Room will appear here when seats open.</p></div>}
     </div>
   </div>;
+}
+
+function ReferralSessionCard({ session, requests = [] }) {
+  const myRequest = requests.find((item) => item.sessionId === session.id);
+  const totalSeats = Number(session.totalSeats || 0);
+  const remaining = Number(session.remaining || 0);
+  const accepted = Number(session.accepted || Math.max(totalSeats - remaining, 0));
+  const progress = totalSeats ? Math.min(100, Math.max(0, (accepted / totalSeats) * 100)) : 0;
+  const ruleCount = (session.rules || []).filter((rule) => rule.accepting !== false).length || (session.rules || []).length;
+
+  return <article className="referral-room-preview-card">
+    <div className="referral-room-card-top">
+      <span className="referral-room-dot" />
+      <strong>{formatShortDate(session.date)}</strong>
+      {myRequest ? <span className={`status ${statusTone(myRequest.status)}`}>{myRequest.status || "Pending"}</span> : null}
+    </div>
+    <h3>{session.name || "The Referral Room"}</h3>
+    <p>{session.description || "A curated referral circle for aligned healing professionals."}</p>
+    <div className="referral-room-card-rule" />
+    <div className="referral-room-card-meta">
+      <strong>{remaining} of {totalSeats || remaining} seats open</strong>
+      <span>{ruleCount} provider type{ruleCount === 1 ? "" : "s"}</span>
+    </div>
+    <div className="referral-room-progress"><i style={{ width: `${progress}%` }} /></div>
+    <button className={myRequest ? "button provider-dashboard-secondary" : "button provider-dashboard-primary"} type="button" onClick={() => go(`/referral-room?room=${encodeURIComponent(session.id || "")}`)}>
+      {myRequest ? "Manage RSVP" : "Request a seat"} <ArrowRight size={16} />
+    </button>
+  </article>;
 }
 
 function ReferralSessionSummary({ session, requests = [], open, onToggle }) {
@@ -284,7 +317,9 @@ function providerTypeMatches(left, right) { const a = compact(left); const b = c
 function go(path) { window.location.assign(path); }
 async function signOut() { await logout().catch(() => null); window.location.assign("/"); }
 function formatDate(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(time); }
+function formatShortDate(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(time).replace(",", " ·"); }
 function formatDateTime(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(time); }
+function statusTone(value) { const clean = normalize(value); return clean.includes("accept") || clean.includes("attended") ? "good" : clean.includes("cancel") || clean.includes("declin") ? "bad" : "warm"; }
 function emptyPayload() { return { counts: {}, savedProviders: [], savedProviderItems: [], savedEvents: [], myEvents: [], referralRequests: [], referralSessions: [] }; }
 async function loadDashboard() {
   const [dashboard, savedProviders, myEvents, referralRoom] = await Promise.all([

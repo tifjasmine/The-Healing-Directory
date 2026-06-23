@@ -5405,8 +5405,20 @@
   color: #24493d;
 }
 
+.referral-dashboard-hero {
+  margin-bottom: 22px;
+  padding: clamp(22px, 3vw, 34px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+  gap: 24px;
+  align-items: center;
+  border: 1px solid #eadfce;
+  border-radius: 22px;
+  background: linear-gradient(110deg, #fff0d7 0%, #eef6ed 100%);
+}
+
 .referral-dashboard-card h2 {
-  margin: 12px 0 8px;
+  margin: 8px 0 10px;
   color: #24493d;
   font-family: "Cormorant Garamond", Georgia, serif;
   font-size: 38px;
@@ -5416,6 +5428,155 @@
   max-width: 620px;
   color: #756a61;
   line-height: 1.6;
+}
+
+.referral-dashboard-hero > div > p:last-child {
+  margin: 0;
+  font-size: 15px;
+}
+
+.referral-dashboard-hero aside {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .72);
+}
+
+.referral-dashboard-hero aside svg {
+  padding: 7px;
+  border-radius: 999px;
+  background: #1f5948;
+  color: #fff;
+}
+
+.referral-dashboard-hero aside p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.referral-dashboard-sessions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.referral-room-preview-card {
+  min-width: 0;
+  min-height: 330px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e4d8cc;
+  border-radius: 18px;
+  background: #fffdf9;
+  box-shadow: 0 10px 24px rgba(58, 44, 35, .045);
+}
+
+.referral-room-card-top,
+.referral-room-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.referral-room-card-top > strong {
+  color: #a86143;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.referral-room-card-top .status {
+  margin-left: auto;
+}
+
+.referral-room-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #3f835e;
+}
+
+.referral-room-preview-card h3 {
+  margin: 18px 0 0;
+  color: #24493d;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.referral-room-preview-card > p {
+  margin: 14px 0 0;
+  color: #6f786f;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.referral-room-card-rule {
+  height: 1px;
+  margin: auto 0 16px;
+  background: #eadfce;
+}
+
+.referral-room-card-meta {
+  justify-content: space-between;
+  color: #56635b;
+  font-size: 13px;
+}
+
+.referral-room-card-meta span {
+  color: #929a90;
+  font-weight: 900;
+}
+
+.referral-room-progress {
+  height: 10px;
+  margin: 10px 0 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #ebe1d2;
+}
+
+.referral-room-progress i {
+  height: 100%;
+  display: block;
+  background: #3f835e;
+}
+
+.referral-room-preview-card .button {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+}
+
+@media (max-width: 980px) {
+  .referral-dashboard-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .referral-dashboard-sessions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .referral-dashboard-card {
+    padding: 18px;
+  }
+
+  .referral-dashboard-hero {
+    padding: 22px;
+  }
+
+  .referral-dashboard-sessions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .dashboard-referral-events {
@@ -5615,13 +5776,6 @@
   .event-editor-page .editor-section-title h3 {
     font-size: 30px;
   }
-}
-
-/* Referral Room dashboard: show seat-rule details inside the dashboard tab. */
-.referral-dashboard-sessions {
-  display: grid;
-  gap: 14px;
-  margin: 18px 0;
 }
 
 .referral-session-summary {
