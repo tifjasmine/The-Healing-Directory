@@ -1,9 +1,8 @@
-import { getUser } from "./supabase-user.mjs";
+import { getUser } from "@netlify/identity";
 
 const BASE_ID = process.env.AIRTABLE_BASE_ID || "appACV3Zz7ngug6yt";
 const TOKEN = () => process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "";
 const TABLES = {
-  directory: process.env.AIRTABLE_DIRECTORY_TABLE_ID || "Directory",
   sessions: process.env.AIRTABLE_REFERRAL_ROOM_TABLE_ID || "The Referral Room",
   attendance: process.env.AIRTABLE_ATTENDANCE_TABLE_ID || "The Referral Room Attendance",
   rules: process.env.AIRTABLE_SEAT_RULES_TABLE_ID || "Referral Room Seat Rules",
@@ -21,7 +20,7 @@ const SERVICE_TYPES = [
 export default async function handler(request) {
   try {
     if (!TOKEN()) return json({ error: "AIRTABLE_TOKEN is not configured." }, 503);
-    const user = requireUser(await getUser(request));
+    const user = requireUser(await getUser());
     const url = new URL(request.url);
     const action = url.searchParams.get("action") || "provider-data";
 
@@ -34,7 +33,7 @@ export default async function handler(request) {
     if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
     const body = await request.json().catch(() => ({}));
     if (action === "request-seat") return json(await requestSeat(user, body));
-    if (action === "cancel-seat") return json(await cancelSeat(user, body));
+    if (action === "remove-rsvp") return json(await removeRsvp(user, body));
     if (action === "create-session") return json(await createSession(requireAdmin(user), body));
     if (action === "update-request") return json(await updateRequest(requireAdmin(user), body));
     if (action === "update-session") return json(await updateSession(requireAdmin(user), body));
@@ -45,65 +44,51 @@ export default async function handler(request) {
 }
 
 async function providerData(user) {
-  const [sessionRecords, attendanceRecords, ruleRecords, providerRecords] = await Promise.all([
-    list("sessions"), list("attendance"), list("rules"), list("directory").catch(() => []),
+  const [sessionRecords, attendanceRecords, ruleRecords] = await Promise.all([
+    list("sessions"), list("attendance"), list("rules"),
   ]);
   const attendance = attendanceRecords.map(normalizeAttendance);
-  const providers = providerIndex(providerRecords);
-  const provider = providers.byEmail?.get(lower(user.email)) || null;
-  const sessions = sessionRecords.map((record) => normalizeSession(record, attendance, ruleRecords, providers))
+  const sessions = sessionRecords.map((record) => normalizeSession(record, attendance, ruleRecords))
     .filter((session) => !["draft", "closed", "cancelled", "canceled"].includes(lower(session.status)))
     .filter((session) => !session.date || dateValue(session.date) >= startOfToday())
     .sort((a, b) => dateValue(a.date) - dateValue(b.date));
   return {
     serviceTypes: SERVICE_TYPES,
-    provider,
     sessions,
-    attendance: attendance.filter((item) => lower(item.email) === lower(user.email)),
+    attendance: attendance.filter((item) => lower(item.email) === lower(user.email) && !["cancelled", "canceled"].includes(lower(item.status))),
   };
 }
 
 async function managerData() {
-  const [sessionRecords, attendanceRecords, ruleRecords, providerRecords] = await Promise.all([
-    list("sessions"), list("attendance"), list("rules"), list("directory").catch(() => []),
+  const [sessionRecords, attendanceRecords, ruleRecords] = await Promise.all([
+    list("sessions"), list("attendance"), list("rules"),
   ]);
-  const providers = providerIndex(providerRecords);
   const requests = attendanceRecords.map(normalizeAttendance).sort((a, b) => dateValue(b.created) - dateValue(a.created));
-  const sessions = sessionRecords.map((record) => normalizeSession(record, requests, ruleRecords, providers)).sort((a, b) => dateValue(a.date) - dateValue(b.date));
+  const sessions = sessionRecords.map((record) => normalizeSession(record, requests, ruleRecords)).sort((a, b) => dateValue(a.date) - dateValue(b.date));
   return { requests, sessions, serviceTypes: SERVICE_TYPES };
 }
 
 async function requestSeat(user, body) {
   const sessionId = required(body.sessionId, "Session");
+  const serviceType = required(body.serviceType, "Service type");
   const sessionRecord = await get("sessions", sessionId);
-  const [attendanceRecords, ruleRecords, providerRecords] = await Promise.all([
-    list("attendance"),
-    list("rules"),
-    list("directory").catch(() => []),
-  ]);
-  const providers = providerIndex(providerRecords);
-  const providerProfile = providers.byEmail?.get(lower(user.email));
-  const serviceType = clean(body.serviceType) || providerProfile?.serviceType || "";
-  const existing = attendanceRecords.map(normalizeAttendance).find((item) => item.sessionId === sessionId && lower(item.email) === lower(user.email) && !countsAsCancelled(item.status));
+  const [attendanceRecords, ruleRecords] = await Promise.all([list("attendance"), list("rules")]);
+  const existing = attendanceRecords.map(normalizeAttendance).find((item) => item.sessionId === sessionId && lower(item.email) === lower(user.email) && !["cancelled", "canceled"].includes(lower(item.status)));
   if (existing) throw httpError(409, "You already requested this Referral Room date.");
 
-  const session = normalizeSession(sessionRecord, attendanceRecords.map(normalizeAttendance), ruleRecords, providers);
-  const rule = findMatchingRule(session.rules, serviceType);
+  const session = normalizeSession(sessionRecord, attendanceRecords.map(normalizeAttendance), ruleRecords);
+  const rule = session.rules.find((item) => lower(item.serviceType) === lower(serviceType));
   const roomFull = session.remaining <= 0;
-  const typeFull = Boolean(rule && (rule.remaining <= 0 || rule.accepting === false));
-  const status = "Pending";
-  const reason = roomFull ? "Room Full" : typeFull ? "Provider Type Full" : "";
+  const typeFull = !rule || rule.remaining <= 0 || rule.accepting === false;
+  const status = roomFull || typeFull ? "Waitlist" : "Pending";
+  const reason = roomFull ? "Room Full" : typeFull ? (rule ? "Provider Type Full" : "Provider Type Not Open") : "";
 
   const fields = {
     "Name": `${user.email} - ${session.name}`,
-  };
-  const optionalFields = {
-    "Session Name": [sessionId],
+    "Session": [sessionId],
     "Provider Email": user.email,
     "Email": user.email,
-    "Provider Name": providerProfile?.name || clean(body.providerName) || displayName(user),
-    "Provider": providerProfile?.id ? [providerProfile.id] : undefined,
-    "Directory Provider": providerProfile?.id ? [providerProfile.id] : undefined,
+    "Provider Name": clean(body.providerName) || displayName(user),
     "Service Type": serviceType,
     "Specialty Focus": clean(body.specialtyFocus),
     "Notes": clean(body.notes),
@@ -112,46 +97,25 @@ async function requestSeat(user, body) {
     "Waitlist Reason": reason,
     "Attended": false,
     "Verified After Attendance": false,
-    "Provider Type": serviceType,
-    "Referral Room Seat Rule": rule ? [rule.id] : undefined,
-    "Seat Rule": rule ? [rule.id] : undefined,
-    "Seat Rule ID": rule?.id,
-    "Referral Room Name": session.name,
-    "Session Date": session.date,
   };
   removeEmpty(fields);
-  removeEmpty(optionalFields);
-  const record = await createWithOptionalFields("attendance", fields, optionalFields);
-  const request = {
-    ...normalizeAttendance(record),
-    sessionId,
-    sessionName: session.name,
-    sessionDate: session.date,
-    serviceType,
-    specialtyFocus: clean(body.specialtyFocus),
-    notes: clean(body.notes),
-    status,
-    reason,
-    providerName: providerProfile?.name || clean(body.providerName) || displayName(user),
-    email: user.email,
-    providerRecordId: providerProfile?.id || "",
-    seatRuleId: rule?.id || "",
-  };
-  return { ok: true, request };
+  const record = await create("attendance", fields);
+  return { ok: true, request: normalizeAttendance(record) };
 }
 
-async function cancelSeat(user, body) {
-  const requestId = required(body.requestId, "Request ID");
-  const record = await get("attendance", requestId);
+async function removeRsvp(user, body) {
+  const id = required(body.requestId, "Request ID");
+  const record = await get("attendance", id);
   const request = normalizeAttendance(record);
-  if (lower(request.email) !== lower(user.email)) throw httpError(403, "This RSVP belongs to another account.");
-  if (request.attended || request.verified) throw httpError(400, "This room has already been attended, so the RSVP cannot be removed here.");
+  if (lower(request.email) !== lower(user.email)) throw httpError(403, "You can only remove your own RSVP.");
+
   const fields = {
     "Signup Status": "Cancelled",
     "Status": "Cancelled",
-    "Waitlist Reason": "Removed by provider",
+    "Attended": false,
+    "Verified After Attendance": false,
   };
-  return { ok: true, request: normalizeAttendance(await update("attendance", requestId, fields)) };
+  return { ok: true, request: normalizeAttendance(await update("attendance", id, fields)) };
 }
 
 async function createSession(user, body) {
@@ -174,16 +138,12 @@ async function createSession(user, body) {
   const session = await create("sessions", fields);
   for (let index = 0; index < rules.length; index += 1) {
     const rule = rules[index];
-    await createWithOptionalFields("rules", {
+    await create("rules", {
       "Name": `${name} - ${rule.serviceType}`,
-      "Service Type": rule.serviceType,
-    }, {
       "Session": [session.id],
-      "Referral Room Event": [session.id],
+      "Service Type": rule.serviceType,
       "Seat Limit": Number(rule.seatLimit),
-      "# Seat Limit": Number(rule.seatLimit),
       "Accepting": true,
-      "Accepting This Type": true,
       "Display Order": index + 1,
     });
   }
@@ -220,157 +180,46 @@ async function updateSession(user, body) {
   return { ok: true, session: normalizeSession(await update("sessions", id, fields), [], []), admin: user.email };
 }
 
-function normalizeSession(record, attendance, rules, providers = providerIndex([])) {
+function normalizeSession(record, attendance, rules) {
   const f = record.fields || {};
   const id = record.id;
   const linkedAttendance = attendance.filter((item) => item.sessionId === id);
-  const acceptedItems = linkedAttendance.filter((item) => countsAsAccepted(item.status));
-  const accepted = acceptedItems.length;
-  const rawRules = rules.map(normalizeRule)
-    .filter((rule) => rule.sessionId === id && rule.seatLimit > 0)
-    .sort((a, b) => (a.displayOrder || 999) - (b.displayOrder || 999) || a.serviceType.localeCompare(b.serviceType));
-  const explicitTotalSeats = Number(value(f, ["Total Seats", "Total Seat Cap", "Total Limit", "Seat Limit", "Capacity", "Max Seats", "Seats"])) || totalSeatsFromNotes(text(value(f, ["Notes"])));
-  const totalSeats = explicitTotalSeats || rawRules.reduce((sum, rule) => sum + rule.seatLimit, 0) || 8;
-  const sessionRules = rawRules.map((rule) => {
-    const acceptedForRule = linkedAttendance.filter((item) => countsAsAccepted(item.status) && (
-      (item.seatRuleId && item.seatRuleId === rule.id) || providerTypeMatches(providerTypeForAttendance(item, providers), rule.serviceType)
-    ));
-    return {
-      ...rule,
-      taken: acceptedForRule.length,
-      remaining: Math.max(rule.seatLimit - acceptedForRule.length, 0),
-      approvedProviders: acceptedForRule.map((item) => approvedProviderSummary(item, rule, providers)).filter(Boolean),
-    };
+  const accepted = linkedAttendance.filter((item) => ["accepted", "attended"].includes(lower(item.status))).length;
+  const totalSeats = Number(value(f, ["Total Seats", "Total Seat Cap", "Total Limit"])) || totalSeatsFromNotes(text(value(f, ["Notes"]))) || 8;
+  const sessionRules = rules.map(normalizeRule).filter((rule) => rule.sessionId === id).map((rule) => {
+    const taken = linkedAttendance.filter((item) => ["accepted", "attended"].includes(lower(item.status)) && lower(item.serviceType) === lower(rule.serviceType)).length;
+    return { ...rule, taken, remaining: Math.max(rule.seatLimit - taken, 0) };
   });
-  const ruleRemaining = sessionRules.length ? sessionRules.filter((rule) => rule.accepting !== false).reduce((sum, rule) => sum + rule.remaining, 0) : null;
   return {
     id, name: text(value(f, ["Session Name", "Name"])) || "Referral Room",
     date: text(value(f, ["Session Date", "Date"])), focus: text(value(f, ["Focus", "Theme"])),
     status: text(value(f, ["Status"])) || "Open", description: text(value(f, ["Description"])),
     notes: text(value(f, ["Notes", "Internal Notes"])), totalSeats, accepted,
-    remaining: ruleRemaining == null ? Math.max(totalSeats - accepted, 0) : Math.max(Math.min(totalSeats - accepted, ruleRemaining), 0),
-    approvedProviders: acceptedItems.map((item) => approvedProviderSummary(item, {}, providers)).filter(Boolean),
-    rules: sessionRules,
+    remaining: Math.max(totalSeats - accepted, 0), rules: sessionRules,
   };
 }
 
 function normalizeAttendance(record) {
   const f = record.fields || {};
-  const linkedSessionId = linked(value(f, ["Session", "Referral Room Event", "Session Name", "Referral Room", "Referral Room Session", "Room", "Event", "Referral Room Date"]))[0] || "";
-  const sessionName = text(value(f, [
-    "Session Name (from Session Name)",
-    "Session Name (from Referral Room Event)",
-    "Session Name (from Referral Room)",
-    "Session Name Lookup",
-    "Session",
-    "Referral Room Name",
-    "Room Name",
-  ])) || readableLinkedName(value(f, ["Session Name", "Referral Room Event"]));
-  const sessionDate = text(value(f, [
-    "Session Date (from Session Name)",
-    "Session Date (from Referral Room Event)",
-    "Session Date (from Referral Room)",
-    "Session Date Lookup",
-    "Session Date",
-  ]));
   return {
-    id: record.id, sessionId: linkedSessionId,
-    seatRuleId: linked(value(f, ["Referral Room Seat Rule", "Seat Rule", "Provider Type Rule"]))[0] || text(value(f, ["Seat Rule ID"])),
-    sessionName, sessionDate,
+    id: record.id, sessionId: linked(value(f, ["Session", "Referral Room", "Referral Room Session"]))[0] || "",
+    sessionName: text(value(f, ["Session Name", "Referral Room Name"])), sessionDate: text(value(f, ["Session Date"])),
     providerName: text(value(f, ["Provider Name", "Name"])), email: text(value(f, ["Provider Email", "Email"])),
-    providerRecordId: linked(value(f, ["Provider", "Directory Provider", "Provider Profile", "Directory Profile"]))[0] || "",
-    serviceType: text(value(f, ["Service Type", "Provider Type", "Provider Type / Service", "Category"])), specialtyFocus: text(value(f, ["Specialty Focus", "Focus"])),
+    serviceType: text(value(f, ["Service Type"])), specialtyFocus: text(value(f, ["Specialty Focus", "Focus"])),
     notes: text(value(f, ["Notes"])), status: text(value(f, ["Signup Status", "Status"])) || "Pending",
     reason: text(value(f, ["Waitlist Reason", "Reason"])), attended: truthy(value(f, ["Attended"])),
     verified: truthy(value(f, ["Verified After Attendance", "Verified"])), created: text(value(f, ["Created", "Created At"])),
   };
 }
 
-function normalizeProvider(record) {
-  const f = record.fields || {};
-  const email = text(value(f, ["Email", "Provider Email", "Contact Email"]));
-  const name = text(value(f, ["Name", "Full Name", "Provider Name", "Practice Name"])) || email;
-  return {
-    id: record.id,
-    email,
-    name,
-    serviceType: text(value(f, ["Provider Type", "Service Type", "Profession", "Profession / Title"])),
-    photo: imageUrl(value(f, ["Profile Photo URL", "Profile Photo", "Photo", "Headshot", "Image"])),
-  };
-}
-
-function providerIndex(records) {
-  const providers = records.map(normalizeProvider);
-  return {
-    byEmail: new Map(providers.filter((item) => item.email).map((item) => [lower(item.email), item])),
-    byId: new Map(providers.filter((item) => item.id).map((item) => [item.id, item])),
-  };
-}
-
-function providerForAttendance(item, providers) {
-  return providers.byId?.get(item.providerRecordId) || providers.byEmail?.get(lower(item.email));
-}
-
-function approvedProviderSummary(item, rule, providers) {
-  const profile = providerForAttendance(item, providers);
-  const id = text(item.providerRecordId || profile?.id || "");
-  const name = text(profile?.name || item.providerName || item.name || item.email);
-  if (!name) return null;
-  return {
-    name,
-    email: text(profile?.email || item.email),
-    serviceType: text(providerTypeForAttendance(item, providers) || rule.serviceType),
-    photo: imageUrl(profile?.photo || item.providerPhoto || item.photo || ""),
-    profileId: id,
-    profileUrl: id ? `/provider-details?id=${encodeURIComponent(id)}` : "",
-  };
-}
-
-function providerTypeForAttendance(item, providers) {
-  const profile = providerForAttendance(item, providers);
-  return item.serviceType || profile?.serviceType || "";
-}
-
 function normalizeRule(record) {
   const f = record.fields || {};
-  const acceptingValue = value(f, ["Accepting This Type", "Accepting", "Accepting Requests", "Open"]);
-  return {
-    id: record.id,
-    sessionId: linked(value(f, ["Referral Room Event", "Session", "Referral Room", "Referral Room Session", "Room", "Event", "Referral Room Date"]))[0] || "",
-    serviceType: text(value(f, ["Service Type", "Provider Type", "Provider Type / Service", "Category", "Name"])),
-    seatLimit: Number(value(f, ["# Seat Limit", "Seat Limit", "Category Cap", "Seats", "Seat Cap", "Limit", "Max Seats"])) || 0,
-    accepting: acceptingValue === undefined || truthy(acceptingValue),
-    displayOrder: Number(value(f, ["Display Order", "Order", "Sort"])) || 999,
-  };
+  return { id: record.id, sessionId: linked(value(f, ["Session", "Referral Room"]))[0] || "", serviceType: text(value(f, ["Service Type"])), seatLimit: Number(value(f, ["Seat Limit", "Category Cap"])) || 0, accepting: value(f, ["Accepting"]) === undefined || truthy(value(f, ["Accepting"])) };
 }
 
 async function list(key) { const records = []; let offset = ""; do { const params = new URLSearchParams({ pageSize: "100" }); if (offset) params.set("offset", offset); const result = await airtable(key, "", { params }); records.push(...(result.records || [])); offset = result.offset || ""; } while (offset); return records; }
 async function get(key, id) { return airtable(key, id); }
 async function create(key, fields) { return airtable(key, "", { method: "POST", body: { records: [{ fields }], typecast: true } }).then((result) => result.records[0]); }
-async function createWithOptionalFields(key, requiredFields, optionalFields) {
-  const optionalNames = Object.keys(optionalFields);
-  let fields = { ...requiredFields, ...optionalFields };
-  for (let attempt = 0; attempt <= optionalNames.length + 1; attempt += 1) {
-    try {
-      return await create(key, fields);
-    } catch (error) {
-      const exactMissing = error.message.match(/Unknown field name:\s*"([^"]+)"/i)?.[1];
-      const missing = exactMissing && Object.prototype.hasOwnProperty.call(fields, exactMissing)
-        ? exactMissing
-        : optionalNames.find((name) => Object.prototype.hasOwnProperty.call(fields, name) && error.message.includes(name));
-      if (missing) {
-        delete fields[missing];
-        continue;
-      }
-      if (attempt === 0 && optionalNames.length) {
-        fields = { ...requiredFields };
-        continue;
-      }
-      throw error;
-    }
-  }
-  return create(key, requiredFields);
-}
 async function update(key, id, fields) { return airtable(key, id, { method: "PATCH", body: { fields, typecast: true } }); }
 async function airtable(key, id = "", options = {}) {
   const query = options.params ? `?${options.params}` : "";
@@ -385,106 +234,12 @@ function requireUser(user) { if (!user?.email) throw httpError(401, "Please log 
 function requireAdmin(user) { if (!(user.roles || user.app_metadata?.roles || []).includes("admin")) throw httpError(403, "Administrator access is required."); return user; }
 function displayName(user) { return user.user_metadata?.full_name || user.userMetadata?.full_name || user.email.split("@")[0]; }
 function value(fields, names) { for (const name of names) if (Object.prototype.hasOwnProperty.call(fields, name)) return fields[name]; return undefined; }
-function text(input) {
-  if (input == null) return "";
-  if (Array.isArray(input)) return input.map(text).filter(Boolean).join(", ");
-  if (typeof input === "object") {
-    return text(
-      input.name ??
-      input.fullName ??
-      input.full_name ??
-      input.displayName ??
-      input.providerName ??
-      input.title ??
-      input.email ??
-      input.label ??
-      input.value ??
-      input.text ??
-      input.fields?.Name ??
-      input.fields?.name ??
-      input.fields?.["Full Name"] ??
-      input.fields?.["Provider Name"] ??
-      input.fields?.Email ??
-      input.fields?.email ??
-      ""
-    );
-  }
-  return clean(input);
-}
+function text(input) { if (input == null) return ""; if (Array.isArray(input)) return input.map(text).filter(Boolean).join(", "); if (typeof input === "object") return text(input.name ?? input.label ?? input.value ?? input.text ?? ""); return clean(input); }
 function linked(input) { return (Array.isArray(input) ? input : input ? [input] : []).map((item) => typeof item === "object" ? clean(item.id || item.value) : clean(item)).filter((item) => item.startsWith("rec")); }
-function readableLinkedName(input) {
-  return (Array.isArray(input) ? input : input ? [input] : [])
-    .map((item) => {
-      if (typeof item === "object") return clean(item.name || item.label || item.value || item.text || "");
-      const candidate = clean(item);
-      return candidate.startsWith("rec") ? "" : candidate;
-    })
-    .filter(Boolean)
-    .join(", ");
-}
 function truthy(input) { return input === true || ["true", "yes", "1", "checked", "accepted", "attended", "verified"].includes(lower(text(input))); }
-function clean(input) {
-  if (input == null) return "";
-  if (Array.isArray(input)) return input.map(clean).filter(Boolean).join(", ");
-  if (typeof input === "object") {
-    const fields = input.fields && typeof input.fields === "object" ? input.fields : {};
-    const candidates = [
-      input.name,
-      input.fullName,
-      input.full_name,
-      input.displayName,
-      input.providerName,
-      input.title,
-      input.label,
-      input.value,
-      input.text,
-      input.email,
-      fields.Name,
-      fields.name,
-      fields["Full Name"],
-      fields["Provider / Practice Name"],
-      fields["Provider Name"],
-      fields["Practice Name"],
-      fields["Display Name"],
-      fields.Email,
-      fields.email,
-      fields["Provider Email"],
-      input.id,
-    ];
-    for (const candidate of candidates) {
-      const textValue = clean(candidate);
-      if (textValue && textValue !== "[object Object]") return textValue;
-    }
-    return "";
-  }
-  return String(input).replace(/\s+/g, " ").trim();
-}
+function clean(input) { return String(input ?? "").replace(/\s+/g, " ").trim(); }
 function lower(input) { return clean(input).toLowerCase(); }
-function compact(input) { return lower(input).replace(/&/g, "and").replace(/[^a-z0-9]/g, ""); }
-function providerTypeMatches(left, right) {
-  const a = compact(left);
-  const b = compact(right);
-  return Boolean(a && b && (a === b || a.includes(b) || b.includes(a)));
-}
-function findMatchingRule(rules, serviceType) {
-  return rules.find((item) => providerTypeMatches(item.serviceType, serviceType)) || null;
-}
-function countsAsAccepted(status) {
-  const value = lower(status);
-  return Boolean(value && ["accept", "approv", "confirm", "attend", "verified"].some((word) => value.includes(word)));
-}
-function countsAsCancelled(status) {
-  const value = lower(status);
-  return Boolean(value && ["cancel", "declin", "remove"].some((word) => value.includes(word)));
-}
 function required(input, label) { const result = clean(input); if (!result) throw httpError(400, `${label} is required.`); return result; }
-function imageUrl(input) {
-  const first = Array.isArray(input) ? input[0] : input;
-  if (!first) return "";
-  if (typeof first === "string") return clean(first);
-  if (typeof first === "object") return clean(first.url || first.thumbnails?.full?.url || first.thumbnails?.large?.url || first.thumbnails?.small?.url || "");
-  return "";
-}
 function removeEmpty(fields, keepEmpty = false) { Object.keys(fields).forEach((key) => { if (fields[key] == null || (!keepEmpty && typeof fields[key] === "string" && !fields[key])) delete fields[key]; }); }
 function totalSeatsFromNotes(notes) { const match = String(notes || "").match(/Total Seats:\s*(\d+)/i); return match ? Number(match[1]) : 0; }
 function dateValue(input) { const time = new Date(input || 0).getTime(); return Number.isNaN(time) ? 0 : time; }
