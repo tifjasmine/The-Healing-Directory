@@ -98,8 +98,7 @@ async function requestSeat(user, body) {
     "Name": `${user.email} - ${session.name}`,
   };
   const optionalFields = {
-    "Referral Room Event": [sessionId],
-    "Session": [sessionId],
+    "Session Name": [sessionId],
     "Provider Email": user.email,
     "Email": user.email,
     "Provider Name": providerProfile?.name || clean(body.providerName) || displayName(user),
@@ -117,14 +116,28 @@ async function requestSeat(user, body) {
     "Referral Room Seat Rule": rule ? [rule.id] : undefined,
     "Seat Rule": rule ? [rule.id] : undefined,
     "Seat Rule ID": rule?.id,
-    "Session Name": [sessionId],
     "Referral Room Name": session.name,
     "Session Date": session.date,
   };
   removeEmpty(fields);
   removeEmpty(optionalFields);
   const record = await createWithOptionalFields("attendance", fields, optionalFields);
-  return { ok: true, request: normalizeAttendance(record) };
+  const request = {
+    ...normalizeAttendance(record),
+    sessionId,
+    sessionName: session.name,
+    sessionDate: session.date,
+    serviceType,
+    specialtyFocus: clean(body.specialtyFocus),
+    notes: clean(body.notes),
+    status,
+    reason,
+    providerName: providerProfile?.name || clean(body.providerName) || displayName(user),
+    email: user.email,
+    providerRecordId: providerProfile?.id || "",
+    seatRuleId: rule?.id || "",
+  };
+  return { ok: true, request };
 }
 
 async function cancelSeat(user, body) {
@@ -341,7 +354,10 @@ async function createWithOptionalFields(key, requiredFields, optionalFields) {
     try {
       return await create(key, fields);
     } catch (error) {
-      const missing = optionalNames.find((name) => Object.prototype.hasOwnProperty.call(fields, name) && error.message.includes(name));
+      const exactMissing = error.message.match(/Unknown field name:\s*"([^"]+)"/i)?.[1];
+      const missing = exactMissing && Object.prototype.hasOwnProperty.call(fields, exactMissing)
+        ? exactMissing
+        : optionalNames.find((name) => Object.prototype.hasOwnProperty.call(fields, name) && error.message.includes(name));
       if (missing) {
         delete fields[missing];
         continue;
@@ -407,7 +423,42 @@ function readableLinkedName(input) {
     .join(", ");
 }
 function truthy(input) { return input === true || ["true", "yes", "1", "checked", "accepted", "attended", "verified"].includes(lower(text(input))); }
-function clean(input) { return String(input ?? "").replace(/\s+/g, " ").trim(); }
+function clean(input) {
+  if (input == null) return "";
+  if (Array.isArray(input)) return input.map(clean).filter(Boolean).join(", ");
+  if (typeof input === "object") {
+    const fields = input.fields && typeof input.fields === "object" ? input.fields : {};
+    const candidates = [
+      input.name,
+      input.fullName,
+      input.full_name,
+      input.displayName,
+      input.providerName,
+      input.title,
+      input.label,
+      input.value,
+      input.text,
+      input.email,
+      fields.Name,
+      fields.name,
+      fields["Full Name"],
+      fields["Provider / Practice Name"],
+      fields["Provider Name"],
+      fields["Practice Name"],
+      fields["Display Name"],
+      fields.Email,
+      fields.email,
+      fields["Provider Email"],
+      input.id,
+    ];
+    for (const candidate of candidates) {
+      const textValue = clean(candidate);
+      if (textValue && textValue !== "[object Object]") return textValue;
+    }
+    return "";
+  }
+  return String(input).replace(/\s+/g, " ").trim();
+}
 function lower(input) { return clean(input).toLowerCase(); }
 function compact(input) { return lower(input).replace(/&/g, "and").replace(/[^a-z0-9]/g, ""); }
 function providerTypeMatches(left, right) {

@@ -69,11 +69,13 @@ export default function ReferralRoomProviderPage({ setNotice }) {
         method: "POST",
         body: { sessionId: session.id, serviceType, notes: form.notes },
       });
-      const roomName = cleanText(session.name) || "this room";
+      const request = result.request || {};
+      const roomName = cleanText(request.sessionName) || cleanText(session.name) || "this room";
+      const requestStatus = cleanText(request.status) || "Pending";
       showMessage(
-        result.request.status === "Waitlist"
-          ? `Waitlist request received for ${roomName}. It will stay visible in My RSVPs while it is reviewed.`
-          : `Request received for ${roomName}. Your RSVP is pending review and will stay visible in My RSVPs.`,
+        requestStatus === "Waitlist"
+          ? `Waitlist request sent for ${roomName}. You can track it in My RSVPs.`
+          : `Request sent for ${roomName}. You can track it in My RSVPs while it is reviewed.`,
       );
       await load();
       setView("details");
@@ -266,6 +268,7 @@ function RequestSeat({ session, provider, form, setForm, onBrowse, onSubmit, bus
     </article>
     <section className="request-form-panel">
       <h2>Request a seat</h2>
+      <p className="request-form-intro">Choose the provider type that best matches how you would join this room.</p>
       <label className="field">
         <span>Your provider type *</span>
         <select value={form.serviceType} onChange={(event) => setForm({ ...form, serviceType: event.target.value })}>
@@ -339,9 +342,11 @@ function ApprovedProviderList({ providers = [], fallbackType, emptyText = "No ap
 }
 
 function InlineMessage({ message, onClose }) {
-  return <div className={`referral-message ${message.type === "error" ? "error" : "success"}`}>
+  const payload = typeof message === "string" ? { text: message, type: "success" } : message;
+  if (!payload?.text) return null;
+  return <div className={`referral-message ${payload.type === "error" ? "error" : "success"}`} role={payload.type === "error" ? "alert" : "status"}>
     <CheckCircle2 size={20} />
-    <span>{message.text}</span>
+    <span>{payload.text}</span>
     <button onClick={onClose} aria-label="Dismiss message"><X size={18} /></button>
   </div>;
 }
@@ -469,16 +474,41 @@ function displayText(value) {
   if (typeof value === "string" || typeof value === "number") return String(value);
   if (Array.isArray(value)) return value.map(displayText).filter(Boolean).join(", ");
   if (typeof value === "object") {
-    const direct = value.name ?? value.fullName ?? value.full_name ?? value.displayName ?? value.providerName ?? value.title ?? value.label ?? value.value ?? value.text ?? value.email;
-    if (direct != null) return displayText(direct);
-    if (value.fields) return displayText(value.fields.Name ?? value.fields.name ?? value.fields["Full Name"] ?? value.fields["Provider Name"] ?? value.fields.Email ?? value.fields.email);
+    const fields = value.fields && typeof value.fields === "object" ? value.fields : {};
+    const candidates = [
+      value.name,
+      value.fullName,
+      value.full_name,
+      value.displayName,
+      value.providerName,
+      value.title,
+      value.label,
+      value.value,
+      value.text,
+      value.email,
+      fields.Name,
+      fields.name,
+      fields["Full Name"],
+      fields["Provider / Practice Name"],
+      fields["Provider Name"],
+      fields["Practice Name"],
+      fields["Display Name"],
+      fields.Email,
+      fields.email,
+      fields["Provider Email"],
+      value.id,
+    ];
+    for (const candidate of candidates) {
+      const text = displayText(candidate).trim();
+      if (text && text !== "[object Object]") return text;
+    }
     return "";
   }
   return String(value);
 }
 
 function cleanText(value) {
-  const text = displayText(value).trim();
+  const text = displayText(value).replace(/\s+/g, " ").trim();
   return text === "[object Object]" ? "" : text;
 }
 
