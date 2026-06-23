@@ -184,11 +184,19 @@ function normalizeSession(record, attendance, rules) {
   const f = record.fields || {};
   const id = record.id;
   const linkedAttendance = attendance.filter((item) => item.sessionId === id);
-  const accepted = linkedAttendance.filter((item) => ["accepted", "attended"].includes(lower(item.status))).length;
+  const acceptedAttendance = linkedAttendance.filter(isSeatHolding);
+  const accepted = acceptedAttendance.length;
   const totalSeats = Number(value(f, ["Total Seats", "Total Seat Cap", "Total Limit"])) || totalSeatsFromNotes(text(value(f, ["Notes"]))) || 8;
   const sessionRules = rules.map(normalizeRule).filter((rule) => rule.sessionId === id).map((rule) => {
-    const taken = linkedAttendance.filter((item) => ["accepted", "attended"].includes(lower(item.status)) && lower(item.serviceType) === lower(rule.serviceType)).length;
-    return { ...rule, taken, remaining: Math.max(rule.seatLimit - taken, 0) };
+    const approvedProviders = acceptedAttendance.filter((item) => providerTypeMatches(item.serviceType, rule.serviceType)).map((item) => ({
+      id: item.id,
+      name: item.providerName || item.email || "Approved provider",
+      email: item.email,
+      serviceType: item.serviceType,
+      status: item.status
+    }));
+    const taken = approvedProviders.length;
+    return { ...rule, taken, remaining: Math.max(rule.seatLimit - taken, 0), approvedProviders };
   });
   return {
     id, name: text(value(f, ["Session Name", "Name"])) || "Referral Room",
@@ -196,17 +204,27 @@ function normalizeSession(record, attendance, rules) {
     status: text(value(f, ["Status"])) || "Open", description: text(value(f, ["Description"])),
     notes: text(value(f, ["Notes", "Internal Notes"])), totalSeats, accepted,
     remaining: Math.max(totalSeats - accepted, 0), rules: sessionRules,
+    approvedProviders: acceptedAttendance.map((item) => ({
+      id: item.id,
+      name: item.providerName || item.email || "Approved provider",
+      email: item.email,
+      serviceType: item.serviceType,
+      status: item.status
+    })),
   };
 }
 
 function normalizeAttendance(record) {
   const f = record.fields || {};
+  const rawStatus = value(f, ["Signup Status", "Status", "RSVP Status", "Approval Status"]);
   return {
-    id: record.id, sessionId: linked(value(f, ["Session", "Referral Room", "Referral Room Session"]))[0] || "",
-    sessionName: text(value(f, ["Session Name", "Referral Room Name"])), sessionDate: text(value(f, ["Session Date"])),
+    id: record.id, sessionId: linked(value(f, ["Session Name", "Session", "Referral Room", "Referral Room Session"]))[0] || "",
+    sessionName: text(value(f, ["Session Name (from Session Name)", "Session Name", "Referral Room Name"])),
+    sessionDate: text(value(f, ["Session Date (from Session Name)", "Session Date"])),
     providerName: text(value(f, ["Provider Name", "Name"])), email: text(value(f, ["Provider Email", "Email"])),
-    serviceType: text(value(f, ["Service Type"])), specialtyFocus: text(value(f, ["Specialty Focus", "Focus"])),
-    notes: text(value(f, ["Notes"])), status: text(value(f, ["Signup Status", "Status"])) || "Pending",
+    serviceType: text(value(f, ["Service Type", "Provider Type", "Provider Type (from Provider)", "Provider Type (from Name)"])),
+    specialtyFocus: text(value(f, ["Specialty Focus", "Focus"])),
+    notes: text(value(f, ["Notes"])), status: text(rawStatus) || "Accepted",
     reason: text(value(f, ["Waitlist Reason", "Reason"])), attended: truthy(value(f, ["Attended"])),
     verified: truthy(value(f, ["Verified After Attendance", "Verified"])), created: text(value(f, ["Created", "Created At"])),
   };
@@ -246,6 +264,14 @@ function linked(input) { return (Array.isArray(input) ? input : input ? [input] 
 function truthy(input) { return input === true || ["true", "yes", "1", "checked", "accepted", "attended", "verified"].includes(lower(text(input))); }
 function clean(input) { return String(input ?? "").replace(/\s+/g, " ").trim(); }
 function lower(input) { return clean(input).toLowerCase(); }
+function compact(input) { return lower(input).replace(/&/g, "and").replace(/[^a-z0-9]/g, ""); }
+function providerTypeMatches(left, right) { const a = compact(left); const b = compact(right); return Boolean(a && b && (a === b || a.includes(b) || b.includes(a))); }
+function isSeatHolding(item) {
+  const status = lower(item?.status);
+  if (!status) return true;
+  if (status.includes("cancel") || status.includes("declin") || status.includes("waitlist") || status.includes("pending")) return false;
+  return status.includes("accept") || status.includes("attend") || status.includes("verified") || status.includes("approve");
+}
 function required(input, label) { const result = clean(input); if (!result) throw httpError(400, `${label} is required.`); return result; }
 function removeEmpty(fields, keepEmpty = false) { Object.keys(fields).forEach((key) => { if (fields[key] == null || (!keepEmpty && typeof fields[key] === "string" && !fields[key])) delete fields[key]; }); }
 function totalSeatsFromNotes(notes) { const match = String(notes || "").match(/Total Seats:\s*(\d+)/i); return match ? Number(match[1]) : 0; }

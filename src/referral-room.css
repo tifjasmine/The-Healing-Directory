@@ -539,12 +539,37 @@
   font-size: 19px;
 }
 
+.rule-ledger article > div {
+  min-width: 0;
+}
+
 .rule-ledger span {
   padding: 9px 16px;
   border-radius: 999px;
   background: #e7f0e9;
   color: #2d604c;
   font-weight: 900;
+}
+
+.rule-ledger p {
+  margin: 10px 0 0;
+  color: #8a918a;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.rule-provider-pills {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rule-provider-pills span {
+  padding: 8px 13px;
+  background: #e9f3ee;
+  color: #2d604c;
+  font-size: 14px;
 }
 
 .room-side-panel {
@@ -586,6 +611,28 @@
 .seat-card .room-text-button {
   width: 100%;
   margin-top: 14px;
+}
+
+.seat-request-form {
+  display: grid;
+  gap: 16px;
+}
+
+.seat-request-form .room-field {
+  gap: 7px;
+}
+
+.seat-request-form .room-field textarea {
+  min-height: 128px;
+}
+
+.seat-request-form .room-availability {
+  margin: 0;
+}
+
+.seat-request-form .room-solid-button {
+  width: 100%;
+  margin-top: 2px;
 }
 
 .verify-card {

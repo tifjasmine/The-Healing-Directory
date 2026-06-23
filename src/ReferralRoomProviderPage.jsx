@@ -18,9 +18,11 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
     try {
       const payload = await api("provider-data");
       const nextData = normalizePayload(payload);
+      const requestedRoom = new URLSearchParams(window.location.search).get("room") || "";
       setData(nextData);
       setLoadError("");
-      setSelectedId((current) => current || nextData.sessions?.[0]?.id || "");
+      setSelectedId((current) => requestedRoom || current || nextData.sessions?.[0]?.id || "");
+      if (requestedRoom) setPage("details");
     } catch (error) {
       setLoadError(error.message || "Referral Room data could not load.");
       setNotice(error.message);
@@ -107,7 +109,7 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
               sessions={sessions}
               attendance={attendance}
               onDetails={(session) => chooseSession(session, "details")}
-              onRequest={(session) => chooseSession(session, "request")}
+              onRequest={(session) => chooseSession(session, "details")}
             />
           ) : null}
 
@@ -116,23 +118,10 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
               sessions={sessions}
               session={selectedSession}
               request={selectedRequest}
-              onSelect={(session) => chooseSession(session, "details")}
-              onBrowse={() => setPage("browse")}
-              onRequest={() => setPage("request")}
-              onRemove={removeRsvp}
-              busy={busy}
-            />
-          ) : null}
-
-          {page === "request" ? (
-            <RequestView
-              sessions={sessions}
-              session={selectedSession}
-              request={selectedRequest}
-              serviceTypes={data.serviceTypes || []}
               form={form}
               setForm={setForm}
-              onSelect={(session) => chooseSession(session, "request")}
+              onSelect={(session) => chooseSession(session, "details")}
+              onBrowse={() => setPage("browse")}
               onSubmit={requestSeat}
               onRemove={removeRsvp}
               busy={busy}
@@ -160,7 +149,6 @@ function RoomNav({ page, setPage }) {
   const pages = [
     ["browse", "Browse"],
     ["details", "Room details"],
-    ["request", "Request a seat"],
     ["rsvps", "My RSVPs"],
   ];
 
@@ -224,7 +212,7 @@ function BrowseView({ sessions, attendance, onDetails, onRequest }) {
   );
 }
 
-function DetailsView({ sessions, session, request, onSelect, onBrowse, onRequest, onRemove, busy }) {
+function DetailsView({ sessions, session, request, form, setForm, onSelect, onBrowse, onSubmit, onRemove, busy }) {
   if (!session) return <RoomEmpty title="No room selected" text="Choose a room from Browse to see details." />;
   const fullRules = session.rules.filter((rule) => rule.remaining <= 0 || !rule.accepting);
   const openTypeCount = session.rules.filter((rule) => rule.remaining > 0 && rule.accepting && session.remaining > 0).length;
@@ -253,63 +241,7 @@ function DetailsView({ sessions, session, request, onSelect, onBrowse, onRequest
             <RuleLedger rules={session.rules} />
           </section>
         </article>
-        <SideSeatPanel request={request} session={session} onRequest={onRequest} onRemove={onRemove} busy={busy} />
-      </div>
-    </section>
-  );
-}
-
-function RequestView({ sessions, session, request, serviceTypes, form, setForm, onSelect, onSubmit, onRemove, busy }) {
-  if (!session) return <RoomEmpty title="No room selected" text="Choose a room from Browse before requesting a seat." />;
-  const rule = session.rules.find((item) => normalize(item.serviceType) === normalize(form.serviceType));
-  const waitlist = form.serviceType && (session.remaining <= 0 || !rule || rule.remaining <= 0 || !rule.accepting);
-
-  return (
-    <section className="referral-stage">
-      <RoomPills sessions={sessions} selected={session.id} onSelect={onSelect} />
-      <div className="room-detail-layout">
-        <form className="room-request-panel" onSubmit={onSubmit}>
-          <p className="room-date-line">{formatDate(session.date)}</p>
-          <h1>Request a seat</h1>
-          <p className="room-description-large">Choose the provider type you want represented in this room. The manager will review fit and seat balance before approval.</p>
-          <div className="room-form-grid">
-            <RoomSelect
-              label="Provider type"
-              value={form.serviceType}
-              onChange={(event) => setForm({ ...form, serviceType: event.target.value })}
-              options={serviceTypes}
-              placeholder="Select your provider type"
-            />
-            <RoomField
-              label="Specialty / focus area"
-              value={form.specialtyFocus}
-              onChange={(event) => setForm({ ...form, specialtyFocus: event.target.value })}
-              placeholder="Postpartum, trauma, pelvic health, nervous system..."
-            />
-            <RoomField
-              label="Optional note"
-              value={form.notes}
-              onChange={(event) => setForm({ ...form, notes: event.target.value })}
-              placeholder="Anything helpful about your work, fit for the theme, or referral interests."
-              textarea
-            />
-          </div>
-          <div className={waitlist ? "room-availability warm" : "room-availability"}>
-            <strong>{form.serviceType || "Choose your provider type"}</strong>
-            <span>
-              {!form.serviceType
-                ? "Availability will appear after you choose a provider type."
-                : waitlist
-                  ? "This provider type is waitlist-only for this room."
-                  : `${Math.min(rule.remaining, session.remaining)} seat${Math.min(rule.remaining, session.remaining) === 1 ? "" : "s"} open for this provider type.`}
-            </span>
-          </div>
-          <button className={waitlist ? "room-solid-button warm" : "room-solid-button"} disabled={busy === "request" || Boolean(request) || !form.serviceType}>
-            {busy === "request" ? <RefreshCw className="spin" size={16} /> : null}
-            {request ? `Already ${request.status}` : waitlist ? "Join waitlist" : "Request this date"}
-          </button>
-        </form>
-        <SideSeatPanel request={request} session={session} onRequest={null} onRemove={onRemove} busy={busy} />
+        <SideSeatPanel request={request} session={session} form={form} setForm={setForm} onSubmit={onSubmit} onRemove={onRemove} busy={busy} />
       </div>
     </section>
   );
@@ -359,7 +291,10 @@ function RsvpColumn({ title, items, onManage }) {
   );
 }
 
-function SideSeatPanel({ request, session, onRequest, onRemove, busy }) {
+function SideSeatPanel({ request, session, form, setForm, onSubmit, onRemove, busy }) {
+  const openRules = (session.rules || []).filter((rule) => rule.accepting !== false && rule.remaining > 0 && session.remaining > 0);
+  const selectedRule = (session.rules || []).find((item) => normalize(item.serviceType) === normalize(form?.serviceType));
+  const waitlist = form?.serviceType && (session.remaining <= 0 || !selectedRule || selectedRule.remaining <= 0 || selectedRule.accepting === false);
   return (
     <aside className="room-side-panel">
       <section className="seat-card">
@@ -374,10 +309,32 @@ function SideSeatPanel({ request, session, onRequest, onRemove, busy }) {
             </button>
           </>
         ) : (
-          <>
+          <form className="seat-request-form" onSubmit={onSubmit}>
             <p>{session.remaining} of {session.totalSeats} seats open</p>
-            {onRequest ? <button className="room-solid-button" onClick={onRequest}>Request a seat</button> : null}
-          </>
+            <RoomSelect
+              label="Your provider type"
+              value={form.serviceType}
+              onChange={(event) => setForm({ ...form, serviceType: event.target.value })}
+              options={openRules.map((rule) => `${rule.serviceType} (${Math.min(rule.remaining, session.remaining)} open)`)}
+              optionValues={openRules.map((rule) => rule.serviceType)}
+              placeholder="Select your provider type"
+            />
+            <RoomField
+              label="Optional note"
+              value={form.notes}
+              onChange={(event) => setForm({ ...form, notes: event.target.value })}
+              placeholder="Share anything helpful about your practice or why you would like to join this room."
+              textarea
+            />
+            {form.serviceType ? <div className={waitlist ? "room-availability warm" : "room-availability"}>
+              <strong>{form.serviceType}</strong>
+              <span>{waitlist ? "This provider type is waitlist-only for this room." : `${Math.min(selectedRule.remaining, session.remaining)} seat${Math.min(selectedRule.remaining, session.remaining) === 1 ? "" : "s"} open for this provider type.`}</span>
+            </div> : null}
+            <button className={waitlist ? "room-solid-button warm" : "room-solid-button"} disabled={busy === "request" || !form.serviceType}>
+              {busy === "request" ? <RefreshCw className="spin" size={16} /> : null}
+              {waitlist ? "Join waitlist" : "Submit request"}
+            </button>
+          </form>
         )}
       </section>
       <section className="verify-card">
@@ -394,7 +351,14 @@ function RuleLedger({ rules }) {
     <div className="rule-ledger">
       {rules.map((rule) => (
         <article key={rule.id || rule.serviceType}>
-          <strong>{rule.serviceType}</strong>
+          <div>
+            <strong>{rule.serviceType}</strong>
+            {rule.approvedProviders?.length ? (
+              <div className="rule-provider-pills">
+                {rule.approvedProviders.map((provider) => <span key={provider.id || provider.email || provider.name}>{provider.name}</span>)}
+              </div>
+            ) : <p>No approved providers in this seat yet.</p>}
+          </div>
           <span>{rule.remaining}/{rule.seatLimit} open</span>
         </article>
       ))}
@@ -410,8 +374,8 @@ function RoomField({ label, textarea, ...props }) {
   return <label className={textarea ? "room-field full" : "room-field"}><span>{label}</span>{textarea ? <textarea rows="5" {...props} /> : <input {...props} />}</label>;
 }
 
-function RoomSelect({ label, options, placeholder, ...props }) {
-  return <label className="room-field"><span>{label}</span><select {...props}><option value="">{placeholder}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>;
+function RoomSelect({ label, options, optionValues, placeholder, ...props }) {
+  return <label className="room-field"><span>{label}</span><select {...props}><option value="">{placeholder}</option>{options.map((option, index) => <option key={optionValues?.[index] || option} value={optionValues?.[index] || option}>{option}</option>)}</select></label>;
 }
 
 function RoomStat({ label, value }) {
