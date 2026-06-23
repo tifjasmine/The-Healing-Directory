@@ -300,14 +300,14 @@ function providerForAttendance(item, providers) {
 
 function approvedProviderSummary(item, rule, providers) {
   const profile = providerForAttendance(item, providers);
-  const id = item.providerRecordId || profile?.id || "";
-  const name = profile?.name || item.providerName || item.email;
+  const id = text(item.providerRecordId || profile?.id || "");
+  const name = text(profile?.name || item.providerName || item.name || item.email);
   if (!name) return null;
   return {
     name,
-    email: item.email,
-    serviceType: providerTypeForAttendance(item, providers) || rule.serviceType,
-    photo: profile?.photo || "",
+    email: text(profile?.email || item.email),
+    serviceType: text(providerTypeForAttendance(item, providers) || rule.serviceType),
+    photo: imageUrl(profile?.photo || item.providerPhoto || item.photo || ""),
     profileId: id,
     profileUrl: id ? `/provider-details?id=${encodeURIComponent(id)}` : "",
   };
@@ -369,7 +369,32 @@ function requireUser(user) { if (!user?.email) throw httpError(401, "Please log 
 function requireAdmin(user) { if (!(user.roles || user.app_metadata?.roles || []).includes("admin")) throw httpError(403, "Administrator access is required."); return user; }
 function displayName(user) { return user.user_metadata?.full_name || user.userMetadata?.full_name || user.email.split("@")[0]; }
 function value(fields, names) { for (const name of names) if (Object.prototype.hasOwnProperty.call(fields, name)) return fields[name]; return undefined; }
-function text(input) { if (input == null) return ""; if (Array.isArray(input)) return input.map(text).filter(Boolean).join(", "); if (typeof input === "object") return text(input.name ?? input.label ?? input.value ?? input.text ?? ""); return clean(input); }
+function text(input) {
+  if (input == null) return "";
+  if (Array.isArray(input)) return input.map(text).filter(Boolean).join(", ");
+  if (typeof input === "object") {
+    return text(
+      input.name ??
+      input.fullName ??
+      input.full_name ??
+      input.displayName ??
+      input.providerName ??
+      input.title ??
+      input.email ??
+      input.label ??
+      input.value ??
+      input.text ??
+      input.fields?.Name ??
+      input.fields?.name ??
+      input.fields?.["Full Name"] ??
+      input.fields?.["Provider Name"] ??
+      input.fields?.Email ??
+      input.fields?.email ??
+      ""
+    );
+  }
+  return clean(input);
+}
 function linked(input) { return (Array.isArray(input) ? input : input ? [input] : []).map((item) => typeof item === "object" ? clean(item.id || item.value) : clean(item)).filter((item) => item.startsWith("rec")); }
 function readableLinkedName(input) {
   return (Array.isArray(input) ? input : input ? [input] : [])
