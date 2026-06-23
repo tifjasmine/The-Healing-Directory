@@ -329,14 +329,18 @@ function ApprovedProviderList({ providers = [], fallbackType, emptyText = "No ap
   return <div className="approved-provider-list">
     {providers.map((provider, index) => {
       const item = normalizeProviderSummary(provider, fallbackType);
+      const providerName = cleanText(item.name) || "Approved provider";
+      const providerType = cleanText(item.serviceType) || cleanText(fallbackType);
+      const photo = cleanText(item.photo);
+      const profileUrl = cleanText(item.profileUrl);
       const content = <>
-        {item.photo ? <img src={item.photo} alt="" /> : <span>{initials(item.name)}</span>}
-        <b>{item.name}</b>
-        {item.serviceType ? <small>{item.serviceType}</small> : null}
+        {photo ? <img src={photo} alt="" /> : <span>{initials(providerName)}</span>}
+        <b>{providerName}</b>
+        {providerType ? <small>{providerType}</small> : null}
       </>;
-      return item.profileUrl
-        ? <a key={`${item.name}-${index}`} href={item.profileUrl}>{content}</a>
-        : <div key={`${item.name}-${index}`}>{content}</div>;
+      return profileUrl
+        ? <a key={`${providerName}-${index}`} href={profileUrl}>{content}</a>
+        : <div key={`${providerName}-${index}`}>{content}</div>;
     })}
   </div>;
 }
@@ -386,20 +390,27 @@ function providerChoices(session, provider) {
 }
 
 function normalizeProviderSummary(provider, fallbackType = "Provider") {
+  if (Array.isArray(provider)) return normalizeProviderSummary(provider[0], fallbackType);
+  if (!provider || (typeof provider !== "object" && typeof provider !== "string" && typeof provider !== "number")) {
+    return { name: "Approved provider", serviceType: fallbackType, photo: "", profileUrl: "" };
+  }
   if (provider?.fields) return normalizeProviderSummary({ id: provider.id, ...provider.fields }, fallbackType);
   if (provider?.record) return normalizeProviderSummary(provider.record, fallbackType);
   if (provider?.provider) return normalizeProviderSummary(provider.provider, fallbackType);
   if (provider?.linkedProvider) return normalizeProviderSummary(provider.linkedProvider, fallbackType);
   if (provider?.approvedProvider) return normalizeProviderSummary(provider.approvedProvider, fallbackType);
   if (provider?.name && typeof provider.name === "object") return normalizeProviderSummary({ ...provider, name: displayText(provider.name) }, fallbackType);
-  if (typeof provider === "string") return { name: provider, serviceType: fallbackType, photo: "", profileUrl: "" };
-  const name = cleanText(fieldFromObject(provider, ["Name", "name", "Full Name", "full_name", "Provider / Practice Name", "Provider Name", "providerName", "Practice Name", "Display Name", "displayName", "Email", "Provider Email", "email"])) || "Approved provider";
-  const rawProfileId = cleanText(fieldFromObject(provider, ["Profile ID", "Provider Record ID", "recordId", "id"])) || cleanText(provider?.id) || cleanText(provider?.profileId);
+  if (typeof provider === "string" || typeof provider === "number") {
+    const name = cleanText(provider);
+    return { name: name || "Approved provider", serviceType: fallbackType, photo: "", profileUrl: "" };
+  }
+  const name = cleanText(fieldFromObject(provider, ["Name", "name", "Full Name", "Full name", "fullName", "full_name", "Provider", "Provider / Practice Name", "Provider Name", "Provider (from Directory)", "Provider Name (from Directory)", "providerName", "Practice Name", "Display Name", "displayName", "Email", "Provider Email", "email"])) || "Approved provider";
+  const rawProfileId = cleanText(fieldFromObject(provider, ["Profile ID", "Provider Record ID", "Directory Record ID", "Provider ID", "recordId", "id"])) || cleanText(provider?.id) || cleanText(provider?.profileId);
   return {
     name,
-    serviceType: cleanText(fieldFromObject(provider, ["Provider Type", "Service Type", "serviceType", "providerType"])) || fallbackType,
-    photo: attachmentUrl(fieldFromObject(provider, ["Profile Photo", "Profile Photo URL", "Photo", "photo", "photoUrl", "profilePhoto"])),
-    profileUrl: cleanText(fieldFromObject(provider, ["Profile URL", "profileUrl"])) || (rawProfileId ? `/provider-details?id=${encodeURIComponent(rawProfileId)}` : ""),
+    serviceType: cleanText(fieldFromObject(provider, ["Provider Type", "Provider Type (from Directory)", "Provider Type Name", "Service Type", "Service Type (from Directory)", "serviceType", "providerType", "Type"])) || fallbackType,
+    photo: attachmentUrl(fieldFromObject(provider, ["Profile Photo", "Profile Photo (from Directory)", "Profile Photo URL", "Profile Photo URL (from Directory)", "Photo", "Headshot", "photo", "photoUrl", "profilePhoto"])),
+    profileUrl: cleanText(fieldFromObject(provider, ["Profile URL", "Directory URL", "Provider URL", "profileUrl"])) || (rawProfileId ? `/provider-details?id=${encodeURIComponent(rawProfileId)}` : ""),
   };
 }
 
@@ -448,7 +459,7 @@ function roomDescription(session) {
 function sessionOpenText(session) {
   const open = Number(session?.remaining || 0);
   const total = Number(session?.totalSeats || 0);
-  return `${open} of ${total || open} seats open`;
+  return `${open}/${total || open} seats open`;
 }
 
 function providerTypeCount(session) {
