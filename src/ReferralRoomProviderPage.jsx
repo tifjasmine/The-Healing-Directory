@@ -1,5 +1,6 @@
 import React from "react";
 import { Check, RefreshCw, Sparkles } from "lucide-react";
+import { getAccessToken, refreshSession } from "./authClient.js";
 
 const API = "/.netlify/functions/referral-room";
 
@@ -173,14 +174,6 @@ function RoomNav({ page, setPage }) {
               {label}
             </button>
           ))}
-        </div>
-      </div>
-      <div className="room-nav-group room-option-group">
-        <span>Option</span>
-        <div className="room-segment">
-          <button className="active">A <em>{page === "rsvps" ? "Columns" : page === "browse" ? "Cards" : "Split panel"}</em></button>
-          <button>B <em>{page === "rsvps" ? "Grouped" : "Seat ledger"}</em></button>
-          <button>C <em>{page === "rsvps" ? "Timeline" : "Grouped"}</em></button>
         </div>
       </div>
     </header>
@@ -442,10 +435,17 @@ function RoomEmpty({ title, text }) {
 async function api(action, options = {}) {
   const url = new URL(API, window.location.origin);
   url.searchParams.set("action", action);
+  let token = getAccessToken();
+  if (!token) token = (await refreshSession().catch(() => null))?.access_token || getAccessToken();
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+    headers["X-Supabase-Access-Token"] = token;
+  }
   const response = await fetch(url, {
     method: options.method || "GET",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   const payload = await response.json().catch(() => ({}));

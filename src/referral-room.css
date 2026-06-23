@@ -102,7 +102,7 @@
   padding: 0 max(24px, calc((100vw - 1680px) / 2));
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 28px;
   border-bottom: 1px solid var(--room-line);
   background: rgba(244, 238, 223, .94);
@@ -150,11 +150,6 @@
   background: var(--room-panel);
   color: var(--room-ink);
   box-shadow: 0 4px 12px rgba(60, 49, 34, .12);
-}
-
-.room-option-group .room-segment button.active {
-  background: var(--room-ink);
-  color: #fff;
 }
 
 .room-segment em {
@@ -780,10 +775,6 @@
 }
 
 @media (max-width: 1180px) {
-  .room-option-group {
-    display: none;
-  }
-
   .room-hero {
     grid-template-columns: 1fr;
   }

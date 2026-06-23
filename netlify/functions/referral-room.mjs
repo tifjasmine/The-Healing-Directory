@@ -140,10 +140,10 @@ async function createSession(user, body) {
     const rule = rules[index];
     await create("rules", {
       "Name": `${name} - ${rule.serviceType}`,
-      "Session": [session.id],
+      "Referral Room Event": [session.id],
       "Service Type": rule.serviceType,
-      "Seat Limit": Number(rule.seatLimit),
-      "Accepting": true,
+      "# Seat Limit": Number(rule.seatLimit),
+      "Accepting This Type": true,
       "Display Order": index + 1,
     });
   }
@@ -214,7 +214,14 @@ function normalizeAttendance(record) {
 
 function normalizeRule(record) {
   const f = record.fields || {};
-  return { id: record.id, sessionId: linked(value(f, ["Session", "Referral Room"]))[0] || "", serviceType: text(value(f, ["Service Type"])), seatLimit: Number(value(f, ["Seat Limit", "Category Cap"])) || 0, accepting: value(f, ["Accepting"]) === undefined || truthy(value(f, ["Accepting"])) };
+  const accepting = value(f, ["Accepting This Type", "Accepting", "Open", "Active"]);
+  return {
+    id: record.id,
+    sessionId: linked(value(f, ["Referral Room Event", "Session", "Referral Room", "Referral Room Session"]))[0] || "",
+    serviceType: text(value(f, ["Service Type", "Provider Type", "Provider Category"])),
+    seatLimit: Number(value(f, ["# Seat Limit", "Seat Limit", "Category Cap", "Seats"])) || 0,
+    accepting: accepting === undefined || truthy(accepting)
+  };
 }
 
 async function list(key) { const records = []; let offset = ""; do { const params = new URLSearchParams({ pageSize: "100" }); if (offset) params.set("offset", offset); const result = await airtable(key, "", { params }); records.push(...(result.records || [])); offset = result.offset || ""; } while (offset); return records; }
