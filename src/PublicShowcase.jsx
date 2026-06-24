@@ -517,11 +517,15 @@ function DirectoryMultiSelect({ label, values = [], options = [], placeholder, o
       <ChevronDown size={16} />
     </button>
     {values.length ? <div className="selected-filter-chips">{values.map((value) => <button type="button" key={value} onClick={() => onToggle(value)}>{value}<X size={13} /></button>)}</div> : null}
-    {open ? <div className="multi-select-menu">
+    {open ? <div className="multi-select-menu" onPointerDown={(event) => event.stopPropagation()}>
       <p className="multi-select-hint">Select all that apply</p>
       {options.length ? options.map((option) => {
         const selected = values.includes(option);
-        return <button type="button" key={option} className={selected ? "selected" : ""} onClick={() => onToggle(option)}>
+        return <button type="button" key={option} className={selected ? "selected" : ""} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onToggle(option);
+        }}>
           <span>{selected ? <CheckCircle2 size={14} /> : null}</span>
           {option}
         </button>;

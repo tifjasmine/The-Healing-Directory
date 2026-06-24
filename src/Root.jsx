@@ -15,7 +15,7 @@ import PrivacyPage from "./PrivacyPage.jsx";
 import "./event-workspace-theme.css";
 
 const REFERRAL_ROUTES = new Set(["/referral-room", "/referral-room-admin", "/referral-room-manager"]);
-const SHOWCASE_ROUTES = new Set(["/", "/providers", "/provider-details", "/events", "/event-details"]);
+const SHOWCASE_ROUTES = new Set(["/", "/index.html", "/providers", "/provider-details", "/events", "/event-details"]);
 const AUTH_ROUTES = new Set(["/login", "/signup", "/provider-signup", "/forgot-password", "/reset-password"]);
 const LEGAL_ROUTES = new Set(["/terms", "/privacy"]);
 const EVENT_WORKSPACE_ROUTES = new Set(["/my-events", "/add-event", "/edit-event"]);

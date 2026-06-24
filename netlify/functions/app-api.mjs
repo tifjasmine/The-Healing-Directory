@@ -790,7 +790,7 @@ function normalizeProvider(record) {
     photo: attachment(pick(f, FIELDS.provider.photo)) || text(pick(f, FIELDS.provider.photoUrl)), bio: text(pick(f, FIELDS.provider.bio)),
     profession: text(pick(f, FIELDS.provider.profession)), pronouns: text(pick(f, FIELDS.provider.pronouns)),
     providerType: array(pick(f, FIELDS.provider.type)), services: array(pick(f, FIELDS.provider.services)),
-    support: array(pick(f, FIELDS.provider.support)), populations: array(pick(f, FIELDS.provider.population)),
+    support: arrayExact(pick(f, FIELDS.provider.support)), populations: array(pick(f, FIELDS.provider.population)),
     location: array(pick(f, FIELDS.provider.location)), payment: array(pick(f, FIELDS.provider.payment)),
     identity: array(pick(f, FIELDS.provider.identity)), genderIdentity: array(pick(f, FIELDS.provider.genderIdentity)),
     availability: array(pick(f, FIELDS.provider.availability)), currentAvailability: array(pick(f, FIELDS.provider.availabilitySpecifics)),
@@ -1667,6 +1667,7 @@ function emptyCell(value) {
 }
 function text(value) { if (value == null) return ""; if (Array.isArray(value)) return value.map(text).filter(Boolean).join(", "); if (typeof value === "object") return text(value.name ?? value.label ?? value.value ?? value.text ?? value.url ?? ""); return clean(value); }
 function array(value) { return arrayRaw(value).map(text).flatMap((v) => v.split(/[,;\n]+/)).map(clean).filter(Boolean); }
+function arrayExact(value) { return arrayRaw(value).map(text).map(clean).filter(Boolean); }
 function arrayRaw(value) { return value == null ? [] : Array.isArray(value) ? value : [value]; }
 function attachment(value) { const first = arrayRaw(value)[0]; return typeof first === "string" ? first : first?.url || first?.thumbnails?.large?.url || ""; }
 function truthy(value) { if (value === true || value === 1) return true; return ["true", "yes", "approved", "published", "active", "open", "1", "checked"].includes(lower(text(value))); }

@@ -8763,3 +8763,106 @@ button.referral-room-preview-card:hover {
     margin-right: 0 !important;
   }
 }
+
+/* Latest mobile cleanup: tighter homepage art, stable filter menus, calmer login. */
+@media (max-width: 760px) {
+  .directory-home-shell {
+    gap: 8px !important;
+  }
+
+  .directory-home-hero {
+    gap: 18px !important;
+  }
+
+  .directory-hero-art {
+    min-height: 360px !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  .directory-hero-art > img {
+    width: min(106%, 430px) !important;
+    max-width: none !important;
+    transform: translateY(62px) !important;
+  }
+
+  .home-verified-card {
+    top: 10px !important;
+    width: min(322px, calc(100% - 24px)) !important;
+  }
+
+  .directory-location-pill {
+    margin-top: 0 !important;
+  }
+
+  .directory-home-hero .directory-search-panel {
+    overflow: visible !important;
+    padding: 24px 18px 28px !important;
+  }
+
+  .directory-home-hero .directory-search-panel .primary-filter-grid,
+  .directory-home-hero .directory-search-panel .more-filter-grid,
+  .directory-home-hero .directory-filter-actions {
+    overflow: visible !important;
+  }
+
+  .directory-home-hero .directory-multi-select {
+    position: relative !important;
+    z-index: 1 !important;
+  }
+
+  .directory-home-hero .directory-multi-select.open {
+    z-index: 220 !important;
+  }
+
+  .directory-home-hero .multi-select-menu {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 240 !important;
+    max-height: 238px !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    box-shadow: 0 18px 38px rgba(18, 43, 35, .28) !important;
+  }
+
+  .directory-home-hero .multi-select-menu button {
+    min-height: 44px !important;
+    padding-block: 10px !important;
+  }
+
+  .auth-root .auth-redesign {
+    padding: 10px 10px 28px !important;
+  }
+
+  .auth-root .auth-redesign-panel {
+    padding: 16px 16px 14px !important;
+  }
+
+  .auth-root .auth-redesign-panel .brand-pill {
+    margin-bottom: 10px !important;
+    font-size: 10px !important;
+    color: #24493d !important;
+  }
+
+  .auth-root .auth-redesign-panel h1 {
+    max-width: 300px !important;
+    font-size: clamp(30px, 9vw, 38px) !important;
+    line-height: 1.02 !important;
+  }
+
+  .auth-root .auth-redesign-panel p:not(.brand-pill),
+  .auth-root .auth-redesign-panel .auth-paths {
+    display: none !important;
+  }
+
+  .auth-root .auth-redesign-card {
+    padding: 18px 16px 20px !important;
+  }
+
+  .auth-root .auth-redesign-card h2 {
+    font-size: 30px !important;
+  }
+}

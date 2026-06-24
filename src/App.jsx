@@ -22,6 +22,7 @@ import PwaInstallButton from "./PwaInstallButton.jsx";
 import ProviderDashboard from "./ProviderDashboard.jsx";
 import ClientDashboard from "./ClientDashboard.jsx";
 import ReferralRoomProviderPage from "./ReferralRoomProviderPage.jsx";
+import PublicShowcase from "./PublicShowcase.jsx";
 
 const API = "/.netlify/functions/app-api";
 const EVENT_STATUSES = ["Pending Review", "Approved", "Declined", "Draft", "Cancelled"];
@@ -136,6 +137,10 @@ export default function App() {
     setUser(null);
     setData((current) => ({ ...current, savedProviderIds: [], savedEventIds: [] }));
     navigate("/");
+  }
+
+  if (["/", "/index.html", "/providers", "/provider-details", "/events", "/event-details"].includes(route.path)) {
+    return <PublicShowcase path={route.path === "/index.html" ? "/" : route.path} />;
   }
 
   const pageProps = { route, navigate, user, authReady, data, loading, notice, setNotice, refresh, toggleSave, setUser };
@@ -623,11 +628,6 @@ function AuthPage({ mode, navigate, setUser, setNotice }) {
           <p className="brand-pill">Account access</p>
           <h1>Care, connection, and community.</h1>
           <p>Save trusted providers, manage events, and participate in a relationship-based referral network.</p>
-          <div className="auth-paths">
-            <span>Community care</span>
-            <span>Provider membership</span>
-            <span>Referral Room</span>
-          </div>
         </div>
 
         <form className="auth-redesign-card" onSubmit={submit}>
