@@ -7625,6 +7625,13 @@ button.referral-room-preview-card:hover {
   color: #fffdf8;
 }
 
+.home-join-card.member-card {
+  border-color: #d7b89f;
+  background: #fff1df;
+  color: #24493d;
+  box-shadow: 0 12px 28px rgba(151, 94, 55, .08);
+}
+
 .home-join-card strong {
   font-size: 17px;
   line-height: 1.1;
@@ -8864,5 +8871,90 @@ button.referral-room-preview-card:hover {
 
   .auth-root .auth-redesign-card h2 {
     font-size: 30px !important;
+  }
+}
+
+/* Mobile login: compact strip so the desktop headline never gets clipped. */
+@media (max-width: 760px) {
+  .auth-root .auth-redesign-shell {
+    display: block !important;
+  }
+
+  .auth-root .auth-redesign-panel {
+    display: block !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 14px 16px !important;
+    border-radius: 18px 18px 0 0 !important;
+    overflow: visible !important;
+  }
+
+  .auth-root .auth-redesign-panel .brand-pill {
+    margin: 0 !important;
+  }
+
+  .auth-root .auth-redesign-panel h1,
+  .auth-root .auth-redesign-panel p:not(.brand-pill) {
+    display: none !important;
+  }
+
+  .auth-root .auth-redesign-card {
+    margin: 0 !important;
+    border-top: 0 !important;
+    border-radius: 0 0 18px 18px !important;
+  }
+}
+
+/* Mobile homepage art order: logo first, recently joined tucked below it. */
+@media (max-width: 760px) {
+  .directory-hero-art {
+    min-height: 330px !important;
+    display: grid !important;
+    align-content: start !important;
+    justify-items: center !important;
+    padding-top: 4px !important;
+  }
+
+  .directory-hero-art > img {
+    width: min(98%, 405px) !important;
+    transform: translateY(0) !important;
+  }
+
+  .home-verified-card {
+    top: auto !important;
+    bottom: 8px !important;
+    left: auto !important;
+    right: 12px !important;
+    transform: none !important;
+    width: min(288px, calc(100% - 28px)) !important;
+  }
+}
+
+/* Keep the expandable directory filters available on every viewport. */
+.directory-home-hero .directory-filter-actions {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.directory-home-hero .filter-toggle-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+@media (min-width: 981px) {
+  .directory-home-hero .directory-filter-actions {
+    grid-column: 2 !important;
+    grid-row: 4 !important;
+    justify-self: end !important;
+  }
+
+  .directory-home-hero .verified-circle-filter {
+    grid-row: 5 !important;
+  }
+
+  .directory-home-hero .directory-submit-button {
+    grid-row: 5 !important;
   }
 }
