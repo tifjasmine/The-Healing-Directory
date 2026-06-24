@@ -773,6 +773,7 @@ function normalizeProvider(record) {
   const explicitlyApproved = truthy(approvalValue) || ["approved", "active", "published", "live", "open"].includes(approvalStatus);
   return {
     id: record.id, name: text(pick(f, FIELDS.provider.name)) || "Provider",
+    createdTime: record.createdTime || "",
     accountType,
     order: numberValue(pick(f, FIELDS.provider.order)),
     email: text(pick(f, FIELDS.provider.email)), phone: text(pick(f, FIELDS.provider.phone)),

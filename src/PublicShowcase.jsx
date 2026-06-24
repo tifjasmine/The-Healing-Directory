@@ -217,18 +217,30 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
     setVisibleCount(LIST_PAGE_SIZE);
   }, [query, verified, filters, data.providers.length]);
   const visibleProviders = providers.slice(0, visibleCount);
+  const newestProvider = [...(data.providers || [])].sort((a, b) => dateNumber(b.createdTime) - dateNumber(a.createdTime))[0];
 
   return <main>
     <section className="directory-intro page-band dark-band directory-home-hero">
-      <div className="band-inner directory-heading">
-        <div className="directory-hero-lockup">
-          <img src="/directory-logo-strip.png" alt="The Healing Directory" />
+      <div className="band-inner directory-home-shell">
+        <div className="directory-heading">
+          <p className="directory-location-pill"><span />Serving New Jersey & Pennsylvania</p>
+          <h1>Find <span>trusted</span> support.</h1>
+          <p className="lede">A curated directory of therapists, wellness professionals, and holistic providers — matched to you by care need, not just location.</p>
+          <div className="directory-hero-actions">
+            <button className="button hero-primary" type="button" onClick={() => document.querySelector(".directory-search-panel input")?.focus()}>Find a provider</button>
+            <button className="button hero-secondary" type="button" onClick={() => go("/provider-signup")}>For providers <ArrowRight size={17} /></button>
+          </div>
         </div>
-        <h1>Find the right support.</h1>
-        <p className="lede">A curated directory of therapists, wellness professionals, and holistic providers serving clients in New Jersey and Pennsylvania.</p>
-        <div className="directory-hero-context">
-          <span>Search by care need, provider type, location, or payment fit.</span>
-          <span>Built around thoughtful referrals and relationship-based care.</span>
+        <div className="directory-hero-art">
+          <img src="/directory-logo-strip.png" alt="The Healing Directory" />
+          <div className="home-verified-card">
+            <p>Recently joined</p>
+            <div className="home-verified-provider">
+              <span>{initials(newestProvider?.name || "Tiffany Wright")}</span>
+              <div><strong>{newestProvider?.name || "Tiffany Wright"}</strong><small>{verifiedProviderSubtitle(newestProvider)}</small></div>
+            </div>
+            <div className="home-verified-line"><CheckCircle2 size={16} /> Verified within The Healing Directory</div>
+          </div>
         </div>
       </div>
       <div className="band-inner directory-search-panel">
@@ -567,10 +579,20 @@ function isProviderOnlyEvent(event) { return String(event?.audience || "").toLow
 function optionChoices(options = [], fallback = []) { return (options?.length ? unique(options) : unique(fallback || [])).filter((value) => String(value).trim().toLowerCase() !== "all").sort(); }
 function matchesSelected(values = [], selected = []) { return !selected.length || selected.some((value) => values?.includes(value)); }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
+function dateNumber(value) {
+  const time = new Date(value || 0).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
 function truncate(value, max) { const text = String(value || "").replace(/\s+/g, " ").trim(); return text.length > max ? `${text.slice(0, max - 1)}...` : text; }
 function href(value) { return /^(https?:|mailto:|tel:)/i.test(String(value || "")) ? value : `https://${value}`; }
 function initials(value) { const parts = String(value || "TH").split(/\s+/).filter(Boolean); return `${parts[0]?.[0] || "T"}${parts.at(-1)?.[0] || "H"}`.toUpperCase(); }
 function firstName(value) { return String(value || "there").split(/\s+/)[0]; }
+function verifiedProviderSubtitle(provider) {
+  if (!provider) return "Somatic Therapist · NJ";
+  const role = provider.profession || provider.providerType?.[0] || "Provider";
+  const place = provider.location?.[0] || "NJ";
+  return `${role} · ${place}`;
+}
 function capitalize(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
 function time(value) { const date = new Date(value || 0); return Number.isNaN(date.getTime()) ? null : date; }
 function formatDate(value) { const date = time(value); return date ? new Intl.DateTimeFormat(undefined, { weekday: "short", month: "long", day: "numeric", year: "numeric" }).format(date) : "Date TBA"; }
