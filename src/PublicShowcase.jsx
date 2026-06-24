@@ -17,6 +17,7 @@ export default function PublicShowcase({ path }) {
   const [user, setUser] = React.useState(null);
   const [authReady, setAuthReady] = React.useState(false);
   const [signupOpen, setSignupOpen] = React.useState(false);
+  const headerRef = React.useRef(null);
 
   const hydrateUser = React.useCallback(async () => {
     const currentUser = normalizeUser(await getUser().catch(() => null));
@@ -48,6 +49,17 @@ export default function PublicShowcase({ path }) {
     });
     return () => { active = false; };
   }, []);
+
+  React.useEffect(() => {
+    if (!menuOpen && !signupOpen) return undefined;
+    function closeHeaderMenus(event) {
+      if (headerRef.current?.contains(event.target)) return;
+      setMenuOpen(false);
+      setSignupOpen(false);
+    }
+    document.addEventListener("pointerdown", closeHeaderMenus);
+    return () => document.removeEventListener("pointerdown", closeHeaderMenus);
+  }, [menuOpen, signupOpen]);
 
   React.useEffect(() => {
     const recheck = () => void hydrateUser();
@@ -95,7 +107,7 @@ export default function PublicShowcase({ path }) {
     go(type === "provider" ? "/provider-signup" : "/signup");
   };
   return <div className="app-shell">
-    <header className={warm ? "site-header warm-header" : "site-header"}>
+    <header ref={headerRef} className={warm ? "site-header warm-header" : "site-header"}>
       <button className="brand" onClick={() => go("/")}>
         <span><strong>The Healing Directory</strong><small>Relationship-based care</small></span>
       </button>
@@ -241,7 +253,7 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
           <p className="directory-location-pill"><span />Serving New Jersey & Pennsylvania</p>
           <h1>Find <span>trusted</span> support.</h1>
           <p className="lede">A curated directory of therapists, wellness professionals, and holistic providers — matched to you by care need, not just location.</p>
-          <div className="directory-hero-actions home-join-cards">
+          {!user ? <div className="directory-hero-actions home-join-cards">
             <button className="home-join-card provider-card" type="button" onClick={() => go("/provider-signup")}>
               <strong>Become a Provider</strong>
               <span>Join a trusted, relationship-based healing network.</span>
@@ -250,7 +262,7 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
               <strong>Become a Member</strong>
               <span>Save providers and events in one place.</span>
             </button>
-          </div>
+          </div> : null}
         </div>
         <div className="directory-hero-art">
           <img src="/homepage-logo-transparent.png" alt="The Healing Directory" />
@@ -305,14 +317,16 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
 
 function ProviderCard({ provider, saved, onSave }) {
   const [contactOpen, setContactOpen] = React.useState(false);
+  const providerTypeText = provider.providerType?.join(", ") || provider.profession || "Provider";
+  const supportTags = (provider.support || []).slice(0, 5);
   return <article className="provider-row">
     <Avatar item={provider} />
     <div className="provider-copy">
       <div className="title-line"><button className="text-link title-link" onClick={() => go(`/provider-details?id=${provider.id}`)}>{provider.name}</button>{provider.verified ? <span className="status good"><CheckCircle2 size={12} /> Verified</span> : null}</div>
-      <p className="profession">{provider.profession || provider.providerType?.join(", ")}</p>
+      <p className="profession">{providerTypeText}</p>
       {provider.location?.length ? <p className="meta"><MapPin size={14} /> {provider.location.join(", ")}</p> : null}
       <p className="summary">{truncate(provider.bio, 210) || "View this provider's profile, approach, services, and contact options."}</p>
-      <div className="tag-row">{[...(provider.providerType || []), ...(provider.support || [])].slice(0, 5).map((tag) => <span key={tag}>{tag}</span>)}</div>
+      {supportTags.length ? <div className="tag-row">{supportTags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
     </div>
     <div className={contactOpen ? "provider-contact open" : "provider-contact"}>
       <div className="provider-contact-title">

@@ -7416,6 +7416,54 @@ button.referral-room-preview-card:hover {
   }
 }
 
+@media (max-width: 640px) {
+  .auth-root .auth-redesign {
+    min-height: auto !important;
+    padding: 14px 12px 32px !important;
+  }
+
+  .auth-root .auth-redesign-shell {
+    width: 100% !important;
+  }
+
+  .auth-root .auth-redesign-panel {
+    min-height: 0 !important;
+    padding: 22px 20px 18px !important;
+    border-radius: 18px 18px 0 0 !important;
+  }
+
+  .auth-root .auth-redesign-panel .brand-pill {
+    margin-bottom: 16px !important;
+    padding: 8px 14px !important;
+    border-radius: 999px !important;
+    font-size: 11px !important;
+    letter-spacing: .16em !important;
+    box-shadow: 0 8px 18px rgba(10, 35, 28, .14) !important;
+  }
+
+  .auth-root .auth-redesign-panel h1 {
+    max-width: 330px !important;
+    font-size: clamp(38px, 12vw, 50px) !important;
+    line-height: .98 !important;
+  }
+
+  .auth-root .auth-redesign-panel p:not(.brand-pill) {
+    margin-top: 14px !important;
+    max-width: 310px !important;
+    font-size: 15px !important;
+    line-height: 1.45 !important;
+  }
+
+  .auth-root .auth-redesign-card {
+    padding: 22px 18px 24px !important;
+    border-radius: 0 0 18px 18px !important;
+  }
+
+  .auth-root .auth-redesign-card h2 {
+    font-size: 34px !important;
+  }
+}
+
 .client-dashboard-hero {
   padding-bottom: clamp(32px, 5vw, 54px) !important;
 }
@@ -7616,9 +7664,10 @@ button.referral-room-preview-card:hover {
 .home-verified-card {
   position: absolute;
   z-index: 2;
-  right: clamp(4px, 1.8vw, 28px);
-  top: clamp(0px, 1.4vw, 18px);
-  bottom: auto;
+  left: clamp(10px, 2vw, 34px);
+  right: auto;
+  top: auto;
+  bottom: clamp(8px, 2vw, 32px);
   width: min(270px, calc(100% - 36px));
   padding: 13px;
   border: 1px solid #eadfce;
@@ -7760,10 +7809,10 @@ button.referral-room-preview-card:hover {
   }
 
   .home-verified-card {
-    left: auto;
-    right: 16px;
-    top: 16px;
-    bottom: auto;
+    left: 16px;
+    right: auto;
+    top: auto;
+    bottom: 14px;
     width: min(250px, calc(100% - 32px));
     padding: 13px;
     border-radius: 18px;
@@ -7988,5 +8037,309 @@ button.referral-room-preview-card:hover {
 @media (max-width: 760px) {
   .directory-search-panel .primary-filter-grid {
     display: grid !important;
+  }
+}
+
+/* Mobile homepage refinement: art first, compact filters, readable provider cards. */
+@media (max-width: 760px) {
+  .directory-home-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .directory-home-shell .directory-heading {
+    order: 2;
+    padding-top: 0 !important;
+    text-align: left !important;
+  }
+
+  .directory-hero-art {
+    order: 1;
+    min-height: 260px !important;
+    margin-top: 2px;
+    overflow: visible !important;
+  }
+
+  .directory-hero-art > img {
+    width: min(100%, 390px) !important;
+    transform: translateY(0) !important;
+  }
+
+  .home-verified-card {
+    bottom: -2px !important;
+    left: 10px !important;
+    width: min(245px, calc(100% - 20px)) !important;
+    padding: 11px !important;
+  }
+
+  .home-verified-card > p {
+    margin-bottom: 7px;
+    font-size: 9px;
+  }
+
+  .home-verified-provider {
+    grid-template-columns: 36px minmax(0, 1fr) !important;
+    gap: 9px !important;
+  }
+
+  .home-verified-provider > span {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 16px !important;
+  }
+
+  .home-verified-provider strong {
+    font-size: 18px !important;
+  }
+
+  .directory-home-hero .directory-search-panel {
+    width: min(100% - 24px, 520px) !important;
+    padding: 22px 18px !important;
+    gap: 12px !important;
+    border-radius: 0 !important;
+  }
+
+  .directory-search-heading h2 {
+    font-size: 34px !important;
+  }
+
+  .directory-search-heading p {
+    margin-top: 7px;
+    font-size: 14px !important;
+  }
+
+  .directory-home-hero .directory-search-panel > .search-control input {
+    min-height: 52px !important;
+    border-radius: 16px !important;
+    font-size: 16px !important;
+  }
+
+  .directory-home-hero .directory-multi-select {
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  .directory-home-hero .directory-search-panel .primary-filter-grid,
+  .directory-home-hero .directory-search-panel .more-filter-grid {
+    gap: 10px !important;
+  }
+
+  .directory-home-hero .multi-select-trigger {
+    min-height: 50px !important;
+    padding: 0 18px !important;
+    border-radius: 999px !important;
+    border-color: rgba(255, 253, 248, .24) !important;
+    background: rgba(255, 253, 248, .12) !important;
+    color: #fffdf8 !important;
+    font-size: 15px !important;
+  }
+
+  .directory-home-hero .multi-select-trigger strong {
+    color: #fffdf8 !important;
+  }
+
+  .directory-home-hero .multi-select-menu {
+    position: relative !important;
+    z-index: 80;
+    margin-top: 8px !important;
+    max-height: 230px !important;
+    border-color: rgba(255, 253, 248, .22) !important;
+    background: #fffdf8 !important;
+    box-shadow: 0 18px 34px rgba(10, 35, 28, .2) !important;
+  }
+
+  .directory-home-hero .multi-select-menu button {
+    border: 0 !important;
+    background: transparent !important;
+    color: #2f3e35 !important;
+  }
+
+  .directory-home-hero .multi-select-menu button.selected,
+  .directory-home-hero .multi-select-menu button:hover {
+    background: #e7f1eb !important;
+    color: #214d3f !important;
+  }
+
+  .directory-home-hero .filter-toggle-button,
+  .directory-home-hero .verified-circle-filter,
+  .directory-submit-button {
+    min-height: 50px !important;
+    border-radius: 999px !important;
+  }
+
+  .directory-home-hero .filter-toggle-button {
+    justify-content: center;
+  }
+
+  .directory-home-hero .verified-circle-filter {
+    margin-top: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .events-page .event-card {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow: hidden !important;
+  }
+
+  .events-page .event-image {
+    width: 100% !important;
+    inline-size: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    aspect-ratio: 16 / 9 !important;
+    border-radius: 0 !important;
+  }
+
+  .events-page .event-image img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .site-header,
+  .warm-header.site-header,
+  .auth-root .site-header {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      "brand brand"
+      "menu actions" !important;
+    align-items: center !important;
+    gap: 9px 10px !important;
+    padding: 12px !important;
+  }
+
+  .site-header .brand,
+  .auth-root .site-header .brand {
+    grid-area: brand !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .site-header .brand strong,
+  .auth-root .site-header .brand strong {
+    font-size: clamp(24px, 8vw, 32px) !important;
+    line-height: .95 !important;
+  }
+
+  .site-header .brand small,
+  .auth-root .site-header .brand small {
+    display: block !important;
+    margin-top: 3px !important;
+    font-size: 10px !important;
+    letter-spacing: .14em !important;
+  }
+
+  .site-header .menu-toggle,
+  .auth-root .site-header .menu-toggle {
+    grid-area: menu !important;
+    display: inline-flex !important;
+    width: auto !important;
+    min-width: 104px !important;
+    height: 46px !important;
+    padding: 0 18px !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    border: 1px solid #e3d5c7 !important;
+    border-radius: 999px !important;
+    background: #fffdf8 !important;
+    color: #214d3f !important;
+    font-size: 0 !important;
+  }
+
+  .site-header .menu-toggle::after,
+  .auth-root .site-header .menu-toggle::after {
+    content: "Menu";
+    font-size: 15px;
+    font-weight: 900;
+  }
+
+  .site-header .menu-toggle svg,
+  .auth-root .site-header .menu-toggle svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .site-header .account-actions,
+  .auth-root .site-header .account-actions {
+    grid-area: actions !important;
+    width: auto !important;
+    display: flex !important;
+    justify-self: end !important;
+    gap: 8px !important;
+  }
+
+  .site-header .account-actions .button.compact,
+  .site-header .account-chip,
+  .auth-root .site-header .account-actions .button.compact,
+  .auth-root .site-header .account-chip {
+    width: auto !important;
+    min-height: 46px !important;
+    padding: 0 16px !important;
+    border-radius: 999px !important;
+    font-size: 15px !important;
+  }
+
+  .site-header .site-nav,
+  .auth-root .site-header .site-nav {
+    display: none !important;
+  }
+
+  .site-header .site-nav.open,
+  .auth-root .site-header .site-nav.open {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+    padding: 8px !important;
+    border: 1px solid #e1d4c7 !important;
+    border-radius: 18px !important;
+    background: #fffdf8 !important;
+    box-shadow: 0 18px 40px rgba(42, 33, 25, .18) !important;
+    z-index: 80 !important;
+  }
+
+  .site-header .site-nav.open button,
+  .site-header .site-nav.open a,
+  .auth-root .site-header .site-nav.open button,
+  .auth-root .site-header .site-nav.open a {
+    min-height: 48px !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+    padding: 0 14px !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    color: #2f3e35 !important;
+    font-size: 16px !important;
+    font-weight: 850 !important;
+  }
+
+  .site-header .site-nav.open button + button,
+  .site-header .site-nav.open a + a,
+  .auth-root .site-header .site-nav.open button + button,
+  .auth-root .site-header .site-nav.open a + a {
+    border-top: 1px solid #eee4d9 !important;
+  }
+
+  .site-header .signup-dropdown,
+  .auth-root .site-header .signup-dropdown {
+    left: auto !important;
+    right: 0 !important;
+    width: min(260px, calc(100vw - 24px)) !important;
   }
 }

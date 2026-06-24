@@ -1,4 +1,5 @@
 import React from "react";
+import LegalChrome from "./LegalChrome.jsx";
 
 export default function TermsPage() {
   const colors = {
@@ -209,12 +210,13 @@ export default function TermsPage() {
   ];
 
   return (
+    <LegalChrome>
     <div style={wrap}>
       <div style={page}>
         <header style={hero}>
           <div style={logo}>The Healing Directory</div>
           <h1 style={h1}>Terms of Use</h1>
-          <div style={date}>Last updated April 24, 2025</div>
+          <div style={date}>Last updated June 20, 2026</div>
         </header>
 
         <Section title="Agreement to Our Legal Terms">
@@ -236,8 +238,8 @@ export default function TermsPage() {
 
           <P>
             You can contact us by email at{" "}
-            <a style={link} href="mailto:jointhehealingdirectory@gmail.com">
-              jointhehealingdirectory@gmail.com
+            <a style={link} href="mailto:admin@thehealingdirectory.com">
+              admin@thehealingdirectory.com
             </a>{" "}
             or by mail at 1907 Deptford Center Road STE 3, Deptford, NJ 08096, United States.
           </P>
@@ -512,8 +514,8 @@ export default function TermsPage() {
 
           <div style={card}>
             <P>
-              <a style={link} href="mailto:jointhehealingdirectory@gmail.com">
-                jointhehealingdirectory@gmail.com
+              <a style={link} href="mailto:admin@thehealingdirectory.com">
+                admin@thehealingdirectory.com
               </a>
             </P>
             <P>1907 Deptford Center Road STE 3</P>
@@ -523,5 +525,6 @@ export default function TermsPage() {
         </Section>
       </div>
     </div>
+    </LegalChrome>
   );
 }

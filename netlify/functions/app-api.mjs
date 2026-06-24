@@ -336,6 +336,9 @@ async function toggleProvider(user, body) {
   const account = await ensureSaverAccount(user);
   const saves = await list("savedProviders");
   const mapped = await mappedFields("providerSave");
+  const mappedLinks = await mappedSaveLinkFields("providerSave", accountTypeForUser(user));
+  mapped.savedProvider = mappedLinks.savedProvider || mapped.savedProvider;
+  mapped.saverRecord = mappedLinks.saverRecord || mapped.saverRecord;
   const existingById = body.saveId ? saves.find((r) => r.id === body.saveId && belongsTo(r, user.email, account.id)) : null;
   const existing = saves.find((r) => belongsTo(r, user.email, account.id) && providerIds(r).includes(body.providerId));
   const existingByLinkedField = mapped.savedProvider ? saves.find((r) => providerIds(r).includes(body.providerId) && belongsTo(r, user.email, account.id)) : null;
@@ -359,6 +362,9 @@ async function toggleEvent(user, body) {
   const account = await ensureSaverAccount(user);
   const saves = await list("savedEvents");
   const mapped = await mappedFields("eventSave");
+  const mappedLinks = await mappedSaveLinkFields("eventSave", accountTypeForUser(user));
+  mapped.savedEvent = mappedLinks.savedEvent || mapped.savedEvent;
+  mapped.saverRecord = mappedLinks.saverRecord || mapped.saverRecord;
   const existing = saves.find((r) => belongsTo(r, user.email, account.id) && eventIds(r).includes(body.eventId));
   const existingByLinkedField = mapped.savedEvent ? saves.find((r) => eventIds(r).includes(body.eventId) && belongsTo(r, user.email, account.id)) : null;
   const active = body.active !== false;
@@ -559,6 +565,7 @@ async function signupProfile(body) {
     email,
     status,
     accountType: normalizedType,
+    overwriteName: true,
     phone: body.phone,
     website: body.website,
     professionalTitle: body.professionalTitle,
@@ -673,7 +680,8 @@ async function saveAccount(user, body) {
       accountType,
       status: "Approved",
       areaInterest: body.interests || body.areaInterest,
-      source: "account"
+      source: "account",
+      overwriteName: true
     });
   }
   const signup = await recordSignup(accountType, {
@@ -682,7 +690,8 @@ async function saveAccount(user, body) {
     accountType,
     status: accountType === "provider" ? "Pending Review" : "Approved",
     areaInterest: body.interests || body.areaInterest,
-    source: "account"
+    source: "account",
+    overwriteName: true
   }).catch((error) => ({ syncWarning: error.message }));
   const supabaseSync = await syncSignupToSupabase(accountType, {
     name: body.name || publicUser(user)?.name || user.email.split("@")[0],
@@ -998,6 +1007,40 @@ async function mappedFields(key) {
   return fields;
 }
 
+async function mappedSaveLinkFields(key, accountType = "") {
+  const tableName = key === "providerSave" ? "savedProviders" : "savedEvents";
+  const table = await metadataTable(tableName).catch(() => null);
+  if (!table) return {};
+  const directoryTable = await metadataTable("directory").catch(() => null);
+  const clientsTable = await metadataTable("clients").catch(() => null);
+  const eventsTable = await metadataTable("events").catch(() => null);
+  const accountTable = lower(accountType) === "provider" ? directoryTable : clientsTable;
+  const set = SAVE_FIELD_SETS[key] || {};
+  return {
+    saverRecord: findLinkedField(table, set.saverRecord || [], accountTable),
+    savedProvider: key === "providerSave" ? findLinkedField(table, set.savedProvider || [], directoryTable) : "",
+    savedEvent: key === "eventSave" ? findLinkedField(table, set.savedEvent || [], eventsTable) : "",
+  };
+}
+
+function findLinkedField(table, names = [], linkedTable = null) {
+  const nameMatches = new Set(names.map((name) => lower(name)));
+  const targetIds = new Set([linkedTable?.id, linkedTable?.name].filter(Boolean).map(lower));
+  const fields = table?.fields || [];
+  const candidates = fields.filter((field) => field.type === "multipleRecordLinks" && nameMatches.has(lower(field.name)));
+  const exactTarget = candidates.find((field) => {
+    const linkedId = lower(field.options?.linkedTableId || field.options?.linkedTableName || "");
+    return linkedId && targetIds.has(linkedId);
+  });
+  if (exactTarget) return exactTarget.name;
+  const targetFallback = fields.find((field) => {
+    if (field.type !== "multipleRecordLinks") return false;
+    const linkedId = lower(field.options?.linkedTableId || field.options?.linkedTableName || "");
+    return linkedId && targetIds.has(linkedId);
+  });
+  return targetFallback?.name || candidates[0]?.name || "";
+}
+
 function findField(table, names) {
   const matches = new Set(
     names.map((name) => lower(name))
@@ -1052,6 +1095,7 @@ async function safeAirtableSignup(table, accountType, body) {
   });
   if (existing) {
     const nextFields = { ...fields };
+    if (!body.overwriteName) delete nextFields[mapped.name];
     nextFields[mapped.status] = body.status;
     try {
       return updateSafe(table, existing.id, nextFields);
@@ -1343,7 +1387,8 @@ async function ensureMemberAccount(body) {
     accountType: "client",
     status: body.status || "Approved",
     areaInterest: body.areaInterest,
-    source: body.source || "app"
+    source: body.source || "app",
+    overwriteName: body.overwriteName
   });
   if (!record) throw httpError(500, "Members table was not found in Airtable, so the member account was not recorded.");
   return record;

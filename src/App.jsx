@@ -175,15 +175,26 @@ function Page(props) {
 
 function SiteHeader({ route, user, authReady, navigate, onLogout, menuOpen, setMenuOpen }) {
   const [signupOpen, setSignupOpen] = React.useState(false);
+  const headerRef = React.useRef(null);
   const admin = user?.roles?.includes("admin");
   const dashboardPath = user ? defaultDashboardPath(user) : "";
   const warm = ["/events", "/event-details", "/provider-details", "/add-event", "/edit-event"].includes(route.path);
+  React.useEffect(() => {
+    if (!menuOpen && !signupOpen) return undefined;
+    function closeHeaderMenus(event) {
+      if (headerRef.current?.contains(event.target)) return;
+      setMenuOpen(false);
+      setSignupOpen(false);
+    }
+    document.addEventListener("pointerdown", closeHeaderMenus);
+    return () => document.removeEventListener("pointerdown", closeHeaderMenus);
+  }, [menuOpen, setMenuOpen, signupOpen]);
   const openSignup = (type) => {
     setSignupOpen(false);
     navigate(type === "provider" ? "/provider-signup" : "/signup");
   };
   return (
-    <header className={warm ? "site-header warm-header" : "site-header"}>
+    <header ref={headerRef} className={warm ? "site-header warm-header" : "site-header"}>
       <button className="brand" onClick={() => navigate("/")}>
         <span><strong>The Healing Directory</strong><small>Relationship-based care</small></span>
       </button>
@@ -699,7 +710,7 @@ function LegalPage({ route }) {
     ["Payments and Membership", "Provider membership, subscriptions, and billing are handled through Stripe or another payment processor when enabled. Payment terms, cancellation timing, refunds, and plan changes may depend on the payment provider and the membership plan selected."],
     ["Content and Communications", "By submitting profile, event, or account content, you confirm that you have the right to share it and that it is accurate to the best of your knowledge. You remain responsible for messages you send through the directory or after making a connection through it."],
     ["Changes to the Service", "The Healing Directory may update features, pages, eligibility requirements, event approval processes, Referral Room workflows, pricing, or these terms as the community and platform evolve."],
-    ["Contact", "Questions about these terms can be sent to jointhehealingdirectory@gmail.com."],
+    ["Contact", "Questions about these terms can be sent to admin@thehealingdirectory.com."],
   ];
   const privacySections = [
     ["Information We Collect", "We collect information needed to operate accounts, saved lists, provider profiles, event listings, Referral Room participation, account settings, membership status, and administrative review workflows. This may include names, email addresses, profile details, provider categories, services, support areas, availability, event details, saved providers, saved events, RSVP status, and related notes."],
@@ -711,7 +722,7 @@ function LegalPage({ route }) {
     ["Data Accuracy and Updates", "You can update account settings, provider profile information, membership details, and event content through the available pages. If something looks incorrect or you need help changing information, contact The Healing Directory."],
     ["Data Retention", "Information may be retained as long as needed to operate the directory, maintain records, resolve disputes, enforce community standards, support billing or administrative needs, and comply with legal obligations."],
     ["Security", "We use reasonable technical and administrative safeguards, but no online service can promise perfect security. Keep your login private and contact us if you believe your account has been accessed without permission."],
-    ["Contact", "Privacy questions or requests can be sent to jointhehealingdirectory@gmail.com."],
+    ["Contact", "Privacy questions or requests can be sent to admin@thehealingdirectory.com."],
   ];
   const sections = privacy ? privacySections : termsSections;
 

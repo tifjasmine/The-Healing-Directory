@@ -1,4 +1,5 @@
 import React from "react";
+import LegalChrome from "./LegalChrome.jsx";
 
 export default function PrivacyPage() {
   const colors = {
@@ -295,12 +296,13 @@ export default function PrivacyPage() {
   ];
 
   return (
+    <LegalChrome>
     <div style={pageStyle}>
       <div style={innerStyle}>
         <header style={heroStyle}>
           <div style={logoStyle}>The Healing Directory</div>
           <h1 style={h1Style}>Privacy Policy</h1>
-          <div style={dateStyle}>Last updated April 24, 2025</div>
+          <div style={dateStyle}>Last updated June 20, 2026</div>
         </header>
 
         <Section>
@@ -322,8 +324,8 @@ export default function PrivacyPage() {
 
           <P>
             Questions or concerns? Reading this Privacy Notice will help you understand your privacy rights and choices. If you do not agree with our policies and practices, please do not use our Services. You may contact us at{" "}
-            <a style={linkStyle} href="mailto:jointhehealingdirectory@gmail.com">
-              jointhehealingdirectory@gmail.com
+            <a style={linkStyle} href="mailto:admin@thehealingdirectory.com">
+              admin@thehealingdirectory.com
             </a>
             .
           </P>
@@ -481,8 +483,8 @@ export default function PrivacyPage() {
 
           <P>
             To opt out of applicable online tracking technologies, you may email us directly at{" "}
-            <a style={linkStyle} href="mailto:jointhehealingdirectory@gmail.com">
-              jointhehealingdirectory@gmail.com
+            <a style={linkStyle} href="mailto:admin@thehealingdirectory.com">
+              admin@thehealingdirectory.com
             </a>
             .
           </P>
@@ -528,8 +530,8 @@ export default function PrivacyPage() {
 
           <P>
             If you become aware of data we may have collected from children under 18, please contact us at{" "}
-            <a style={linkStyle} href="mailto:jointhehealingdirectory@gmail.com">
-              jointhehealingdirectory@gmail.com
+            <a style={linkStyle} href="mailto:admin@thehealingdirectory.com">
+              admin@thehealingdirectory.com
             </a>
             .
           </P>
@@ -627,8 +629,8 @@ export default function PrivacyPage() {
           <H3>How to Exercise Your Rights</H3>
           <P>
             To exercise these rights, you can email us at{" "}
-            <a style={linkStyle} href="mailto:jointhehealingdirectory@gmail.com">
-              jointhehealingdirectory@gmail.com
+            <a style={linkStyle} href="mailto:admin@thehealingdirectory.com">
+              admin@thehealingdirectory.com
             </a>
             .
           </P>
@@ -660,8 +662,8 @@ export default function PrivacyPage() {
         <Section num="12" title="How Can You Contact Us About This Notice?">
           <P>
             If you have questions or comments about this notice, you may email us at{" "}
-            <a style={linkStyle} href="mailto:jointhehealingdirectory@gmail.com">
-              jointhehealingdirectory@gmail.com
+            <a style={linkStyle} href="mailto:admin@thehealingdirectory.com">
+              admin@thehealingdirectory.com
             </a>{" "}
             or contact us by post at:
           </P>
@@ -681,13 +683,14 @@ export default function PrivacyPage() {
 
           <P>
             To request to review, update, or delete your personal information, please email us directly at{" "}
-            <a style={linkStyle} href="mailto:jointhehealingdirectory@gmail.com">
-              jointhehealingdirectory@gmail.com
+            <a style={linkStyle} href="mailto:admin@thehealingdirectory.com">
+              admin@thehealingdirectory.com
             </a>
             .
           </P>
         </Section>
       </div>
     </div>
+    </LegalChrome>
   );
 }
