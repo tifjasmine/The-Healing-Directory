@@ -183,11 +183,16 @@ function normalizeSession(record, attendance, rules, providers = []) {
   const id = record.id;
   const linkedAttendance = attendance.filter((item) => item.sessionId === id);
   const acceptedAttendance = linkedAttendance.filter(isSeatHolding);
-  const providerMap = new Map(providers.filter((item) => item.email).map((item) => [lower(item.email), item]));
+  const providerMap = {
+    byEmail: new Map(providers.filter((item) => item.email).map((item) => [lower(item.email), item])),
+    byId: new Map(providers.filter((item) => item.id).map((item) => [item.id, item])),
+  };
   const accepted = acceptedAttendance.length;
   const totalSeats = Number(value(f, ["Total Seats", "Total Seat Cap", "Total Limit"])) || totalSeatsFromNotes(text(value(f, ["Notes"]))) || 8;
   const sessionRules = rules.map(normalizeRule).filter((rule) => rule.sessionId === id).map((rule) => {
-    const approvedProviders = acceptedAttendance.filter((item) => providerTypeMatches(item.serviceType, rule.serviceType)).map((item) => approvedProvider(item, providerMap));
+    const approvedProviders = acceptedAttendance
+      .filter((item) => providerTypeMatches(attendanceServiceType(item, providerMap), rule.serviceType))
+      .map((item) => approvedProvider(item, providerMap));
     const taken = approvedProviders.length;
     return { ...rule, taken, remaining: Math.max(rule.seatLimit - taken, 0), approvedProviders };
   });
@@ -202,7 +207,7 @@ function normalizeSession(record, attendance, rules, providers = []) {
 }
 
 function approvedProvider(item, providerMap) {
-  const provider = providerMap.get(lower(item.email)) || {};
+  const provider = providerFor(item, providerMap);
   const fallbackName = item.providerName && !String(item.providerName).includes("@") ? item.providerName : "Approved provider";
   return {
     id: item.id,
@@ -231,6 +236,7 @@ function normalizeAttendance(record) {
   const rawStatus = value(f, ["Signup Status", "Status", "RSVP Status", "Approval Status"]);
   return {
     id: record.id, sessionId: linked(value(f, ["Session Name", "Session", "Referral Room", "Referral Room Session"]))[0] || "",
+    providerIds: linked(value(f, ["Provider", "Provider Record", "Provider Link", "Contact", "Member"])),
     sessionName: text(value(f, ["Session Name (from Session Name)", "Session Name", "Referral Room Name"])),
     sessionDate: text(value(f, ["Session Date (from Session Name)", "Session Date"])),
     providerName: text(value(f, ["Provider Name", "Name"])), email: text(value(f, ["Provider Email", "Email"])),
@@ -280,6 +286,8 @@ function clean(input) { return String(input ?? "").replace(/\s+/g, " ").trim(); 
 function lower(input) { return clean(input).toLowerCase(); }
 function compact(input) { return lower(input).replace(/&/g, "and").replace(/[^a-z0-9]/g, ""); }
 function providerTypeMatches(left, right) { const a = compact(left); const b = compact(right); return Boolean(a && b && (a === b || a.includes(b) || b.includes(a))); }
+function providerFor(item, providerMap) { return item.providerIds?.map((id) => providerMap.byId.get(id)).find(Boolean) || providerMap.byEmail.get(lower(item.email)) || {}; }
+function attendanceServiceType(item, providerMap) { const provider = providerFor(item, providerMap); return item.serviceType || provider.providerType || ""; }
 function isSeatHolding(item) {
   const status = lower(item?.status);
   if (!status) return true;

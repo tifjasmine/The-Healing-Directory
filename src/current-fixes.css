@@ -6800,3 +6800,118 @@ button.referral-room-preview-card:hover {
     border-radius: 13px;
   }
 }
+
+/* Referral Room detail seat card: keep the dashboard-scale treatment. */
+.referral-provider-page.room-experience .room-side-panel {
+  align-content: start;
+}
+
+.referral-provider-page.room-experience .seat-card {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid #e2d5c3;
+  border-radius: 18px;
+  background: #fffdf8;
+  box-shadow: 0 12px 28px rgba(58, 44, 35, .05);
+}
+
+.referral-provider-page.room-experience .seat-card h2 {
+  margin: 0;
+  color: #7f8c82;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .13em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.referral-provider-page.room-experience .seat-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 0;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #f2ecdf;
+  color: #526158;
+}
+
+.referral-provider-page.room-experience .seat-chip .status-pill {
+  flex: 0 0 auto;
+}
+
+.referral-provider-page.room-experience .seat-chip strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #36423c;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.referral-provider-page.room-experience .seat-card .room-outline-button {
+  min-height: 44px;
+  margin-top: 0;
+  border-width: 1px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.referral-provider-page.room-experience .seat-card .room-text-button {
+  min-height: 34px;
+  margin-top: 0;
+  color: #ae6648;
+  font-size: 14px;
+}
+
+.referral-provider-page.room-experience .provider-chip-photo {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  overflow: hidden;
+  border: 1px solid #dcebe3;
+  border-radius: 9px;
+  background: #2d604c;
+}
+
+.referral-provider-page.room-experience .provider-chip-photo img,
+.referral-provider-page.room-experience .provider-chip-initials {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.referral-provider-page.room-experience .provider-chip-photo img {
+  z-index: 1;
+  object-fit: cover;
+  object-position: center;
+}
+
+.referral-provider-page.room-experience .provider-chip-initials {
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.referral-provider-page.room-experience .provider-chip {
+  padding-left: 5px;
+}
+
+@media (max-width: 760px) {
+  .referral-provider-page.room-experience .seat-card {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .referral-provider-page.room-experience .seat-chip {
+    align-items: flex-start;
+    border-radius: 10px;
+  }
+}

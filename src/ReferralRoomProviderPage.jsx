@@ -193,7 +193,6 @@ function BrowseView({ sessions, attendance, onDetails, onRequest }) {
 function DetailsView({ sessions, session, request, form, setForm, onSelect, onBrowse, onManage, onSubmit, onRemove, busy }) {
   if (!session) return <RoomEmpty title="No room selected" text="Choose a room from Browse to see details." />;
   const fullRules = session.rules.filter((rule) => rule.remaining <= 0 || !rule.accepting);
-  const openTypeCount = session.rules.filter((rule) => rule.remaining > 0 && rule.accepting && session.remaining > 0).length;
 
   return (
     <section className="referral-stage">
@@ -212,11 +211,9 @@ function DetailsView({ sessions, session, request, form, setForm, onSelect, onBr
           </div>
           <section className="approved-panel">
             <h3>Approved Providers</h3>
-            <p>
-              {openTypeCount ? `${openTypeCount} of ${session.rules.length} provider types still have open seats.` : "All listed provider types are currently full."}
-              {fullRules.length ? <> <strong>Full: {fullRules.map((rule) => rule.serviceType).join(", ")}</strong></> : null}
-            </p>
-            <RuleLedger rules={session.rules} />
+            <p>{session.accepted ? `${session.accepted} approved provider${session.accepted === 1 ? "" : "s"} in this room.` : "No approved providers yet."}</p>
+            {fullRules.length ? <p><strong>Full: {fullRules.map((rule) => rule.serviceType).join(", ")}</strong></p> : null}
+            <RuleLedger rules={session.rules} approvedProviders={session.approvedProviders || []} />
           </section>
         </article>
         <SideSeatPanel request={request} session={session} form={form} setForm={setForm} onManage={onManage} onSubmit={onSubmit} onRemove={onRemove} busy={busy} />
@@ -311,9 +308,11 @@ function SideSeatPanel({ request, session, form, setForm, onManage, onSubmit, on
   );
 }
 
-function RuleLedger({ rules }) {
+function RuleLedger({ rules, approvedProviders = [] }) {
   const approvedRules = rules.filter((rule) => rule.approvedProviders?.length);
-  if (!approvedRules.length) return <p className="muted-italic">No approved providers yet.</p>;
+  const matchedIds = new Set(approvedRules.flatMap((rule) => rule.approvedProviders.map((provider) => provider.id)));
+  const unmatchedProviders = approvedProviders.filter((provider) => !matchedIds.has(provider.id));
+  if (!approvedRules.length && !unmatchedProviders.length) return <p className="muted-italic">No approved providers yet.</p>;
   return (
     <div className="rule-ledger">
       {approvedRules.map((rule) => (
@@ -327,6 +326,17 @@ function RuleLedger({ rules }) {
           <span>{rule.approvedProviders.length}/{rule.seatLimit} approved</span>
         </article>
       ))}
+      {unmatchedProviders.length ? (
+        <article>
+          <div>
+            <strong>Approved providers</strong>
+            <div className="rule-provider-pills">
+              {unmatchedProviders.map((provider) => <ProviderChip key={provider.id || provider.email || provider.name} provider={provider} />)}
+            </div>
+          </div>
+          <span>{unmatchedProviders.length} approved</span>
+        </article>
+      ) : null}
     </div>
   );
 }
@@ -337,7 +347,10 @@ function RoomPills({ sessions, selected, onSelect }) {
 
 function ProviderChip({ provider }) {
   const content = <>
-    <span className="provider-chip-photo">{initials(provider.name)}</span>
+    <span className="provider-chip-photo">
+      <span className="provider-chip-initials">{initials(provider.name)}</span>
+      {provider.photo ? <img src={provider.photo} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
+    </span>
     <span>{provider.name || "Approved provider"}</span>
   </>;
   return provider.profileId
