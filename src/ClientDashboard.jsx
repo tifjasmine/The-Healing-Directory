@@ -1,6 +1,6 @@
 import React from "react";
 import { getAccessToken, getUser, logout, refreshSession } from "./authClient.js";
-import { ArrowRight, CalendarDays, ChevronDown, CircleUserRound, HeartHandshake, LogOut, RefreshCw, Save } from "lucide-react";
+import { ArrowRight, CalendarDays, ChevronDown, CircleUserRound, HeartHandshake, LogOut, Menu, RefreshCw, Save, X } from "lucide-react";
 
 const API = "/.netlify/functions/app-api";
 
@@ -12,6 +12,8 @@ export default function ClientDashboard({ hideHeader = false }) {
   const [savingNote, setSavingNote] = React.useState("");
   const [openNotes, setOpenNotes] = React.useState({});
   const [savedNotes, setSavedNotes] = React.useState({});
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const headerRef = React.useRef(null);
 
   React.useEffect(() => {
     getUser().then((current) => {
@@ -47,6 +49,16 @@ export default function ClientDashboard({ hideHeader = false }) {
     setNoteDrafts(next);
   }, [payload?.savedProviderItems]);
 
+  React.useEffect(() => {
+    if (!menuOpen) return undefined;
+    function closeHeaderMenu(event) {
+      if (headerRef.current?.contains(event.target)) return;
+      setMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", closeHeaderMenu);
+    return () => document.removeEventListener("pointerdown", closeHeaderMenu);
+  }, [menuOpen]);
+
   if (!user || !payload) return <div className="state"><RefreshCw className="spin" /><h2>Loading dashboard...</h2></div>;
 
   const savedEvents = payload.savedEvents || [];
@@ -75,9 +87,10 @@ export default function ClientDashboard({ hideHeader = false }) {
   }
 
   return <div className="app-shell">
-    {!hideHeader ? <header className="site-header warm-header">
+    {!hideHeader ? <header ref={headerRef} className="site-header warm-header">
       <button className="brand" onClick={() => go("/")}><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></button>
-      <nav className="site-nav"><button onClick={() => go("/")}>Providers</button><button onClick={() => go("/events")}>Events</button><button onClick={() => go("/client-dashboard")}>Dashboard</button></nav>
+      <button className="menu-toggle icon-button" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle menu">{menuOpen ? <X /> : <Menu />}</button>
+      <nav className={menuOpen ? "site-nav open" : "site-nav"}><button onPointerDown={(event) => { event.preventDefault(); go("/"); }} onClick={() => go("/")}>Providers</button><button onPointerDown={(event) => { event.preventDefault(); go("/events"); }} onClick={() => go("/events")}>Events</button><button onPointerDown={(event) => { event.preventDefault(); go("/client-dashboard"); }} onClick={() => go("/client-dashboard")}>Dashboard</button></nav>
       <div className="account-actions"><button className="account-chip" onClick={() => go("/account-settings")}><CircleUserRound size={17} /><span>{firstName(cleanName(user.name) || user.email)}</span></button><button className="icon-button logout-arrow" onClick={signOut} title="Log out"><LogOut size={18} /></button></div>
     </header> : null}
     <main className="client-dashboard-page">
@@ -104,7 +117,7 @@ function ClientStat({ label, value }) { return <div className="client-stat"><spa
 
 function SavedList({ items, kind, noteDrafts = {}, setNoteDrafts, savingNote, savedNotes = {}, openNotes = {}, setOpenNotes, onSaveNote }) {
   if (!items.length) return <div className="client-empty"><h2>No saved {kind === "event" ? "workshops" : "providers"} yet</h2><p>{kind === "event" ? "When you save a workshop, circle, or healing experience, it will show up here." : "Providers you save will become your private healing shortlist."}</p><button className="button client-side-button" onClick={() => go(kind === "event" ? "/events" : "/")}>{kind === "event" ? "Browse Workshops" : "Find Providers"}</button></div>;
-  return <div className="client-saved-list">{items.slice(0, 5).map((item, index) => {
+  return <div className={`client-saved-list ${kind === "event" ? "event-list" : "provider-list"}`}>{items.map((item, index) => {
     const record = item.event || item.provider || item;
     const title = record.name || record.title || (kind === "event" ? "Saved Workshop" : "Saved Provider");
     const path = kind === "event" ? `/event-details?id=${record.id}` : `/provider-details?id=${record.id}`;

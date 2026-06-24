@@ -42,9 +42,9 @@ export default function LegalChrome({ children }) {
       </button>
       <button className="menu-toggle icon-button" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle menu">{menuOpen ? <X /> : <Menu />}</button>
       <nav className={menuOpen ? "site-nav open" : "site-nav"}>
-        <button onClick={() => go("/")}>Providers</button>
-        <button onClick={() => go("/events")}>Events</button>
-        {user ? <button onClick={() => go(defaultDashboardPath(user))}>Dashboard</button> : null}
+        <button onPointerDown={(event) => { event.preventDefault(); go("/"); }} onClick={() => go("/")}>Providers</button>
+        <button onPointerDown={(event) => { event.preventDefault(); go("/events"); }} onClick={() => go("/events")}>Events</button>
+        {user ? <button onPointerDown={(event) => { event.preventDefault(); go(defaultDashboardPath(user)); }} onClick={() => go(defaultDashboardPath(user))}>Dashboard</button> : null}
       </nav>
       <div className="account-actions">
         {!ready ? null : user ? (

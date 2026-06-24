@@ -254,7 +254,7 @@ async function bootstrap(user) {
   let savedEventIds = [];
 
   if (user?.email) {
-    const account = await findSaverAccount(user);
+    const account = await findSavedItemAccount(user);
     const [providerSaves, eventSaves] = await Promise.all([list("savedProviders"), list("savedEvents")]);
     savedProviderIds = providerSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r)).flatMap(providerIds);
     savedEventIds = eventSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r)).flatMap(eventIds);
@@ -287,17 +287,18 @@ async function getEvent(id, user) {
 }
 
 async function dashboard(user) {
-  const [providers, events, providerSaves, eventSaves, account] = await Promise.all([
-    list("directory"), list("events"), list("savedProviders"), list("savedEvents"), ensureSaverAccount(user)
+  const [providers, events, providerSaves, eventSaves, savedAccount] = await Promise.all([
+    list("directory"), list("events"), list("savedProviders"), list("savedEvents"), ensureSavedItemAccount(user)
   ]);
-  const myProviderSaves = providerSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r));
-  const myEventSaves = eventSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r));
+  const myProviderSaves = providerSaves.filter((r) => belongsTo(r, user.email, savedAccount?.id) && activeRecord(r));
+  const myEventSaves = eventSaves.filter((r) => belongsTo(r, user.email, savedAccount?.id) && activeRecord(r));
   const providerMap = new Map(providers.map((r) => [r.id, normalizeProvider(r)]));
   const eventMap = new Map(events.map((r) => [r.id, normalizeEvent(r)]));
   const savedProviders = unique(myProviderSaves.flatMap(providerIds)).map((id) => providerMap.get(id)).filter(Boolean);
   const savedEvents = unique(myEventSaves.flatMap(eventIds)).map((id) => eventMap.get(id)).filter(Boolean);
   const upcoming = savedEvents.filter((event) => event.start && new Date(event.start).getTime() >= Date.now()).length;
   const accountType = accountTypeForUser(user);
+  const account = accountType === "provider" ? await ensureSaverAccount(user) : savedAccount;
   const signup = accountType === "provider" ? await findSignupByEmail("provider", user.email).catch(() => null) : account;
   return {
     account: { ...accountFromRecord(user, account, accountType), interests: accountInterests(account, signup, accountType) },
@@ -308,7 +309,7 @@ async function dashboard(user) {
 }
 
 async function myEvents(user) {
-  const [events, saves, account] = await Promise.all([list("events"), list("savedEvents"), ensureSaverAccount(user)]);
+  const [events, saves, account] = await Promise.all([list("events"), list("savedEvents"), ensureSavedItemAccount(user)]);
   const normalized = events.map(normalizeEvent);
   const hosted = normalized.filter((event) => lower(event.hostEmail) === lower(user.email));
   const ids = unique(saves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r)).flatMap(eventIds));
@@ -317,7 +318,7 @@ async function myEvents(user) {
 }
 
 async function savedProviders(user) {
-  const [providers, saves, account] = await Promise.all([list("directory"), list("savedProviders"), ensureSaverAccount(user)]);
+  const [providers, saves, account] = await Promise.all([list("directory"), list("savedProviders"), ensureSavedItemAccount(user)]);
   const providerMap = new Map(providers.map((r) => [r.id, normalizeProvider(r)]));
   const mapped = await mappedFields("providerSave");
   const items = saves.filter((r) => belongsTo(r, user.email, account?.id)).map((record) => {
@@ -333,10 +334,10 @@ async function savedProviders(user) {
 async function toggleProvider(user, body) {
   if (!body.providerId) throw httpError(400, "Missing provider ID.");
   const provider = normalizeProvider(await get("directory", body.providerId));
-  const account = await ensureSaverAccount(user);
+  const account = await ensureSavedItemAccount(user);
   const saves = await list("savedProviders");
   const mapped = await mappedFields("providerSave");
-  const mappedLinks = await mappedSaveLinkFields("providerSave", accountTypeForUser(user));
+  const mappedLinks = await mappedSaveLinkFields("providerSave");
   mapped.savedProvider = mappedLinks.savedProvider || mapped.savedProvider;
   mapped.saverRecord = mappedLinks.saverRecord || mapped.saverRecord;
   const existingById = body.saveId ? saves.find((r) => r.id === body.saveId && belongsTo(r, user.email, account.id)) : null;
@@ -359,10 +360,10 @@ async function toggleProvider(user, body) {
 async function toggleEvent(user, body) {
   if (!body.eventId) throw httpError(400, "Missing event ID.");
   const event = normalizeEvent(await get("events", body.eventId));
-  const account = await ensureSaverAccount(user);
+  const account = await ensureSavedItemAccount(user);
   const saves = await list("savedEvents");
   const mapped = await mappedFields("eventSave");
-  const mappedLinks = await mappedSaveLinkFields("eventSave", accountTypeForUser(user));
+  const mappedLinks = await mappedSaveLinkFields("eventSave");
   mapped.savedEvent = mappedLinks.savedEvent || mapped.savedEvent;
   mapped.saverRecord = mappedLinks.saverRecord || mapped.saverRecord;
   const existing = saves.find((r) => belongsTo(r, user.email, account.id) && eventIds(r).includes(body.eventId));
@@ -1007,17 +1008,16 @@ async function mappedFields(key) {
   return fields;
 }
 
-async function mappedSaveLinkFields(key, accountType = "") {
+async function mappedSaveLinkFields(key) {
   const tableName = key === "providerSave" ? "savedProviders" : "savedEvents";
   const table = await metadataTable(tableName).catch(() => null);
   if (!table) return {};
   const directoryTable = await metadataTable("directory").catch(() => null);
   const clientsTable = await metadataTable("clients").catch(() => null);
   const eventsTable = await metadataTable("events").catch(() => null);
-  const accountTable = lower(accountType) === "provider" ? directoryTable : clientsTable;
   const set = SAVE_FIELD_SETS[key] || {};
   return {
-    saverRecord: findLinkedField(table, set.saverRecord || [], accountTable),
+    saverRecord: findLinkedField(table, set.saverRecord || [], clientsTable),
     savedProvider: key === "providerSave" ? findLinkedField(table, set.savedProvider || [], directoryTable) : "",
     savedEvent: key === "eventSave" ? findLinkedField(table, set.savedEvent || [], eventsTable) : "",
   };
@@ -1374,9 +1374,24 @@ async function ensureSaverAccount(user) {
   });
 }
 
+async function ensureSavedItemAccount(user) {
+  return ensureMemberAccount({
+    email: user.email,
+    name: publicUser(user)?.name || user.email.split("@")[0],
+    accountType: "client",
+    status: "Approved",
+    areaInterest: user.user_metadata?.area_interest || user.userMetadata?.area_interest || user.user_metadata?.areaInterest || user.userMetadata?.areaInterest,
+    source: "app"
+  });
+}
+
 async function findSaverAccount(user) {
   const accountType = accountTypeForUser(user);
   if (accountType === "provider") return findDirectoryByEmail(user.email);
+  return findSignupByEmail("client", user.email).catch(() => null);
+}
+
+async function findSavedItemAccount(user) {
   return findSignupByEmail("client", user.email).catch(() => null);
 }
 

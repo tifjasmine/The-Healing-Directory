@@ -113,9 +113,9 @@ export default function PublicShowcase({ path }) {
       </button>
       <button className="menu-toggle icon-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X /> : <Menu />}</button>
       <nav className={menuOpen ? "site-nav open" : "site-nav"}>
-        <button onClick={() => go("/")}>Providers</button>
-        <button onClick={() => go("/events")}>Events</button>
-        {user ? <button onClick={() => go(dashboardPath)}>Dashboard</button> : null}
+        <button onPointerDown={(event) => { event.preventDefault(); go("/"); }} onClick={() => go("/")}>Providers</button>
+        <button onPointerDown={(event) => { event.preventDefault(); go("/events"); }} onClick={() => go("/events")}>Events</button>
+        {user ? <button onPointerDown={(event) => { event.preventDefault(); go(dashboardPath); }} onClick={() => go(dashboardPath)}>Dashboard</button> : null}
       </nav>
       <div className="account-actions">
         {!authReady ? (
@@ -553,7 +553,7 @@ function DetailPanel({ title, children, className = "", defaultOpen = true }) {
   </section>;
 }
 function FormattedText({ value }) {
-  const blocks = String(value || "").split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
+  const blocks = String(value || "").split(/\r?\n+/).map((item) => item.trim()).filter(Boolean);
   return <div className="formatted-copy">{(blocks.length ? blocks : [String(value || "").trim()]).map((block, index) => <p key={`${index}-${block.slice(0, 12)}`}>{block}</p>)}</div>;
 }
 function Info({ icon, label, value }) { if (!value) return null; return <div className="info-line">{React.cloneElement(icon, { size: 17 })}<span><small>{label}</small>{value}</span></div>; }

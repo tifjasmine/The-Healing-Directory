@@ -200,10 +200,10 @@ function SiteHeader({ route, user, authReady, navigate, onLogout, menuOpen, setM
       </button>
       <button className="menu-toggle icon-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X /> : <Menu />}</button>
       <nav className={menuOpen ? "site-nav open" : "site-nav"}>
-        <button onClick={() => navigate("/")}>Providers</button>
-        <button onClick={() => navigate("/events")}>Events</button>
-        {user ? <button onClick={() => navigate(dashboardPath)}>Dashboard</button> : null}
-        {admin ? <button onClick={() => navigate("/admin/events")}><ShieldCheck size={15} /> Admin</button> : null}
+        <button onPointerDown={(event) => { event.preventDefault(); navigate("/"); }} onClick={() => navigate("/")}>Providers</button>
+        <button onPointerDown={(event) => { event.preventDefault(); navigate("/events"); }} onClick={() => navigate("/events")}>Events</button>
+        {user ? <button onPointerDown={(event) => { event.preventDefault(); navigate(dashboardPath); }} onClick={() => navigate(dashboardPath)}>Dashboard</button> : null}
+        {admin ? <button onPointerDown={(event) => { event.preventDefault(); navigate("/admin/events"); }} onClick={() => navigate("/admin/events")}><ShieldCheck size={15} /> Admin</button> : null}
       </nav>
       <div className="account-actions">
         {!authReady ? (
