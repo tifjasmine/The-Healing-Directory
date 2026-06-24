@@ -176,9 +176,8 @@ function Page(props) {
 function SiteHeader({ route, user, authReady, navigate, onLogout, menuOpen, setMenuOpen }) {
   const [signupOpen, setSignupOpen] = React.useState(false);
   const admin = user?.roles?.includes("admin");
-  const dashboardPath = user ? defaultDashboardPath(user) : "/client-dashboard";
+  const dashboardPath = user ? defaultDashboardPath(user) : "";
   const warm = ["/events", "/event-details", "/provider-details", "/add-event", "/edit-event"].includes(route.path);
-  const openDashboard = () => navigate(user ? dashboardPath : `/login?next=${encodeURIComponent("/client-dashboard")}`);
   const openSignup = (type) => {
     setSignupOpen(false);
     navigate(type === "provider" ? "/provider-signup" : "/signup");
@@ -192,7 +191,7 @@ function SiteHeader({ route, user, authReady, navigate, onLogout, menuOpen, setM
       <nav className={menuOpen ? "site-nav open" : "site-nav"}>
         <button onClick={() => navigate("/")}>Providers</button>
         <button onClick={() => navigate("/events")}>Events</button>
-        <button onClick={openDashboard}>Dashboard</button>
+        {user ? <button onClick={() => navigate(dashboardPath)}>Dashboard</button> : null}
         {admin ? <button onClick={() => navigate("/admin/events")}><ShieldCheck size={15} /> Admin</button> : null}
       </nav>
       <div className="account-actions">
@@ -265,7 +264,7 @@ function DirectoryPage({ data, loading, navigate, toggleSave }) {
       </div>
     </section>
     <section className="content-shell">
-      <div className="provider-invite"><div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div><button className="button warm" onClick={() => navigate("/provider-signup")}>Become a Provider <ArrowRight size={17} /></button></div>
+      <div className="provider-invite directory-join-invite"><div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div><div className="directory-join-actions"><button className="button warm" onClick={() => navigate("/provider-signup")}>Become a Provider <ArrowRight size={17} /></button><button className="button member-save-cta" onClick={() => navigate("/signup")}>Become a Member <span>Save providers and events in one place.</span></button></div></div>
       <div className="results-count"><strong>{providers.length}</strong> providers shown</div>
       {loading ? <LoadingState label="Loading providers" /> : providers.length ? <div className="provider-list">{providers.map((provider) => <ProviderCard key={provider.id} provider={provider} saved={data.savedProviderIds.includes(provider.id)} onSave={() => toggleSave("provider", provider.id, !data.savedProviderIds.includes(provider.id))} onOpen={() => navigate(`/provider-details?id=${provider.id}`)} />)}</div> : <EmptyState title="No providers match that search" text="Try a broader phrase or clear one of the filters." />}
     </section>
@@ -392,7 +391,7 @@ function SavedProviders({ navigate, toggleSave }) {
     if (!providerId) return;
     setSavingNote(providerId);
     try {
-      await api("toggle-provider", { method: "POST", body: { providerId, active: true, notes: drafts[providerId] || "" } });
+      await api("toggle-provider", { method: "POST", body: { providerId, saveId: item.id, active: true, notes: drafts[providerId] || "" } });
       setItems((current) => current.map((entry) => entry.provider?.id === providerId ? { ...entry, notes: drafts[providerId] || "", active: true } : entry));
     } finally {
       setSavingNote("");

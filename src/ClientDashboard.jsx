@@ -59,7 +59,7 @@ export default function ClientDashboard({ hideHeader = false }) {
     try {
       await api("toggle-provider", {
         method: "POST",
-        body: { providerId, active: true, notes: noteDrafts[providerId] || "" },
+        body: { providerId, saveId: item.id, active: true, notes: noteDrafts[providerId] || "" },
       });
       setPayload((current) => ({
         ...current,
@@ -85,7 +85,6 @@ export default function ClientDashboard({ hideHeader = false }) {
         <p className="client-dashboard-kicker">Client Dashboard</p>
         <h1>Welcome back, {firstName(cleanName(user.name) || user.email)}.</h1>
         <p>A quiet place to keep the people and gatherings you want to remember.</p>
-        <div className="client-dashboard-actions"><button className="button client-primary" onClick={() => go("/events")}>Browse Workshops</button><button className="button client-secondary" onClick={() => go("/")}>Find Providers</button></div>
       </section>
       <section className="client-dashboard-stats">
         <ClientStat label="Saved Workshops" value={payload.counts?.savedEvents || 0} />

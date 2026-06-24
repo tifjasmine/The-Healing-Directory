@@ -97,7 +97,7 @@ export default function AuthAccess({ path }) {
   return <div className="app-shell auth-root">
     <header className="site-header">
       <a className="brand" href="/"><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></a>
-      <nav className="site-nav"><a href="/">Providers</a><a href="/events">Events</a><a href="/login?next=/client-dashboard">Dashboard</a></nav>
+      <nav className="site-nav"><a href="/">Providers</a><a href="/events">Events</a></nav>
       <div className="account-actions">
         <a className="button compact login-button" href="/login"><LogIn size={16} /> Login</a>
         <div className="signup-menu">

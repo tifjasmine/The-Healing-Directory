@@ -166,7 +166,7 @@ const SAVE_FIELD_SETS = {
     saverRecord: ["Saver Info", "Saver", "Member", "Client", "User", "Saved By"],
     saverEmail: ["Saver Email Text", "Saver Email", "Email", "Email Address", "User Email", "Saved By", "Saved By Email", "Client Email", "User's Email"],
     savedProvider: ["Saved Provider Info", "Saved Provider", "Directory", "Directory Record", "Directory Grid View", "Provider", "Provider Link", "Provider Record", "Providers"],
-    notes: ["Notes", "Note", "Saved Provider Notes"],
+    notes: ["Notes", "Note", "Private Note", "Private Notes", "Saved Provider Notes"],
     active: ["Active", "Saved", "Is Active", "Visible"]
   },
   eventSave: {
@@ -323,7 +323,7 @@ async function savedProviders(user) {
   const items = saves.filter((r) => belongsTo(r, user.email, account?.id)).map((record) => {
     const id = providerIds(record)[0];
     return {
-      id: record.id, active: activeRecord(record), notes: mapped.notes ? text(pick(record.fields || {}, [mapped.notes])) : "",
+      id: record.id, active: activeRecord(record), notes: text(pick(record.fields || {}, unique([mapped.notes, ...SAVE_FIELD_SETS.providerSave.notes].filter(Boolean)))),
       savedAt: text(pick(record.fields || {}, ["Saved At", "Created", "Created At", "Created Date", "Date"])), provider: providerMap.get(id)
     };
   }).filter((item) => item.provider);
@@ -336,6 +336,7 @@ async function toggleProvider(user, body) {
   const account = await ensureSaverAccount(user);
   const saves = await list("savedProviders");
   const mapped = await mappedFields("providerSave");
+  const existingById = body.saveId ? saves.find((r) => r.id === body.saveId && belongsTo(r, user.email, account.id)) : null;
   const existing = saves.find((r) => belongsTo(r, user.email, account.id) && providerIds(r).includes(body.providerId));
   const existingByLinkedField = mapped.savedProvider ? saves.find((r) => providerIds(r).includes(body.providerId) && belongsTo(r, user.email, account.id)) : null;
   const active = body.active !== false;
@@ -347,7 +348,7 @@ async function toggleProvider(user, body) {
   if (mapped.saverEmail) fields[mapped.saverEmail] = user.email;
   if (body.notes !== undefined && mapped.notes) fields[mapped.notes] = String(body.notes || "");
 
-  const current = existing || existingByLinkedField;
+  const current = existingById || existing || existingByLinkedField;
   const record = current ? await updateSafe("savedProviders", current.id, fields) : await createSafe("savedProviders", fields);
   return { ok: true, active, recordId: record.id };
 }

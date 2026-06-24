@@ -89,8 +89,7 @@ export default function PublicShowcase({ path }) {
   }
 
   const warm = path === "/events" || path === "/event-details" || path === "/provider-details";
-  const dashboardPath = user ? defaultDashboardPath(user) : "/client-dashboard";
-  const openDashboard = () => go(user ? dashboardPath : `/login?next=${encodeURIComponent("/client-dashboard")}`);
+  const dashboardPath = user ? defaultDashboardPath(user) : "";
   const openSignup = (type) => {
     setSignupOpen(false);
     go(type === "provider" ? "/provider-signup" : "/signup");
@@ -104,7 +103,7 @@ export default function PublicShowcase({ path }) {
       <nav className={menuOpen ? "site-nav open" : "site-nav"}>
         <button onClick={() => go("/")}>Providers</button>
         <button onClick={() => go("/events")}>Events</button>
-        <button onClick={openDashboard}>Dashboard</button>
+        {user ? <button onClick={() => go(dashboardPath)}>Dashboard</button> : null}
       </nav>
       <div className="account-actions">
         {!authReady ? (
@@ -261,7 +260,13 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
       </div>
     </section>
     <section className="content-shell">
-      <div className="provider-invite"><div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div><button className="button warm" onClick={() => go("/provider-signup")}>Become a Provider <ArrowRight size={17} /></button></div>
+      <div className="provider-invite directory-join-invite">
+        <div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div>
+        <div className="directory-join-actions">
+          <button className="button warm" onClick={() => go("/provider-signup")}>Become a Provider <ArrowRight size={17} /></button>
+          <button className="button member-save-cta" onClick={() => go("/signup")}>Become a Member <span>Save providers and events in one place.</span></button>
+        </div>
+      </div>
       {loading ? <State label="Loading providers" /> : providers.length ? <><div className="provider-list">{visibleProviders.map((provider) => <ProviderCard key={provider.id} provider={provider} saved={data.savedProviderIds.includes(provider.id)} onSave={() => toggleSave("provider", provider.id, !data.savedProviderIds.includes(provider.id))} />)}</div><ViewMoreList shown={visibleProviders.length} total={providers.length} label="providers" onMore={() => setVisibleCount((value) => value + LIST_PAGE_SIZE)} /></> : <State label="No providers match that search" />}
     </section>
   </main>;

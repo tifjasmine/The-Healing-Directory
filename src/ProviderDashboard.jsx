@@ -69,7 +69,7 @@ export default function ProviderDashboard({ hideHeader = false }) {
     try {
       await api("toggle-provider", {
         method: "POST",
-        body: { providerId, active: true, notes: noteDrafts[providerId] || "" },
+        body: { providerId, saveId: item.id, active: true, notes: noteDrafts[providerId] || "" },
       });
       setPayload((current) => ({
         ...current,

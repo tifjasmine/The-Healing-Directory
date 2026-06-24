@@ -310,7 +310,6 @@ function ProviderSignupNav() {
     <div>
       <a href="/">Providers</a>
       <a href="/events">Events</a>
-      <a href="/login?next=/client-dashboard">Dashboard</a>
       <a className="provider-signup-login" href="/login">Login</a>
     </div>
   </nav>;
