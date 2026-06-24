@@ -5457,6 +5457,12 @@
   font-size: 14px;
 }
 
+.referral-dashboard-actions {
+  margin: -6px 0 18px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .referral-dashboard-sessions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -5474,6 +5480,19 @@
   border-radius: 18px;
   background: #fffdf9;
   box-shadow: 0 10px 24px rgba(58, 44, 35, .045);
+}
+
+button.referral-room-preview-card {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.referral-room-preview-card:hover {
+  border-color: #cdbd9f;
+  transform: translateY(-1px);
 }
 
 .referral-room-card-top,
@@ -5553,6 +5572,7 @@
   width: 100%;
   min-height: 48px;
   border-radius: 14px;
+  pointer-events: none;
 }
 
 @media (max-width: 980px) {

@@ -187,6 +187,9 @@ function ReferralPanel({ items, sessions }) {
         <p><strong>Verified</strong> means the provider has been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes.</p>
       </aside>
     </section>
+    <div className="referral-dashboard-actions">
+      <button className="button provider-dashboard-secondary" type="button" onClick={() => go("/referral-room?rsvps=1")}>My RSVPs <ArrowRight size={16} /></button>
+    </div>
     <div className="referral-dashboard-sessions">
       {sessions.length ? sessions.map((session) => <ReferralSessionCard key={session.id} session={session} requests={activeRequests} />) : <div className="client-empty inline-empty"><h2>No upcoming rooms yet</h2><p>New dates for The Referral Room will appear here when seats open.</p></div>}
     </div>
@@ -201,10 +204,10 @@ function ReferralSessionCard({ session, requests = [] }) {
   const progress = totalSeats ? Math.min(100, Math.max(0, (accepted / totalSeats) * 100)) : 0;
   const ruleCount = (session.rules || []).filter((rule) => rule.accepting !== false).length || (session.rules || []).length;
 
-  return <article className="referral-room-preview-card">
+  return <button className="referral-room-preview-card clickable-room-card" type="button" onClick={() => go(`/referral-room?room=${encodeURIComponent(session.id || "")}`)}>
     <div className="referral-room-card-top">
       <span className="referral-room-dot" />
-      <strong>{formatShortDate(session.date)}</strong>
+      <strong>{formatShortDate(session.date)} - {session.name || "The Referral Room"}</strong>
       {myRequest ? <span className={`status ${statusTone(myRequest.status)}`}>{myRequest.status || "Pending"}</span> : null}
     </div>
     <h3>{session.name || "The Referral Room"}</h3>
@@ -215,10 +218,10 @@ function ReferralSessionCard({ session, requests = [] }) {
       <span>{ruleCount} provider type{ruleCount === 1 ? "" : "s"}</span>
     </div>
     <div className="referral-room-progress"><i style={{ width: `${progress}%` }} /></div>
-    <button className={myRequest ? "button provider-dashboard-secondary" : "button provider-dashboard-primary"} type="button" onClick={() => go(`/referral-room?room=${encodeURIComponent(session.id || "")}`)}>
+    <span className={myRequest ? "button provider-dashboard-secondary" : "button provider-dashboard-primary"}>
       {myRequest ? "Manage RSVP" : "Request a seat"} <ArrowRight size={16} />
-    </button>
-  </article>;
+    </span>
+  </button>;
 }
 
 function ReferralSessionSummary({ session, requests = [], open, onToggle }) {

@@ -3,6 +3,7 @@ import { getUser } from "./supabase-user.mjs";
 const BASE_ID = process.env.AIRTABLE_BASE_ID || "appACV3Zz7ngug6yt";
 const TOKEN = () => process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "";
 const TABLES = {
+  directory: process.env.AIRTABLE_DIRECTORY_TABLE_ID || "tblOgiBFqw5iftDAE",
   sessions: process.env.AIRTABLE_REFERRAL_ROOM_TABLE_ID || "The Referral Room",
   attendance: process.env.AIRTABLE_ATTENDANCE_TABLE_ID || "The Referral Room Attendance",
   rules: process.env.AIRTABLE_SEAT_RULES_TABLE_ID || "Referral Room Seat Rules",
@@ -44,11 +45,12 @@ export default async function handler(request) {
 }
 
 async function providerData(user) {
-  const [sessionRecords, attendanceRecords, ruleRecords] = await Promise.all([
-    list("sessions"), list("attendance"), list("rules"),
+  const [sessionRecords, attendanceRecords, ruleRecords, providerRecords] = await Promise.all([
+    list("sessions"), list("attendance"), list("rules"), list("directory").catch(() => []),
   ]);
   const attendance = attendanceRecords.map(normalizeAttendance);
-  const openSessions = sessionRecords.map((record) => normalizeSession(record, attendance, ruleRecords))
+  const providers = providerRecords.map(normalizeDirectoryProvider);
+  const openSessions = sessionRecords.map((record) => normalizeSession(record, attendance, ruleRecords, providers))
     .filter((session) => !["draft", "closed", "cancelled", "canceled"].includes(lower(session.status)))
     .sort((a, b) => dateValue(a.date) - dateValue(b.date));
   const futureSessions = openSessions.filter((session) => !session.date || dateValue(session.date) >= startOfToday());
@@ -60,11 +62,12 @@ async function providerData(user) {
 }
 
 async function managerData() {
-  const [sessionRecords, attendanceRecords, ruleRecords] = await Promise.all([
-    list("sessions"), list("attendance"), list("rules"),
+  const [sessionRecords, attendanceRecords, ruleRecords, providerRecords] = await Promise.all([
+    list("sessions"), list("attendance"), list("rules"), list("directory").catch(() => []),
   ]);
   const requests = attendanceRecords.map(normalizeAttendance).sort((a, b) => dateValue(b.created) - dateValue(a.created));
-  const sessions = sessionRecords.map((record) => normalizeSession(record, requests, ruleRecords)).sort((a, b) => dateValue(a.date) - dateValue(b.date));
+  const providers = providerRecords.map(normalizeDirectoryProvider);
+  const sessions = sessionRecords.map((record) => normalizeSession(record, requests, ruleRecords, providers)).sort((a, b) => dateValue(a.date) - dateValue(b.date));
   return { requests, sessions, serviceTypes: SERVICE_TYPES };
 }
 
@@ -180,21 +183,16 @@ async function updateSession(user, body) {
   return { ok: true, session: normalizeSession(await update("sessions", id, fields), [], []), admin: user.email };
 }
 
-function normalizeSession(record, attendance, rules) {
+function normalizeSession(record, attendance, rules, providers = []) {
   const f = record.fields || {};
   const id = record.id;
   const linkedAttendance = attendance.filter((item) => item.sessionId === id);
   const acceptedAttendance = linkedAttendance.filter(isSeatHolding);
+  const providerMap = new Map(providers.filter((item) => item.email).map((item) => [lower(item.email), item]));
   const accepted = acceptedAttendance.length;
   const totalSeats = Number(value(f, ["Total Seats", "Total Seat Cap", "Total Limit"])) || totalSeatsFromNotes(text(value(f, ["Notes"]))) || 8;
   const sessionRules = rules.map(normalizeRule).filter((rule) => rule.sessionId === id).map((rule) => {
-    const approvedProviders = acceptedAttendance.filter((item) => providerTypeMatches(item.serviceType, rule.serviceType)).map((item) => ({
-      id: item.id,
-      name: item.providerName || item.email || "Approved provider",
-      email: item.email,
-      serviceType: item.serviceType,
-      status: item.status
-    }));
+    const approvedProviders = acceptedAttendance.filter((item) => providerTypeMatches(item.serviceType, rule.serviceType)).map((item) => approvedProvider(item, providerMap));
     const taken = approvedProviders.length;
     return { ...rule, taken, remaining: Math.max(rule.seatLimit - taken, 0), approvedProviders };
   });
@@ -204,13 +202,32 @@ function normalizeSession(record, attendance, rules) {
     status: text(value(f, ["Status"])) || "Open", description: text(value(f, ["Description"])),
     notes: text(value(f, ["Notes", "Internal Notes"])), totalSeats, accepted,
     remaining: Math.max(totalSeats - accepted, 0), rules: sessionRules,
-    approvedProviders: acceptedAttendance.map((item) => ({
-      id: item.id,
-      name: item.providerName || item.email || "Approved provider",
-      email: item.email,
-      serviceType: item.serviceType,
-      status: item.status
-    })),
+    approvedProviders: acceptedAttendance.map((item) => approvedProvider(item, providerMap)),
+  };
+}
+
+function approvedProvider(item, providerMap) {
+  const provider = providerMap.get(lower(item.email)) || {};
+  const fallbackName = item.providerName && !String(item.providerName).includes("@") ? item.providerName : "Approved provider";
+  return {
+    id: item.id,
+    profileId: provider.id || "",
+    name: provider.name || fallbackName,
+    email: item.email,
+    photo: provider.photo || "",
+    serviceType: item.serviceType || provider.providerType || "",
+    status: item.status
+  };
+}
+
+function normalizeDirectoryProvider(record) {
+  const f = record.fields || {};
+  return {
+    id: record.id,
+    name: text(value(f, ["Provider / Practice Name", "Provider Name", "Name", "Full Name", "Full Name *"])) || "Provider",
+    email: text(value(f, ["Email", "Email Address", "Provider Email", "Provider Email Address", "Contact Email", "Login Email"])),
+    photo: attachment(value(f, ["Profile Photo", "Photo", "Headshot", "Image"])) || text(value(f, ["Profile Photo URL", "Photo URL", "Headshot URL", "Image URL"])),
+    providerType: text(value(f, ["Provider Type", "Provider Types", "Service Type"]))
   };
 }
 
@@ -260,6 +277,7 @@ function requireAdmin(user) { if (!(user.roles || user.app_metadata?.roles || []
 function displayName(user) { return user.user_metadata?.full_name || user.userMetadata?.full_name || user.email.split("@")[0]; }
 function value(fields, names) { for (const name of names) if (Object.prototype.hasOwnProperty.call(fields, name)) return fields[name]; return undefined; }
 function text(input) { if (input == null) return ""; if (Array.isArray(input)) return input.map(text).filter(Boolean).join(", "); if (typeof input === "object") return text(input.name ?? input.label ?? input.value ?? input.text ?? ""); return clean(input); }
+function attachment(input) { const first = (Array.isArray(input) ? input : input ? [input] : [])[0]; return typeof first === "string" ? first : first?.url || first?.thumbnails?.large?.url || first?.thumbnails?.small?.url || ""; }
 function linked(input) { return (Array.isArray(input) ? input : input ? [input] : []).map((item) => typeof item === "object" ? clean(item.id || item.value) : clean(item)).filter((item) => item.startsWith("rec")); }
 function truthy(input) { return input === true || ["true", "yes", "1", "checked", "accepted", "attended", "verified"].includes(lower(text(input))); }
 function clean(input) { return String(input ?? "").replace(/\s+/g, " ").trim(); }

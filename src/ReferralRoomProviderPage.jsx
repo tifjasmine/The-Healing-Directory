@@ -18,11 +18,13 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
     try {
       const payload = await api("provider-data");
       const nextData = normalizePayload(payload);
-      const requestedRoom = new URLSearchParams(window.location.search).get("room") || "";
+      const params = new URLSearchParams(window.location.search);
+      const requestedRoom = params.get("room") || "";
       setData(nextData);
       setLoadError("");
       setSelectedId((current) => requestedRoom || current || nextData.sessions?.[0]?.id || "");
-      if (requestedRoom) setPage("details");
+      if (params.get("rsvps")) setPage("rsvps");
+      else if (requestedRoom) setPage("details");
     } catch (error) {
       setLoadError(error.message || "Referral Room data could not load.");
       setNotice(error.message);
@@ -94,8 +96,6 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
 
   return (
     <main className="referral-provider-page room-experience">
-      <RoomNav page={page} setPage={setPage} />
-
       {loading ? (
         <section className="referral-stage"><RoomLoading /></section>
       ) : loadError ? (
@@ -146,29 +146,6 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
   );
 }
 
-function RoomNav({ page, setPage }) {
-  const pages = [
-    ["browse", "Browse"],
-    ["details", "Room details"],
-    ["rsvps", "My RSVPs"],
-  ];
-
-  return (
-    <header className="room-nav">
-      <div className="room-nav-group">
-        <span>Page</span>
-        <div className="room-segment">
-          {pages.map(([key, label]) => (
-            <button key={key} className={page === key ? "active" : ""} onClick={() => setPage(key)}>
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </header>
-  );
-}
-
 function BrowseView({ sessions, attendance, onDetails, onRequest }) {
   return (
     <>
@@ -188,10 +165,10 @@ function BrowseView({ sessions, attendance, onDetails, onRequest }) {
         {sessions.length ? sessions.map((session) => {
           const request = attendance.find((item) => item.sessionId === session.id);
           return (
-            <article className="room-preview-card" key={session.id}>
+            <button className="room-preview-card clickable-room-card" type="button" key={session.id} onClick={() => request ? onDetails(session) : onRequest(session)}>
               <div className="room-preview-top">
                 <span className="room-dot" style={{ background: accentFor(session.name) }} />
-                <strong>{shortDate(session.date)}</strong>
+                <strong>{shortNumericDate(session.date)} - {session.name}</strong>
                 {request ? <Status value={request.status} /> : null}
               </div>
               <h2>{session.name}</h2>
@@ -202,10 +179,10 @@ function BrowseView({ sessions, attendance, onDetails, onRequest }) {
                 <span>{session.rules.length} provider types</span>
               </div>
               <div className="room-progress"><i style={{ width: `${fillPercent(session)}%` }} /></div>
-              <button className={request ? "room-outline-button" : "room-solid-button"} onClick={() => request ? onDetails(session) : onRequest(session)}>
+              <span className={request ? "room-outline-button" : "room-solid-button"}>
                 {request ? "Manage RSVP" : "Request a seat"}
-              </button>
-            </article>
+              </span>
+            </button>
           );
         }) : <RoomEmpty title="No upcoming rooms yet" text="New Referral Room sessions will appear here when registration opens." />}
       </section>
@@ -251,27 +228,20 @@ function DetailsView({ sessions, session, request, form, setForm, onSelect, onBr
 function RsvpView({ upcoming, attended, onManage, onBrowse }) {
   const pending = upcoming.filter((item) => normalize(item.status).includes("pending") || normalize(item.status).includes("waitlist"));
   const accepted = upcoming.filter((item) => normalize(item.status).includes("accept"));
+  const total = pending.length + accepted.length + attended.length;
 
   return (
-    <section className="referral-stage">
+    <section className="referral-stage rsvp-stage">
       <div className="rsvp-heading">
-        <p>My Referral Room</p>
         <h1>My RSVPs</h1>
-        <span>Tracking {pending.length + accepted.length + attended.length} rooms across your requests, approvals, and attendance.</span>
+        <span>{total} room{total === 1 ? "" : "s"} across requests, approvals, and attendance.</span>
+        <button className="room-outline-button rsvp-browse-button" onClick={onBrowse}>Browse rooms</button>
       </div>
       <div className="rsvp-columns">
         <RsvpColumn title="Pending" items={pending} onManage={onManage} />
         <RsvpColumn title="Accepted" items={accepted} onManage={onManage} />
         <RsvpColumn title="Attended" items={attended} onManage={onManage} />
       </div>
-      <section className="verification-banner">
-        <Check />
-        <div>
-          <h2>About verification</h2>
-          <p><strong>Verified</strong> means the provider has been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes. You have {attended.length} attended room{attended.length === 1 ? "" : "s"} so far.</p>
-        </div>
-        <button className="room-solid-button" onClick={onBrowse}>Browse upcoming rooms</button>
-      </section>
     </section>
   );
 }
@@ -303,7 +273,6 @@ function SideSeatPanel({ request, session, form, setForm, onManage, onSubmit, on
         {request ? (
           <>
             <div className="seat-chip"><Status value={request.status} /><strong>{request.serviceType || "Provider type"}</strong></div>
-            <p>{request.reason || (normalize(request.status).includes("accept") ? "Reviewed for fit" : "Awaiting manager review")}</p>
             <button className="room-outline-button" type="button" onClick={onManage}>Manage RSVP</button>
             <button className="room-text-button" disabled={busy === request.id} onClick={() => onRemove(request)}>
               {busy === request.id ? "Removing..." : "Remove RSVP"}
@@ -338,10 +307,6 @@ function SideSeatPanel({ request, session, form, setForm, onManage, onSubmit, on
           </form>
         )}
       </section>
-      <section className="verify-card">
-        <h2>✓ About verification</h2>
-        <p><strong>Verified</strong> means the provider has been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes.</p>
-      </section>
     </aside>
   );
 }
@@ -356,7 +321,7 @@ function RuleLedger({ rules }) {
             <strong>{rule.serviceType}</strong>
             {rule.approvedProviders?.length ? (
               <div className="rule-provider-pills">
-                {rule.approvedProviders.map((provider) => <span key={provider.id || provider.email || provider.name}>{provider.name}</span>)}
+                {rule.approvedProviders.map((provider) => <ProviderChip key={provider.id || provider.email || provider.name} provider={provider} />)}
               </div>
             ) : <p>No approved providers in this seat yet.</p>}
           </div>
@@ -368,7 +333,17 @@ function RuleLedger({ rules }) {
 }
 
 function RoomPills({ sessions, selected, onSelect }) {
-  return <div className="room-pills">{sessions.map((session) => <button key={session.id} className={selected === session.id ? "active" : ""} onClick={() => onSelect(session)}>{session.name}</button>)}</div>;
+  return <div className="room-pills">{sessions.map((session) => <button key={session.id} className={selected === session.id ? "active" : ""} onClick={() => onSelect(session)}>{shortNumericDate(session.date)} - {session.name}</button>)}</div>;
+}
+
+function ProviderChip({ provider }) {
+  const content = <>
+    <span className="provider-chip-photo">{provider.photo ? <img src={provider.photo} alt="" /> : initials(provider.name)}</span>
+    <span>{provider.name || "Approved provider"}</span>
+  </>;
+  return provider.profileId
+    ? <a href={`/provider-details?id=${encodeURIComponent(provider.profileId)}`} className="provider-chip">{content}</a>
+    : <span className="provider-chip">{content}</span>;
 }
 
 function RoomField({ label, textarea, ...props }) {
@@ -458,6 +433,17 @@ function shortDate(value) {
   return Number.isNaN(time) || !time
     ? "Date coming soon"
     : new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(time).replace(",", " ·");
+}
+
+function shortNumericDate(value) {
+  const time = new Date(value || 0).getTime();
+  return Number.isNaN(time) || !time
+    ? "Date TBD"
+    : new Intl.DateTimeFormat(undefined, { month: "numeric", day: "numeric", year: "2-digit" }).format(time);
+}
+
+function initials(value) {
+  return String(value || "Provider").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "P";
 }
 
 function formatDate(value) {
