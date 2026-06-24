@@ -112,13 +112,8 @@ async function removeRsvp(user, body) {
   const request = normalizeAttendance(record);
   if (lower(request.email) !== lower(user.email)) throw httpError(403, "You can only remove your own RSVP.");
 
-  const fields = {
-    "Signup Status": "Cancelled",
-    "Status": "Cancelled",
-    "Attended": false,
-    "Verified After Attendance": false,
-  };
-  return { ok: true, request: normalizeAttendance(await update("attendance", id, fields)) };
+  await remove("attendance", id);
+  return { ok: true, removedId: id };
 }
 
 async function createSession(user, body) {
@@ -263,6 +258,7 @@ async function list(key) { const records = []; let offset = ""; do { const param
 async function get(key, id) { return airtable(key, id); }
 async function create(key, fields) { return airtable(key, "", { method: "POST", body: { records: [{ fields }], typecast: true } }).then((result) => result.records[0]); }
 async function update(key, id, fields) { return airtable(key, id, { method: "PATCH", body: { fields, typecast: true } }); }
+async function remove(key, id) { return airtable(key, id, { method: "DELETE" }); }
 async function airtable(key, id = "", options = {}) {
   const query = options.params ? `?${options.params}` : "";
   const endpoint = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLES[key])}${id ? `/${encodeURIComponent(id)}` : ""}${query}`;

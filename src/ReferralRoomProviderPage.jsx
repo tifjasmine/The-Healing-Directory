@@ -285,7 +285,7 @@ function SideSeatPanel({ request, session, form, setForm, onManage, onSubmit, on
               label="Your provider type"
               value={form.serviceType}
               onChange={(event) => setForm({ ...form, serviceType: event.target.value })}
-              options={openRules.map((rule) => `${rule.serviceType} (${Math.min(rule.remaining, session.remaining)} open)`)}
+              options={openRules.map((rule) => `${rule.serviceType} (${Math.min(rule.remaining, session.remaining)}/${rule.seatLimit})`)}
               optionValues={openRules.map((rule) => rule.serviceType)}
               placeholder="Select your provider type"
             />
@@ -312,20 +312,19 @@ function SideSeatPanel({ request, session, form, setForm, onManage, onSubmit, on
 }
 
 function RuleLedger({ rules }) {
-  if (!rules.length) return <p className="muted-italic">No provider seat rules have been added yet.</p>;
+  const approvedRules = rules.filter((rule) => rule.approvedProviders?.length);
+  if (!approvedRules.length) return <p className="muted-italic">No approved providers yet.</p>;
   return (
     <div className="rule-ledger">
-      {rules.map((rule) => (
+      {approvedRules.map((rule) => (
         <article key={rule.id || rule.serviceType}>
           <div>
             <strong>{rule.serviceType}</strong>
-            {rule.approvedProviders?.length ? (
-              <div className="rule-provider-pills">
-                {rule.approvedProviders.map((provider) => <ProviderChip key={provider.id || provider.email || provider.name} provider={provider} />)}
-              </div>
-            ) : <p>No approved providers in this seat yet.</p>}
+            <div className="rule-provider-pills">
+              {rule.approvedProviders.map((provider) => <ProviderChip key={provider.id || provider.email || provider.name} provider={provider} />)}
+            </div>
           </div>
-          <span>{rule.remaining}/{rule.seatLimit} open</span>
+          <span>{rule.approvedProviders.length}/{rule.seatLimit} approved</span>
         </article>
       ))}
     </div>
@@ -338,7 +337,7 @@ function RoomPills({ sessions, selected, onSelect }) {
 
 function ProviderChip({ provider }) {
   const content = <>
-    <span className="provider-chip-photo">{provider.photo ? <img src={provider.photo} alt="" /> : initials(provider.name)}</span>
+    <span className="provider-chip-photo">{initials(provider.name)}</span>
     <span>{provider.name || "Approved provider"}</span>
   </>;
   return provider.profileId
