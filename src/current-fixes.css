@@ -6566,6 +6566,46 @@ button.referral-room-preview-card:hover {
   border-radius: 999px;
 }
 
+.auth-root > .global-notice {
+  position: fixed;
+  z-index: 2000;
+  top: 96px;
+  left: 50%;
+  width: min(560px, calc(100% - 32px));
+  margin: 0;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transform: translateX(-50%);
+  border: 1px solid #bddbce;
+  border-radius: 16px;
+  background: #f3faf6;
+  color: #24493d;
+  font-size: 15px;
+  font-weight: 760;
+  box-shadow: 0 18px 46px rgba(13, 39, 31, .18);
+}
+
+.auth-root > .global-notice span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-root > .global-notice span::before {
+  content: "✓";
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #dceee5;
+  color: #2d7353;
+  font-weight: 900;
+}
+
 @media (max-width: 760px) {
   .referral-provider-page .referral-title .title-inner,
   .referral-provider-page .referral-title .content-shell {
@@ -7276,7 +7316,10 @@ button.referral-room-preview-card:hover {
 .auth-root .auth-redesign-panel .brand-pill {
   width: fit-content;
   margin: 0 0 26px !important;
-  color: rgba(255, 255, 255, .78) !important;
+  border-color: rgba(214, 191, 159, .95) !important;
+  background: #fff0d6 !important;
+  color: #24493d !important;
+  box-shadow: 0 10px 26px rgba(10, 35, 28, .18);
 }
 
 .auth-root .auth-redesign-panel h1 {
@@ -7799,6 +7842,8 @@ button.referral-room-preview-card:hover {
 }
 
 .directory-search-panel .primary-filter-grid {
+  grid-column: 1;
+  justify-self: start;
   display: grid !important;
   grid-template-columns: repeat(3, minmax(150px, 230px)) !important;
   gap: 14px !important;
@@ -7839,6 +7884,7 @@ button.referral-room-preview-card:hover {
 }
 
 .directory-home-hero .directory-filter-actions {
+  grid-column: 2;
   justify-self: end;
   margin: 0 !important;
   display: flex;
@@ -7848,11 +7894,19 @@ button.referral-room-preview-card:hover {
 
 .directory-home-hero .filter-toggle-button {
   min-height: 46px;
-  padding: 0 14px;
-  border: 0 !important;
-  background: transparent !important;
-  color: rgba(255, 253, 248, .68) !important;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 253, 248, .24) !important;
+  border-radius: 999px;
+  background: rgba(255, 253, 248, .08) !important;
+  color: rgba(255, 253, 248, .82) !important;
   font-weight: 850;
+}
+
+.directory-home-hero .filter-toggle-button:hover,
+.directory-home-hero .filter-toggle-button.active {
+  border-color: rgba(255, 253, 248, .38) !important;
+  background: rgba(255, 253, 248, .14) !important;
+  color: #fffdf8 !important;
 }
 
 .directory-home-hero .filter-toggle-button svg {
@@ -7871,6 +7925,7 @@ button.referral-room-preview-card:hover {
 }
 
 .directory-home-hero .verified-circle-filter {
+  grid-column: 1;
   justify-self: start;
   margin-top: 0;
   min-height: 46px;
@@ -7878,6 +7933,7 @@ button.referral-room-preview-card:hover {
 }
 
 .directory-submit-button {
+  grid-column: 2;
   justify-self: end;
   min-width: min(100%, 250px);
   min-height: 52px;
@@ -7907,11 +7963,18 @@ button.referral-room-preview-card:hover {
 
   .directory-search-panel .primary-filter-grid,
   .directory-search-panel .more-filter-grid {
+    grid-column: 1 / -1;
     grid-template-columns: 1fr !important;
   }
 
   .directory-home-hero .directory-filter-actions {
+    grid-column: 1 / -1;
     justify-self: stretch;
+  }
+
+  .directory-home-hero .verified-circle-filter,
+  .directory-submit-button {
+    grid-column: 1 / -1;
   }
 
   .directory-home-hero .filter-toggle-button,

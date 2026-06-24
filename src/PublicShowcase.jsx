@@ -217,7 +217,22 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
     setVisibleCount(LIST_PAGE_SIZE);
   }, [query, verified, filters, data.providers.length]);
   const visibleProviders = providers.slice(0, visibleCount);
-  const newestProvider = [...(data.providers || [])].sort((a, b) => dateNumber(b.createdTime) - dateNumber(a.createdTime))[0];
+  const recentlyJoinedProviders = React.useMemo(() => [...(data.providers || [])]
+    .filter((item) => item?.name)
+    .sort((a, b) => dateNumber(b.createdTime) - dateNumber(a.createdTime))
+    .slice(0, 5), [data.providers]);
+  const [recentProviderIndex, setRecentProviderIndex] = React.useState(0);
+  React.useEffect(() => {
+    setRecentProviderIndex(0);
+  }, [recentlyJoinedProviders.length]);
+  React.useEffect(() => {
+    if (recentlyJoinedProviders.length < 2) return undefined;
+    const timer = window.setInterval(() => {
+      setRecentProviderIndex((current) => (current + 1) % recentlyJoinedProviders.length);
+    }, 5200);
+    return () => window.clearInterval(timer);
+  }, [recentlyJoinedProviders.length]);
+  const newestProvider = recentlyJoinedProviders[recentProviderIndex] || recentlyJoinedProviders[0];
 
   return <main>
     <section className="directory-intro page-band dark-band directory-home-hero">
@@ -254,14 +269,14 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
           <p>Therapists, wellness professionals & holistic providers across NJ & PA</p>
         </div>
         <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search for provider..." /></label>
-        <div className="directory-filter-actions">
-          <button type="button" className={filtersOpen ? "filter-toggle-button active" : "filter-toggle-button"} onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? "Fewer filters" : "+ More filters"}{activeFilterCount ? ` (${activeFilterCount})` : ""}<ChevronDown size={16} /></button>
-          {activeFilterCount ? <button type="button" className="clear-filter-button" onClick={clearFilters}>Clear all</button> : null}
-        </div>
         <div className="directory-filter-grid primary-filter-grid">
           <DirectoryMultiSelect label="Provider type" values={filters.type} onToggle={(value) => toggleFilter("type", value)} options={choices.type} placeholder="All provider types" />
           <DirectoryMultiSelect label="Area of support" values={filters.support} onToggle={(value) => toggleFilter("support", value)} options={choices.support} placeholder="All areas of support" />
           <DirectoryMultiSelect label="Population" values={filters.population} onToggle={(value) => toggleFilter("population", value)} options={choices.population} placeholder="All people" />
+        </div>
+        <div className="directory-filter-actions">
+          <button type="button" className={filtersOpen ? "filter-toggle-button active" : "filter-toggle-button"} onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? "Fewer filters" : "+ More filters"}{activeFilterCount ? ` (${activeFilterCount})` : ""}<ChevronDown size={16} /></button>
+          {activeFilterCount ? <button type="button" className="clear-filter-button" onClick={clearFilters}>Clear all</button> : null}
         </div>
         <div className={filtersOpen ? "directory-filter-grid more-filter-grid open" : "directory-filter-grid more-filter-grid"}>
           <DirectoryMultiSelect label="Payment" values={filters.payment} onToggle={(value) => toggleFilter("payment", value)} options={choices.payment} placeholder="All payment" />
@@ -283,13 +298,6 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
       </div>
     </section>
     <section className="content-shell">
-      <div className="provider-invite directory-join-invite">
-        <div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div>
-        <div className="directory-join-actions">
-          <button className="button warm" onClick={() => go("/provider-signup")}>Become a Provider <ArrowRight size={17} /></button>
-          <button className="button member-save-cta" onClick={() => go("/signup")}>Become a Member <span>Save providers and events in one place.</span></button>
-        </div>
-      </div>
       {loading ? <State label="Loading providers" /> : providers.length ? <><div className="provider-list">{visibleProviders.map((provider) => <ProviderCard key={provider.id} provider={provider} saved={data.savedProviderIds.includes(provider.id)} onSave={() => toggleSave("provider", provider.id, !data.savedProviderIds.includes(provider.id))} />)}</div><ViewMoreList shown={visibleProviders.length} total={providers.length} label="providers" onMore={() => setVisibleCount((value) => value + LIST_PAGE_SIZE)} /></> : <State label="No providers match that search" />}
     </section>
   </main>;
@@ -386,18 +394,23 @@ function EventsPage({ data, loading, toggleSave, user }) {
   const [locationType, setLocationType] = React.useState("");
   const [visibleCount, setVisibleCount] = React.useState(LIST_PAGE_SIZE);
   const canSeeProviderEvents = hasProviderEventAccess(user);
+  const canUseSavedEvents = Boolean(user);
   const visibleSourceEvents = canSeeProviderEvents ? data.events : data.events.filter((event) => !isProviderOnlyEvent(event));
   const categories = unique(visibleSourceEvents.map((event) => event.category)).sort();
   const eventTypes = unique(visibleSourceEvents.map((event) => event.eventType)).sort();
   const locations = unique(visibleSourceEvents.map((event) => event.locationType)).sort();
-  const availableTabs = canSeeProviderEvents ? ["all", "community", "provider", "saved"] : ["community", "saved"];
+  const availableTabs = canSeeProviderEvents ? ["all", "community", "provider", "saved"] : canUseSavedEvents ? ["community", "saved"] : [];
   React.useEffect(() => {
+    if (!availableTabs.length) {
+      if (tab !== "all") setTab("all");
+      return;
+    }
     if (!availableTabs.includes(tab)) setTab(canSeeProviderEvents ? "all" : "community");
-  }, [availableTabs, tab]);
+  }, [availableTabs, canSeeProviderEvents, tab]);
   const events = visibleSourceEvents.filter((event) => {
     const providerOnly = isProviderOnlyEvent(event);
     const saved = data.savedEventIds.includes(event.id);
-    const matchesTab = tab === "all" || (tab === "community" && !providerOnly) || (tab === "provider" && providerOnly) || (tab === "saved" && saved);
+    const matchesTab = !availableTabs.length || tab === "all" || (tab === "community" && !providerOnly) || (tab === "provider" && providerOnly) || (tab === "saved" && saved);
     const text = [event.name, event.hostName, event.category, event.eventType, event.description].join(" ").toLowerCase();
     return matchesTab && (!query || text.includes(query.toLowerCase())) && (!category || event.category === category) && (!eventType || event.eventType === eventType) && (!locationType || event.locationType === locationType);
   });
@@ -412,7 +425,7 @@ function EventsPage({ data, loading, toggleSave, user }) {
       <aside className="event-summary-panel"><CalendarDays size={30} /><h2>Explore what's coming up.</h2><p>Find healing-centered spaces, local gatherings, professional trainings, and community events all in one place.</p>{canSeeProviderEvents ? <div><EventCount value={visibleSourceEvents.length} label="Events" /><EventCount value={community} label="Community" /><EventCount value={visibleSourceEvents.length - community} label="Providers" /></div> : null}</aside>
     </div></section>
     <section className="content-shell">
-      <div className="event-filter-panel"><div className="segmented">{availableTabs.map((key) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{key === "provider" ? <LockKeyhole size={14} /> : key === "saved" ? <Bookmark size={14} /> : <Users size={14} />}{capitalize(key)}</button>)}</div><div className="event-filter-grid"><label className="search-control pale"><span className="filter-label">Search</span><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search event, host, topic, description..." /></label><label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Event Type</span><select value={eventType} onChange={(event) => setEventType(event.target.value)}><option value="">All event types</option>{eventTypes.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Location</span><select value={locationType} onChange={(event) => setLocationType(event.target.value)}><option value="">All locations</option>{locations.map((value) => <option key={value}>{value}</option>)}</select></label></div></div>
+      <div className="event-filter-panel">{availableTabs.length ? <div className="segmented">{availableTabs.map((key) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{key === "provider" ? <LockKeyhole size={14} /> : key === "saved" ? <Bookmark size={14} /> : <Users size={14} />}{capitalize(key)}</button>)}</div> : null}<div className="event-filter-grid"><label className="search-control pale"><span className="filter-label">Search</span><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search event, host, topic, description..." /></label><label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Event Type</span><select value={eventType} onChange={(event) => setEventType(event.target.value)}><option value="">All event types</option>{eventTypes.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Location</span><select value={locationType} onChange={(event) => setLocationType(event.target.value)}><option value="">All locations</option>{locations.map((value) => <option key={value}>{value}</option>)}</select></label></div></div>
       {loading ? <State label="Loading events" /> : events.length ? <><div className="event-grid">{visibleEvents.map((event) => <EventCard key={event.id} event={event} saved={data.savedEventIds.includes(event.id)} onSave={() => toggleSave("event", event.id, !data.savedEventIds.includes(event.id))} />)}</div><ViewMoreList shown={visibleEvents.length} total={events.length} label="events" onMore={() => setVisibleCount((value) => value + LIST_PAGE_SIZE)} /></> : <State label="No events in this view" />}
     </section>
   </main>;
