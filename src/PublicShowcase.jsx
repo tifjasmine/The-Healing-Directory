@@ -245,28 +245,32 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
               <span>{initials(newestProvider?.name || "Tiffany Wright")}</span>
               <div><strong>{newestProvider?.name || "Tiffany Wright"}</strong><small>{verifiedProviderSubtitle(newestProvider)}</small></div>
             </div>
-            <div className="home-verified-line"><CheckCircle2 size={16} /> Verified within The Healing Directory</div>
           </div>
         </div>
       </div>
       <div className="band-inner directory-search-panel">
-        <span className="filter-label">Search</span>
-        <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, specialty, area of support..." /></label>
+        <div className="directory-search-heading">
+          <h2>Find the right provider</h2>
+          <p>Therapists, wellness professionals & holistic providers across NJ & PA</p>
+        </div>
+        <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search for provider..." /></label>
         <div className="directory-filter-actions">
-          <button type="button" className="filter-toggle-button" onClick={() => setFiltersOpen((open) => !open)}>Filters{activeFilterCount ? ` (${activeFilterCount})` : ""}<ChevronDown size={16} /></button>
+          <button type="button" className={filtersOpen ? "filter-toggle-button active" : "filter-toggle-button"} onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? "Fewer filters" : "+ More filters"}{activeFilterCount ? ` (${activeFilterCount})` : ""}<ChevronDown size={16} /></button>
           {activeFilterCount ? <button type="button" className="clear-filter-button" onClick={clearFilters}>Clear all</button> : null}
         </div>
-        <div className={filtersOpen ? "directory-filter-grid open" : "directory-filter-grid"}>
+        <div className="directory-filter-grid primary-filter-grid">
           <DirectoryMultiSelect label="Provider type" values={filters.type} onToggle={(value) => toggleFilter("type", value)} options={choices.type} placeholder="All provider types" />
-          <DirectoryMultiSelect label="Service" values={filters.service} onToggle={(value) => toggleFilter("service", value)} options={choices.service} placeholder="All services" />
-          <DirectoryMultiSelect label="Areas of Support" values={filters.support} onToggle={(value) => toggleFilter("support", value)} options={choices.support} placeholder="All areas of support" />
+          <DirectoryMultiSelect label="Area of support" values={filters.support} onToggle={(value) => toggleFilter("support", value)} options={choices.support} placeholder="All areas of support" />
           <DirectoryMultiSelect label="Population" values={filters.population} onToggle={(value) => toggleFilter("population", value)} options={choices.population} placeholder="All people" />
-          <DirectoryMultiSelect label="Location" values={filters.location} onToggle={(value) => toggleFilter("location", value)} options={choices.location} placeholder="All locations" />
+        </div>
+        <div className={filtersOpen ? "directory-filter-grid more-filter-grid open" : "directory-filter-grid more-filter-grid"}>
           <DirectoryMultiSelect label="Payment" values={filters.payment} onToggle={(value) => toggleFilter("payment", value)} options={choices.payment} placeholder="All payment" />
           <DirectoryMultiSelect label="Provider vibe" values={filters.vibe} onToggle={(value) => toggleFilter("vibe", value)} options={choices.vibe} placeholder="All vibes" />
+          <DirectoryMultiSelect label="Location" values={filters.location} onToggle={(value) => toggleFilter("location", value)} options={choices.location} placeholder="All locations" />
+          {!canUseProviderFilters ? <DirectoryMultiSelect label="Availability" values={filters.availability} onToggle={(value) => toggleFilter("availability", value)} options={choices.availability} placeholder="All availability" /> : null}
+          <DirectoryMultiSelect label="Service" values={filters.service} onToggle={(value) => toggleFilter("service", value)} options={choices.service} placeholder="All services" />
           <DirectoryMultiSelect label="Racial / Ethnic Identity" values={filters.identity} onToggle={(value) => toggleFilter("identity", value)} options={choices.identity} placeholder="All identities" />
           <DirectoryMultiSelect label="Gender Identity" values={filters.genderIdentity} onToggle={(value) => toggleFilter("genderIdentity", value)} options={choices.genderIdentity} placeholder="All gender identities" />
-          {!canUseProviderFilters ? <DirectoryMultiSelect label="Availability" values={filters.availability} onToggle={(value) => toggleFilter("availability", value)} options={choices.availability} placeholder="All availability" /> : null}
         </div>
         {canUseProviderFilters ? <div className={filtersOpen ? "provider-only-filter-block open" : "provider-only-filter-block"}>
           <div className="provider-only-filter-copy"><LockKeyhole size={15} /><span>Provider connection filters</span></div>
@@ -274,6 +278,7 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
           <DirectoryMultiSelect label="Current Availability" values={filters.currentAvailability} onToggle={(value) => toggleFilter("currentAvailability", value)} options={choices.currentAvailability} placeholder="All current availability" />
         </div> : null}
         <button type="button" className={verified ? "verified-circle-filter active" : "verified-circle-filter"} onClick={() => setVerified((current) => !current)} aria-pressed={verified} aria-label="Show verified providers only"><span><CheckCircle2 size={17} /></span>Verified only</button>
+        <button type="button" className="directory-submit-button" onClick={() => document.querySelector(".provider-list, .state")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Search providers</button>
         <div className="verified-note"><CheckCircle2 size={17} /><p><strong>Verified</strong> means the provider has been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes.</p></div>
       </div>
     </section>
@@ -594,10 +599,8 @@ function href(value) { return /^(https?:|mailto:|tel:)/i.test(String(value || ""
 function initials(value) { const parts = String(value || "TH").split(/\s+/).filter(Boolean); return `${parts[0]?.[0] || "T"}${parts.at(-1)?.[0] || "H"}`.toUpperCase(); }
 function firstName(value) { return String(value || "there").split(/\s+/)[0]; }
 function verifiedProviderSubtitle(provider) {
-  if (!provider) return "Somatic Therapist · NJ";
-  const role = provider.profession || provider.providerType?.[0] || "Provider";
-  const place = provider.location?.[0] || "NJ";
-  return `${role} · ${place}`;
+  if (!provider) return "Somatic Therapist";
+  return provider.providerType?.[0] || provider.profession || "Provider";
 }
 function capitalize(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
 function time(value) { const date = new Date(value || 0); return Number.isNaN(date.getTime()) ? null : date; }
