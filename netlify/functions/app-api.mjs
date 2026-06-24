@@ -96,8 +96,8 @@ const FIELDS = {
     bio: ["Provider Bio", "Bio", "About", "Description", "Bio / About", "Public Bio"],
     profession: ["Professional Title", "Profession", "Profession / Title", "Credentials", "Service Type"],
     license: ["License #/ Certification", "License # / Certification", "License / Certification", "License", "Credentials"],
-    identity: ["Racial / Ethnic Identity", "Racial/Ethnic Identity", "Identity"],
-    genderIdentity: ["Gender Identity"],
+    identity: ["Racial / Ethnic Identity", "Racial/Ethnic Identity", "Racial Ethnic Identity", "Race / Ethnicity", "Identity"],
+    genderIdentity: ["Gender Identity", "Gender"],
     pronouns: ["Pronouns"],
     type: ["Provider Type", "Provider Types", "Service Type"],
     additionalProviderType: ["Additional Provider Type", "Additional Provider Types"],
@@ -112,7 +112,7 @@ const FIELDS = {
     additionalStates: ["Additional States", "Additional State"],
     payment: ["Pay Type/Insurance", "Pay Type", "Insurance", "Payment"],
     additionalPayTypes: ["Additional Pay Types", "Additional Payment", "Additional Insurance"],
-    availability: ["Availability"],
+    availability: ["Availability", "Current Availability"],
     price: ["Price", "Pricing"],
     physicalLocations: ["Physical Locations", "Physical Location"],
     availabilitySpecifics: ["Current Availability", "Availability Specifics", "Availability Details", "Availability Notes"],
@@ -128,7 +128,7 @@ const FIELDS = {
     referralMethod: ["Preferred Referral Method"],
     referralInstructions: ["Referral Instructions"],
     collaboration: ["Collaboration", "Collaboration Interests"],
-    collaborationInterests: ["Collaboration Interests"],
+    collaborationInterests: ["Collaboration Interests", "Collaboration Interest", "Provider Collaboration Interests"],
     otherCollaboration: ["Other Collaboration", "Additional Collaboration"],
     collaborationDetails: ["Collaboration Details"],
     providerNotes: ["Additional Info", "Provider-to-Provider Notes", "Provider Notes"],
@@ -147,7 +147,7 @@ const FIELDS = {
     healingWish: ["What I Wish People Knew About Healing", "Healing Wish"],
     comfortPractice: ["Favorite Comfort Practice", "Comfort Practice"],
     funFact: ["Fun Fact"],
-    vibe: ["What's Your Vibe?", "What’s Your Vibe?", "Vibe"]
+    vibe: ["What's Your Vibe?", "What’s Your Vibe?", "Provider Vibe", "Vibe"]
   },
   event: {
     name: ["Event Name", "Name"], hostName: ["Host Name"], hostEmail: ["Host Email"],
@@ -539,6 +539,7 @@ async function accountSettings(user) {
   const accountType = accountTypeForUser(user);
   const account = await ensureSaverAccount(user);
   const accountDetails = accountFromRecord(user, account, accountType);
+  accountDetails.name = resolvedAccountName(user, accountDetails.name);
   const signup = accountType === "provider" ? await findSignupByEmail(accountDetails.accountType, user.email).catch(() => null) : account;
   return {
     account: { ...accountDetails, interests: accountInterests(account, signup, accountDetails.accountType) },
@@ -689,7 +690,16 @@ async function saveAccount(user, body) {
     status: accountType === "provider" ? "Pending Review" : "Approved",
     areaInterest: body.interests || body.areaInterest
   });
-  return { ok: true, account: { ...accountFromRecord(user, saved, accountType), interests: arrayRaw(body.interests || body.areaInterest) }, signup, supabaseSync };
+  return {
+    ok: true,
+    account: {
+      ...accountFromRecord({ ...user, user_metadata: { ...(user.user_metadata || {}), full_name: body.name || publicUser(user)?.name } }, saved, accountType),
+      name: clean(body.name) || resolvedAccountName(user, text(pick(saved?.fields || {}, FIELDS.provider.name))),
+      interests: arrayRaw(body.interests || body.areaInterest)
+    },
+    signup,
+    supabaseSync
+  };
 }
 
 async function myProfile(user) {
@@ -770,6 +780,9 @@ function normalizeProvider(record) {
     providerType: array(pick(f, FIELDS.provider.type)), services: array(pick(f, FIELDS.provider.services)),
     support: array(pick(f, FIELDS.provider.support)), populations: array(pick(f, FIELDS.provider.population)),
     location: array(pick(f, FIELDS.provider.location)), payment: array(pick(f, FIELDS.provider.payment)),
+    identity: array(pick(f, FIELDS.provider.identity)), genderIdentity: array(pick(f, FIELDS.provider.genderIdentity)),
+    availability: array(pick(f, FIELDS.provider.availability)), currentAvailability: array(pick(f, FIELDS.provider.availabilitySpecifics)),
+    collaborationInterests: array(pick(f, FIELDS.provider.collaborationInterests)), vibe: array(pick(f, FIELDS.provider.vibe)),
     website: text(pick(f, FIELDS.provider.website)), consultationLink: text(pick(f, FIELDS.provider.consult)),
     humanSide: text(pick(f, FIELDS.provider.human)), collaboration: text(pick(f, FIELDS.provider.collaboration)),
     verified: truthy(pick(f, FIELDS.provider.verified)), approved: truthy(approvalValue),
@@ -782,7 +795,7 @@ function normalizeProfile(record) {
   return {
     ...normalizeProvider(record),
     license: text(pick(f, FIELDS.provider.license)),
-    identity: text(pick(f, FIELDS.provider.identity)),
+    identity: array(pick(f, FIELDS.provider.identity)),
     availability: array(pick(f, FIELDS.provider.availability)),
     price: text(pick(f, FIELDS.provider.price)),
     physicalLocations: text(pick(f, FIELDS.provider.physicalLocations)),
@@ -847,6 +860,7 @@ async function getDirectoryOptions() {
     populations: await selectOptions("directory", FIELDS.provider.population),
     locations: await selectOptions("directory", FIELDS.provider.location),
     availability: await selectOptions("directory", FIELDS.provider.availability),
+    currentAvailability: await selectOptions("directory", FIELDS.provider.availabilitySpecifics),
     identity: await selectOptions("directory", FIELDS.provider.identity),
     genderIdentity: await selectOptions("directory", FIELDS.provider.genderIdentity),
     responseTime: await selectOptions("directory", FIELDS.provider.responseTime),
@@ -1363,9 +1377,17 @@ function accountFromRecord(user, record, forcedAccountType = "") {
   return {
     id: record.id,
     email: text(pick(f, FIELDS.provider.email)) || user.email || "",
-    name: text(pick(f, FIELDS.provider.name)) || publicUser(user)?.name || "",
+    name: resolvedAccountName(user, text(pick(f, FIELDS.provider.name))),
     accountType: forcedAccountType || text(pick(f, FIELDS.provider.accountType)) || user.user_metadata?.account_type || user.userMetadata?.account_type || "client"
   };
+}
+
+function resolvedAccountName(user, recordName = "") {
+  const authName = clean(publicUser(user)?.name);
+  const airtableName = clean(recordName);
+  const emailPrefix = lower(String(user?.email || "").split("@")[0]);
+  if (authName && (!airtableName || lower(airtableName) === emailPrefix || lower(airtableName) === lower(user?.email))) return authName;
+  return airtableName || authName;
 }
 
 function setAlias(fields, names, value) {

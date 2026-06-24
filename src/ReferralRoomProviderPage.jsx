@@ -156,8 +156,8 @@ function BrowseView({ sessions, attendance, onDetails, onRequest }) {
           <span>Small, curated rooms for providers to meet, exchange thoughtful referrals, and build aligned community across New Jersey and Pennsylvania.</span>
         </div>
         <aside>
-          <Check size={20} />
-          <p><strong>Verified</strong> means the provider has been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes.</p>
+          <Check size={18} />
+          <p><strong>Join a Referral Room to become a Verified provider.</strong> This means you have been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes.</p>
         </aside>
       </section>
 
@@ -211,8 +211,6 @@ function DetailsView({ sessions, session, request, form, setForm, onSelect, onBr
           </div>
           <section className="approved-panel">
             <h3>Approved Providers</h3>
-            <p>{session.accepted ? `${session.accepted} approved provider${session.accepted === 1 ? "" : "s"} in this room.` : "No approved providers yet."}</p>
-            {fullRules.length ? <p><strong>Full: {fullRules.map((rule) => rule.serviceType).join(", ")}</strong></p> : null}
             <RuleLedger rules={session.rules} approvedProviders={session.approvedProviders || []} />
           </section>
         </article>

@@ -7,7 +7,7 @@ import {
   signup,
   updateUser,
 } from "./authClient.js";
-import { ChevronDown, HeartHandshake, LogIn, Users } from "lucide-react";
+import { ArrowRight, ChevronDown, HeartHandshake, LogIn, Users } from "lucide-react";
 import ProviderSignupPage from "./ProviderSignupPage.jsx";
 import MemberSignupPage from "./MemberSignupPage.jsx";
 
@@ -110,11 +110,16 @@ export default function AuthAccess({ path }) {
       </div>
     </header>
     {notice ? <div className="global-notice"><span>{notice}</span></div> : null}
-    <main className={signingUp || providerSignup ? "auth-page signup-auth-page" : "auth-page"}><section className={providerSignup ? "auth-shell signup-auth-shell provider-auth-shell" : signingUp ? "auth-shell signup-auth-shell" : "auth-shell"}>
-      <div className="auth-copy"><img src="/directory-logo-strip.png" alt="The Healing Directory" /><p className="eyebrow">Relationship-based care</p><h1>{providerSignup ? "Join as a trusted provider." : signingUp ? "Start saving care that fits." : "Care, connection, and community."}</h1><p>{intro}</p></div>
-      <form className="auth-form" onSubmit={submit}>
-        <p className="eyebrow ink">{signingUp || providerSignup ? "Join the directory" : "Account access"}</p>
+    <main className="auth-redesign"><section className="auth-redesign-shell">
+      <div className="auth-redesign-panel">
+        <p className="brand-pill">Account access</p>
+        <h1>Care, connection, and community.</h1>
+        <p>Save trusted providers, manage events, and return to your dashboard.</p>
+      </div>
+      <form className="auth-redesign-card" onSubmit={submit}>
+        <p className="eyebrow ink">The Healing Directory</p>
         <h2>{title}</h2>
+        <p>{intro}</p>
         {signingUp ? <div className="signup-choice" role="tablist" aria-label="Choose account type"><button type="button" className="active"><Users size={18} /><span><strong>Client</strong><small>Save providers and events.</small></span></button><button type="button" onClick={() => window.location.assign("/provider-signup")}><HeartHandshake size={18} /><span><strong>Provider</strong><small>Apply for reviewed access.</small></span></button></div> : null}
         {providerSignup ? <div className="signup-choice provider-only" role="tablist" aria-label="Choose account type"><button type="button" className="active"><HeartHandshake size={18} /><span><strong>Provider application</strong><small>Tell us about your work and fit.</small></span></button><button type="button" onClick={() => window.location.assign("/signup")}><Users size={18} /><span><strong>Client account</strong><small>Create immediate access.</small></span></button></div> : null}
         {signingUp || providerSignup ? <Field label="Full name" value={form.name} onChange={set("name")} required /> : null}
@@ -122,7 +127,10 @@ export default function AuthAccess({ path }) {
         {providerSignup ? <><Field label="Phone" value={form.phone} onChange={set("phone")} /><Field label="Website or profile link" value={form.website} onChange={set("website")} /><Field label="Professional title" value={form.professionalTitle} onChange={set("professionalTitle")} required /><Field label="Tell us about your work" textarea value={form.message} onChange={set("message")} required /></> : null}
         {!mode.includes("forgot") && !providerSignup ? <><Field label="Password" type="password" value={form.password} onChange={set("password")} required autoComplete={mode === "login" ? "current-password" : "new-password"} />{mode !== "login" ? <PasswordRequirements password={form.password} /> : null}</> : null}
         {signingUp || mode === "reset-password" ? <Field label="Confirm password" type="password" value={form.confirm} onChange={set("confirm")} required /> : null}
-        <button type="submit" className="button full" disabled={busy}>{busy ? "Working..." : providerSignup ? "Submit provider application" : signingUp ? "Create client account" : mode.includes("password") ? "Continue" : "Log in"}</button>
+        <button type="submit" className="button full auth-submit" disabled={busy}>
+          {busy ? "Working..." : providerSignup ? "Submit provider application" : signingUp ? "Create client account" : mode.includes("password") ? "Continue" : "Log in"}
+          <ArrowRight size={17} />
+        </button>
         <div className="auth-links">{mode === "login" ? <><a href="/forgot-password">Forgot password?</a><a href="/signup">Create an account</a></> : <a href="/login">Back to login</a>}</div>
       </form>
     </section></main>
@@ -130,7 +138,7 @@ export default function AuthAccess({ path }) {
 }
 
 function Field({ label, textarea, ...props }) {
-  return <label className={textarea ? "field full-field" : "field"}><span>{label}</span>{textarea ? <textarea rows="5" {...props} /> : <input {...props} />}</label>;
+  return <label className={textarea ? "profile-field full" : "profile-field"}><span>{label}</span>{textarea ? <textarea rows="5" {...props} /> : <input {...props} />}</label>;
 }
 
 function passwordChecks(value) {

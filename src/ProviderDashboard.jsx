@@ -184,7 +184,7 @@ function ReferralPanel({ items, sessions }) {
       </div>
       <aside>
         <HeartHandshake size={22} />
-        <p><strong>Verified</strong> means the provider has been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes.</p>
+        <p><strong>Join a Referral Room to become a Verified provider.</strong> This means you have been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes.</p>
       </aside>
     </section>
     <div className="referral-dashboard-actions">

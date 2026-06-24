@@ -132,7 +132,7 @@ export default function PublicShowcase({ path }) {
         ? <EventDetails data={data} loading={loading} toggleSave={toggleSave} />
       : path === "/events"
         ? <EventsPage data={data} loading={loading} toggleSave={toggleSave} user={user} />
-        : <DirectoryPage data={data} loading={loading} toggleSave={toggleSave} />}
+        : <DirectoryPage data={data} loading={loading} toggleSave={toggleSave} user={user} />}
     <footer className="site-footer"><div><strong>The Healing Directory</strong><p>Thoughtful connections for healing, wellness, and trusted referrals.</p></div><nav><button onClick={() => go("/terms")}>Terms and Conditions</button><button onClick={() => go("/privacy")}>Privacy Policy</button></nav></footer>
   </div>;
 }
@@ -150,12 +150,26 @@ function DirectoryLogoStrip() {
   </section>;
 }
 
-function DirectoryPage({ data, loading, toggleSave }) {
+function DirectoryPage({ data, loading, toggleSave, user }) {
   const [query, setQuery] = React.useState("");
   const [verified, setVerified] = React.useState(false);
-  const [filters, setFilters] = React.useState({ type: [], service: [], support: [], population: [], location: [], payment: [] });
+  const [filters, setFilters] = React.useState({
+    type: [],
+    service: [],
+    support: [],
+    population: [],
+    location: [],
+    payment: [],
+    vibe: [],
+    identity: [],
+    genderIdentity: [],
+    availability: [],
+    collaborationInterests: [],
+    currentAvailability: [],
+  });
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [visibleCount, setVisibleCount] = React.useState(LIST_PAGE_SIZE);
+  const canUseProviderFilters = hasProviderEventAccess(user);
   const choices = {
     type: optionChoices(data.directoryOptions?.providerType, data.providers.flatMap((item) => item.providerType || [])),
     service: unique(data.providers.flatMap((item) => item.services || [])).sort(),
@@ -163,16 +177,30 @@ function DirectoryPage({ data, loading, toggleSave }) {
     population: unique(data.providers.flatMap((item) => item.populations || [])).sort(),
     location: unique(data.providers.flatMap((item) => item.location || [])).sort(),
     payment: optionChoices(data.directoryOptions?.payment, data.providers.flatMap((item) => item.payment || [])),
+    vibe: optionChoices(data.directoryOptions?.vibe, data.providers.flatMap((item) => item.vibe || [])),
+    identity: optionChoices(data.directoryOptions?.identity, data.providers.flatMap((item) => item.identity || [])),
+    genderIdentity: optionChoices(data.directoryOptions?.genderIdentity, data.providers.flatMap((item) => item.genderIdentity || [])),
+    availability: optionChoices(data.directoryOptions?.availability, data.providers.flatMap((item) => item.availability || [])),
+    collaborationInterests: optionChoices(data.directoryOptions?.collaborationInterests, data.providers.flatMap((item) => item.collaborationInterests || [])),
+    currentAvailability: optionChoices(data.directoryOptions?.currentAvailability, data.providers.flatMap((item) => item.currentAvailability || item.availabilitySpecifics || [])),
   };
   const providers = data.providers.filter((item) => {
-    const text = [item.name, item.profession, item.bio, ...(item.providerType || []), ...(item.services || []), ...(item.support || []), ...(item.location || [])].join(" ").toLowerCase();
+    const text = [item.name, item.profession, item.bio, ...(item.providerType || []), ...(item.services || []), ...(item.support || []), ...(item.location || []), ...(item.vibe || []), ...(item.identity || []), ...(item.genderIdentity || []), ...(item.availability || []), ...(item.collaborationInterests || []), ...(item.currentAvailability || [])].join(" ").toLowerCase();
     return (!query || text.includes(query.toLowerCase())) && (!verified || item.verified) &&
       matchesSelected(item.providerType, filters.type) &&
       matchesSelected(item.services, filters.service) &&
       matchesSelected(item.support, filters.support) &&
       matchesSelected(item.populations, filters.population) &&
       matchesSelected(item.location, filters.location) &&
-      matchesSelected(item.payment, filters.payment);
+      matchesSelected(item.payment, filters.payment) &&
+      matchesSelected(item.vibe, filters.vibe) &&
+      matchesSelected(item.identity, filters.identity) &&
+      matchesSelected(item.genderIdentity, filters.genderIdentity) &&
+      matchesSelected(item.availability, filters.availability) &&
+      (!canUseProviderFilters || (
+        matchesSelected(item.collaborationInterests, filters.collaborationInterests) &&
+        matchesSelected(item.currentAvailability || item.availabilitySpecifics || item.availability, filters.currentAvailability)
+      ));
   });
   const toggleFilter = (key, value) => setFilters((current) => {
     const next = current[key].includes(value)
@@ -183,7 +211,7 @@ function DirectoryPage({ data, loading, toggleSave }) {
   const clearFilters = () => {
     setQuery("");
     setVerified(false);
-    setFilters({ type: [], service: [], support: [], population: [], location: [], payment: [] });
+    setFilters({ type: [], service: [], support: [], population: [], location: [], payment: [], vibe: [], identity: [], genderIdentity: [], availability: [], collaborationInterests: [], currentAvailability: [] });
   };
   const activeFilterCount = Object.values(filters).reduce((total, values) => total + values.length, 0) + (verified ? 1 : 0) + (query.trim() ? 1 : 0);
   React.useEffect(() => {
@@ -218,8 +246,17 @@ function DirectoryPage({ data, loading, toggleSave }) {
           <DirectoryMultiSelect label="Population" values={filters.population} onToggle={(value) => toggleFilter("population", value)} options={choices.population} placeholder="All people" />
           <DirectoryMultiSelect label="Location" values={filters.location} onToggle={(value) => toggleFilter("location", value)} options={choices.location} placeholder="All locations" />
           <DirectoryMultiSelect label="Payment" values={filters.payment} onToggle={(value) => toggleFilter("payment", value)} options={choices.payment} placeholder="All payment" />
+          <DirectoryMultiSelect label="Provider vibe" values={filters.vibe} onToggle={(value) => toggleFilter("vibe", value)} options={choices.vibe} placeholder="All vibes" />
+          <DirectoryMultiSelect label="Racial / Ethnic Identity" values={filters.identity} onToggle={(value) => toggleFilter("identity", value)} options={choices.identity} placeholder="All identities" />
+          <DirectoryMultiSelect label="Gender Identity" values={filters.genderIdentity} onToggle={(value) => toggleFilter("genderIdentity", value)} options={choices.genderIdentity} placeholder="All gender identities" />
+          {!canUseProviderFilters ? <DirectoryMultiSelect label="Availability" values={filters.availability} onToggle={(value) => toggleFilter("availability", value)} options={choices.availability} placeholder="All availability" /> : null}
         </div>
-        <label className="check-control circle-check-control"><input aria-label="Show verified providers only" type="checkbox" checked={verified} onChange={(event) => setVerified(event.target.checked)} /><span className="circle-toggle" aria-hidden="true" /><span>Verified only</span></label>
+        {canUseProviderFilters ? <div className={filtersOpen ? "provider-only-filter-block open" : "provider-only-filter-block"}>
+          <div className="provider-only-filter-copy"><LockKeyhole size={15} /><span>Provider connection filters</span></div>
+          <DirectoryMultiSelect label="Collaboration Interests" values={filters.collaborationInterests} onToggle={(value) => toggleFilter("collaborationInterests", value)} options={choices.collaborationInterests} placeholder="All collaboration interests" />
+          <DirectoryMultiSelect label="Current Availability" values={filters.currentAvailability} onToggle={(value) => toggleFilter("currentAvailability", value)} options={choices.currentAvailability} placeholder="All current availability" />
+        </div> : null}
+        <button type="button" className={verified ? "verified-circle-filter active" : "verified-circle-filter"} onClick={() => setVerified((current) => !current)} aria-pressed={verified} aria-label="Show verified providers only"><span><CheckCircle2 size={17} /></span>Verified only</button>
         <div className="verified-note"><CheckCircle2 size={17} /><p><strong>Verified</strong> means the provider has been personally introduced within The Healing Directory referral community. It is not a guarantee of fit, availability, or outcomes.</p></div>
       </div>
     </section>
@@ -317,11 +354,13 @@ function EventsPage({ data, loading, toggleSave, user }) {
   const [tab, setTab] = React.useState("all");
   const [query, setQuery] = React.useState("");
   const [category, setCategory] = React.useState("");
+  const [eventType, setEventType] = React.useState("");
   const [locationType, setLocationType] = React.useState("");
   const [visibleCount, setVisibleCount] = React.useState(LIST_PAGE_SIZE);
   const canSeeProviderEvents = hasProviderEventAccess(user);
   const visibleSourceEvents = canSeeProviderEvents ? data.events : data.events.filter((event) => !isProviderOnlyEvent(event));
   const categories = unique(visibleSourceEvents.map((event) => event.category)).sort();
+  const eventTypes = unique(visibleSourceEvents.map((event) => event.eventType)).sort();
   const locations = unique(visibleSourceEvents.map((event) => event.locationType)).sort();
   const availableTabs = canSeeProviderEvents ? ["all", "community", "provider", "saved"] : ["community", "saved"];
   React.useEffect(() => {
@@ -331,13 +370,13 @@ function EventsPage({ data, loading, toggleSave, user }) {
     const providerOnly = isProviderOnlyEvent(event);
     const saved = data.savedEventIds.includes(event.id);
     const matchesTab = tab === "all" || (tab === "community" && !providerOnly) || (tab === "provider" && providerOnly) || (tab === "saved" && saved);
-    const text = [event.name, event.hostName, event.category, event.description].join(" ").toLowerCase();
-    return matchesTab && (!query || text.includes(query.toLowerCase())) && (!category || event.category === category) && (!locationType || event.locationType === locationType);
+    const text = [event.name, event.hostName, event.category, event.eventType, event.description].join(" ").toLowerCase();
+    return matchesTab && (!query || text.includes(query.toLowerCase())) && (!category || event.category === category) && (!eventType || event.eventType === eventType) && (!locationType || event.locationType === locationType);
   });
   const community = visibleSourceEvents.filter((event) => !isProviderOnlyEvent(event)).length;
   React.useEffect(() => {
     setVisibleCount(LIST_PAGE_SIZE);
-  }, [tab, query, category, locationType, data.events.length]);
+  }, [tab, query, category, eventType, locationType, data.events.length]);
   const visibleEvents = events.slice(0, visibleCount);
   return <main className="events-page">
     <section className="events-hero"><div className="band-inner events-hero-grid">
@@ -345,7 +384,7 @@ function EventsPage({ data, loading, toggleSave, user }) {
       <aside className="event-summary-panel"><CalendarDays size={30} /><h2>Explore what's coming up.</h2><p>Find healing-centered spaces, local gatherings, professional trainings, and community events all in one place.</p>{canSeeProviderEvents ? <div><EventCount value={visibleSourceEvents.length} label="Events" /><EventCount value={community} label="Community" /><EventCount value={visibleSourceEvents.length - community} label="Providers" /></div> : null}</aside>
     </div></section>
     <section className="content-shell">
-      <div className="event-filter-panel"><div className="segmented">{availableTabs.map((key) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{key === "provider" ? <LockKeyhole size={14} /> : key === "saved" ? <Bookmark size={14} /> : <Users size={14} />}{capitalize(key)}</button>)}</div><div className="event-filter-grid"><label className="search-control pale"><span className="filter-label">Search</span><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search event, host, topic, description..." /></label><label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Location type</span><select value={locationType} onChange={(event) => setLocationType(event.target.value)}><option value="">All location types</option>{locations.map((value) => <option key={value}>{value}</option>)}</select></label></div></div>
+      <div className="event-filter-panel"><div className="segmented">{availableTabs.map((key) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{key === "provider" ? <LockKeyhole size={14} /> : key === "saved" ? <Bookmark size={14} /> : <Users size={14} />}{capitalize(key)}</button>)}</div><div className="event-filter-grid"><label className="search-control pale"><span className="filter-label">Search</span><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search event, host, topic, description..." /></label><label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Event Type</span><select value={eventType} onChange={(event) => setEventType(event.target.value)}><option value="">All event types</option>{eventTypes.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Location</span><select value={locationType} onChange={(event) => setLocationType(event.target.value)}><option value="">All locations</option>{locations.map((value) => <option key={value}>{value}</option>)}</select></label></div></div>
       {loading ? <State label="Loading events" /> : events.length ? <><div className="event-grid">{visibleEvents.map((event) => <EventCard key={event.id} event={event} saved={data.savedEventIds.includes(event.id)} onSave={() => toggleSave("event", event.id, !data.savedEventIds.includes(event.id))} />)}</div><ViewMoreList shown={visibleEvents.length} total={events.length} label="events" onMore={() => setVisibleCount((value) => value + LIST_PAGE_SIZE)} /></> : <State label="No events in this view" />}
     </section>
   </main>;

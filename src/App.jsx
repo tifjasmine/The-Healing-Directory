@@ -324,6 +324,7 @@ function EventsPage({ data, loading, navigate, toggleSave, user }) {
   const [tab, setTab] = React.useState("all");
   const [query, setQuery] = React.useState("");
   const [category, setCategory] = React.useState("");
+  const [eventType, setEventType] = React.useState("");
   const [locationType, setLocationType] = React.useState("");
   const canSeeProviderEvents = hasProviderEventAccess(user);
   const sourceEvents = canSeeProviderEvents ? data.events : data.events.filter((event) => !isProviderOnlyEvent(event));
@@ -332,17 +333,18 @@ function EventsPage({ data, loading, navigate, toggleSave, user }) {
     if (!tabs.includes(tab)) setTab("community");
   }, [tab, tabs]);
   const categories = unique(sourceEvents.map((e) => e.category)).filter(Boolean).sort();
+  const eventTypes = unique(sourceEvents.map((e) => e.eventType)).filter(Boolean).sort();
   const locationTypes = unique(sourceEvents.map((e) => e.locationType)).filter(Boolean).sort();
   const events = sourceEvents.filter((event) => {
     const saved = data.savedEventIds.includes(event.id);
     const audience = lower(event.audience);
     const tabMatch = tab === "all" || (tab === "saved" && saved) || (tab === "community" && !audience.includes("provider")) || (tab === "provider" && audience.includes("provider"));
     const text = [event.name, event.description, event.category, event.eventType, event.hostName].join(" ").toLowerCase();
-    return tabMatch && (!query || text.includes(query.toLowerCase())) && (!category || event.category === category) && (!locationType || event.locationType === locationType);
+    return tabMatch && (!query || text.includes(query.toLowerCase())) && (!category || event.category === category) && (!eventType || event.eventType === eventType) && (!locationType || event.locationType === locationType);
   }).sort((a, b) => dateValue(a.start) - dateValue(b.start));
   const communityCount = sourceEvents.filter((event) => !lower(event.audience).includes("provider")).length;
   const providerCount = sourceEvents.filter((event) => lower(event.audience).includes("provider")).length;
-  return <main className="events-page"><section className="events-hero"><div className="band-inner events-hero-grid"><div><p className="event-kicker"><span /> Events</p><h1>Workshops, circles, trainings, and healing community events.</h1><p className="lede">Browse upcoming events from The Healing Directory community.</p>{canSeeProviderEvents ? <div className="action-row"><button className="button event-primary" onClick={() => navigate("/add-event")}><Plus size={16} /> Add an Event</button><button className="button event-secondary" onClick={() => setTab("community")}><HeartHandshake size={16} /> Community Events</button><button className="button event-secondary" onClick={() => setTab("provider")}><LockKeyhole size={16} /> Provider Events</button></div> : null}</div><aside className="event-summary-panel"><CalendarDays size={30} /><h2>Explore what's coming up.</h2><p>Find healing-centered spaces, local gatherings, professional trainings, and community events all in one place.</p>{canSeeProviderEvents ? <div><EventCount value={sourceEvents.length} label="Events" /><EventCount value={communityCount} label="Community" /><EventCount value={providerCount} label="Providers" /></div> : null}</aside></div></section><section className="content-shell"><div className="event-filter-panel"><div className="segmented">{tabs.map((key) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{key === "provider" ? <LockKeyhole size={14} /> : key === "saved" ? <Bookmark size={14} /> : <Users size={14} />}{capitalize(key)}</button>)}</div><div className="event-filter-grid"><label className="search-control pale"><span className="filter-label">Search</span><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search event, host, topic, description..." /></label><label className="field"><span>Category</span><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Location type</span><select value={locationType} onChange={(e) => setLocationType(e.target.value)}><option value="">All location types</option>{locationTypes.map((value) => <option key={value}>{value}</option>)}</select></label></div></div>{loading ? <LoadingState label="Loading events" /> : events.length ? <div className="event-grid">{events.map((event) => <EventCard key={event.id} event={event} saved={data.savedEventIds.includes(event.id)} onSave={() => toggleSave("event", event.id, !data.savedEventIds.includes(event.id))} onOpen={() => navigate(`/event-details?id=${event.id}`)} />)}</div> : <EmptyState title="No events in this view" text="Try another tab or clear your search." />}</section></main>;
+  return <main className="events-page"><section className="events-hero"><div className="band-inner events-hero-grid"><div><p className="event-kicker"><span /> Events</p><h1>Workshops, circles, trainings, and healing community events.</h1><p className="lede">Browse upcoming events from The Healing Directory community.</p>{canSeeProviderEvents ? <div className="action-row"><button className="button event-primary" onClick={() => navigate("/add-event")}><Plus size={16} /> Add an Event</button><button className="button event-secondary" onClick={() => setTab("community")}><HeartHandshake size={16} /> Community Events</button><button className="button event-secondary" onClick={() => setTab("provider")}><LockKeyhole size={16} /> Provider Events</button></div> : null}</div><aside className="event-summary-panel"><CalendarDays size={30} /><h2>Explore what's coming up.</h2><p>Find healing-centered spaces, local gatherings, professional trainings, and community events all in one place.</p>{canSeeProviderEvents ? <div><EventCount value={sourceEvents.length} label="Events" /><EventCount value={communityCount} label="Community" /><EventCount value={providerCount} label="Providers" /></div> : null}</aside></div></section><section className="content-shell"><div className="event-filter-panel"><div className="segmented">{tabs.map((key) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{key === "provider" ? <LockKeyhole size={14} /> : key === "saved" ? <Bookmark size={14} /> : <Users size={14} />}{capitalize(key)}</button>)}</div><div className="event-filter-grid"><label className="search-control pale"><span className="filter-label">Search</span><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search event, host, topic, description..." /></label><label className="field"><span>Category</span><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Event Type</span><select value={eventType} onChange={(e) => setEventType(e.target.value)}><option value="">All event types</option>{eventTypes.map((value) => <option key={value}>{value}</option>)}</select></label><label className="field"><span>Location</span><select value={locationType} onChange={(e) => setLocationType(e.target.value)}><option value="">All locations</option>{locationTypes.map((value) => <option key={value}>{value}</option>)}</select></label></div></div>{loading ? <LoadingState label="Loading events" /> : events.length ? <div className="event-grid">{events.map((event) => <EventCard key={event.id} event={event} saved={data.savedEventIds.includes(event.id)} onSave={() => toggleSave("event", event.id, !data.savedEventIds.includes(event.id))} onOpen={() => navigate(`/event-details?id=${event.id}`)} />)}</div> : <EmptyState title="No events in this view" text="Try another tab or clear your search." />}</section></main>;
 }
 
 function EventCard({ event, saved, onSave, onOpen, editable }) {
@@ -411,12 +413,11 @@ function Dashboard({ user, navigate }) {
       <section className="client-dashboard-hero">
         <p className="client-dashboard-kicker">Client Dashboard</p>
         <h1>Welcome back, {firstName(user?.name || user?.email)}.</h1>
-        <p>Your saved healing support lives here - workshops you want to return to and providers who feel aligned for your next step.</p>
+        <p>A quiet place to keep the people and gatherings you want to remember.</p>
         <div className="client-dashboard-actions"><button className="button client-primary" onClick={() => navigate("/events")}>Browse Workshops</button><button className="button client-secondary" onClick={() => navigate("/")}>Find Providers</button></div>
       </section>
       <section className="client-dashboard-stats">
         <ClientStat label="Saved Workshops" value={payload?.counts?.savedEvents || 0} />
-        <ClientStat label="Upcoming Workshops" value={payload?.counts?.upcomingEvents || 0} />
         <ClientStat label="Saved Providers" value={payload?.counts?.savedProviders || 0} />
       </section>
       <section className="client-dashboard-content">
@@ -424,10 +425,6 @@ function Dashboard({ user, navigate }) {
           <div className="client-tabs"><button className={tab === "events" ? "active" : ""} onClick={() => setTab("events")}>Saved Workshops</button><button className={tab === "providers" ? "active" : ""} onClick={() => setTab("providers")}>Saved Providers</button></div>
           {!payload ? <LoadingState label="Loading dashboard" /> : tab === "events" ? <ClientSavedList items={savedEvents} kind="event" navigate={navigate} /> : <ClientSavedList items={savedProviders} kind="provider" navigate={navigate} />}
         </div>
-        <aside className="client-dashboard-aside">
-          <section><h2>Not sure where to begin?</h2><p>Start with what your system needs most right now: grounding, therapy, body-based healing, community, motherhood support, or care.</p><button className="button client-side-button" onClick={() => navigate("/")}>Explore Providers</button></section>
-          <section><h2>Your private shortlist</h2><p>Save anything that feels aligned now, then return when you have more space to take the next step.</p></section>
-        </aside>
       </section>
     </main>;
   }

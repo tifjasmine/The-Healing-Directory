@@ -84,12 +84,11 @@ export default function ClientDashboard({ hideHeader = false }) {
       <section className="client-dashboard-hero">
         <p className="client-dashboard-kicker">Client Dashboard</p>
         <h1>Welcome back, {firstName(cleanName(user.name) || user.email)}.</h1>
-        <p>Your saved healing support lives here - workshops you want to return to and providers who feel aligned for your next step.</p>
+        <p>A quiet place to keep the people and gatherings you want to remember.</p>
         <div className="client-dashboard-actions"><button className="button client-primary" onClick={() => go("/events")}>Browse Workshops</button><button className="button client-secondary" onClick={() => go("/")}>Find Providers</button></div>
       </section>
       <section className="client-dashboard-stats">
         <ClientStat label="Saved Workshops" value={payload.counts?.savedEvents || 0} />
-        <ClientStat label="Upcoming Workshops" value={payload.counts?.upcomingEvents || 0} />
         <ClientStat label="Saved Providers" value={payload.counts?.savedProviders || 0} />
       </section>
       <section className="client-dashboard-content">
@@ -97,10 +96,6 @@ export default function ClientDashboard({ hideHeader = false }) {
           <div className="client-tabs"><button className={tab === "events" ? "active" : ""} onClick={() => setTab("events")}>Saved Workshops</button><button className={tab === "providers" ? "active" : ""} onClick={() => setTab("providers")}>Saved Providers</button></div>
           {tab === "events" ? <SavedList items={savedEvents} kind="event" /> : <SavedList items={savedProviders} kind="provider" noteDrafts={noteDrafts} setNoteDrafts={setNoteDrafts} savingNote={savingNote} savedNotes={savedNotes} openNotes={openNotes} setOpenNotes={setOpenNotes} onSaveNote={saveProviderNote} />}
         </div>
-        <aside className="client-dashboard-aside">
-          <section><h2>Not sure where to begin?</h2><p>Start with what your system needs most right now: grounding, therapy, body-based healing, community, motherhood support, or care.</p><button className="button client-side-button" onClick={() => go("/")}>Explore Providers</button></section>
-          <section><h2>Your private shortlist</h2><p>Save anything that feels aligned now, then return when you have more space to take the next step.</p></section>
-        </aside>
       </section>
     </main>
   </div>;
@@ -123,7 +118,7 @@ function SavedList({ items, kind, noteDrafts = {}, setNoteDrafts, savingNote, sa
             <small>Only you can see this. Providers cannot see your notes.</small>
             <textarea value={noteDrafts[record.id] || ""} onChange={(event) => setNoteDrafts?.((current) => ({ ...current, [record.id]: event.target.value }))} placeholder="Add a reminder for yourself..." rows={3} />
           </label>
-          <button className="button tertiary note-save-button" type="button" disabled={savingNote === record.id} onClick={() => onSaveNote?.(item)}>{savingNote === record.id ? <RefreshCw className="spin" size={15} /> : <Save size={15} />}{savedNotes[record.id] ? "Saved" : "Save note"}</button></div> : noteDrafts[record.id] ? <p className="saved-note-preview">{savedNotes[record.id] ? "Note saved." : "Private note saved."}</p> : null}
+          <button className="button tertiary note-save-button" type="button" disabled={savingNote === record.id} onClick={() => onSaveNote?.(item)}>{savingNote === record.id ? <RefreshCw className="spin" size={15} /> : <Save size={15} />}{savedNotes[record.id] ? "Saved" : "Save note"}</button></div> : noteDrafts[record.id] ? <p className="saved-note-preview">{notePreview(noteDrafts[record.id])}</p> : null}
       </article>;
     }
     return <button key={record.id || item.id || index} className="client-saved-row saved-event-row" onClick={() => go(path)}>{record.image ? <img src={record.image} alt="" /> : <span className="client-saved-mark"><CalendarDays size={19} /></span>}<span><strong>{title}</strong><small>{formatDate(record.start || record.date)}</small></span><ArrowRight size={18} /></button>;
@@ -135,6 +130,7 @@ function cleanName(value) { const name = String(value || "").trim(); return ["na
 function formatDate(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(time); }
 function initials(value) { return String(value || "Provider").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "P"; }
 function providerTypeLabel(provider) { return Array.isArray(provider.providerType) ? provider.providerType.join(", ") : String(provider.providerType || ""); }
+function notePreview(value) { const text = String(value || "").replace(/\s+/g, " ").trim(); return text.length > 95 ? `${text.slice(0, 95).trim()}...` : text; }
 function go(path) { window.location.assign(path); }
 async function signOut() { await logout().catch(() => null); window.location.assign("/"); }
 async function api(action, options = {}) {

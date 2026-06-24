@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowRight, CalendarDays, Check, ChevronDown, HeartHandshake, LayoutDashboard, LockKeyhole, RefreshCw, Save, Settings, UserRound, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, LockKeyhole, RefreshCw, Save, Settings, UserRound, X } from "lucide-react";
 import { getAccessToken, requestPasswordRecovery, updateUser } from "./authClient.js";
 
 const API = "/.netlify/functions/app-api";
@@ -23,8 +23,9 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
     api("account-settings")
       .then((payload) => {
         if (!alive) return;
+        const accountName = displayAccountName(payload.account?.name, user);
         setForm({
-          name: payload.account?.name || user?.name || "",
+          name: accountName,
           email: payload.account?.email || user?.email || "",
           accountType: payload.account?.accountType || "client",
           interests: payload.account?.interests || [],
@@ -85,6 +86,8 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
           name: payload.account.name || current.name,
           userMetadata: {
             ...(current.userMetadata || {}),
+            full_name: payload.account.name || form.name,
+            name: payload.account.name || form.name,
             account_type: payload.account.accountType,
             area_interest: payload.account.interests || form.interests,
             previous_email: emailChanged ? originalEmail : current.userMetadata?.previous_email,
@@ -126,8 +129,7 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
       <section className="account-hero account-hero-clean">
         <div>
           <p className="brand-pill">Account</p>
-          <h1>Manage your profile and access.</h1>
-          <p>Keep the basics connected to your saved providers, saved events, and dashboard tools.</p>
+          <h1>Account settings.</h1>
         </div>
         <div className="account-identity">
           <UserRound size={24} />
@@ -136,13 +138,13 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
         </div>
       </section>
 
-      <section className="settings-grid">
+      <section className={form.accountType === "provider" ? "settings-grid provider-settings-grid" : "settings-grid member-settings-grid"}>
         <form className="account-card settings-card" onSubmit={save}>
           <div className="account-card-heading">
             <Settings size={20} />
             <div>
               <h2>Account Details</h2>
-              <p>Update the basics connected to your member profile.</p>
+              <p>Update the name, email, and preferences connected to your account.</p>
             </div>
           </div>
 
@@ -174,19 +176,24 @@ export default function AccountSettings({ user, navigate, setNotice, setUser }) 
           </div>
         </form>
 
-        <aside className="account-side-stack">
+        {form.accountType === "provider" ? <aside className="account-side-stack">
           <section className="account-card account-quick">
-            <h2>Next Steps</h2>
-            <button onClick={() => navigate(form.accountType === "provider" ? "/dashboard" : "/client-dashboard")}><LayoutDashboard size={17} /> Open dashboard <ArrowRight size={16} /></button>
-            <button onClick={() => navigate("/") }><HeartHandshake size={17} /> Browse providers <ArrowRight size={16} /></button>
-            <button onClick={() => navigate("/events")}><CalendarDays size={17} /> Browse events <ArrowRight size={16} /></button>
-            {form.accountType === "provider" ? <button onClick={() => navigate("/edit-profile")}>Edit provider profile <ArrowRight size={16} /></button> : null}
-            {form.accountType === "provider" ? <button onClick={() => navigate("/edit-membership")}>Edit membership <ArrowRight size={16} /></button> : null}
+            <h2>Profile Tools</h2>
+            <button onClick={() => navigate("/edit-profile")}>Edit provider profile <ArrowRight size={16} /></button>
+            <button onClick={() => navigate("/edit-membership")}>Edit membership <ArrowRight size={16} /></button>
           </section>
-        </aside>
+        </aside> : null}
       </section>
     </main>
   );
+}
+
+function displayAccountName(accountName, user) {
+  const saved = String(accountName || "").trim();
+  const current = String(user?.name || user?.userMetadata?.full_name || "").trim();
+  const emailPrefix = String(user?.email || "").split("@")[0].toLowerCase();
+  if (current && (!saved || saved.toLowerCase() === emailPrefix || saved.toLowerCase() === String(user?.email || "").toLowerCase())) return current;
+  return saved || current;
 }
 
 function InterestPicker({ label, values, options, onToggle }) {

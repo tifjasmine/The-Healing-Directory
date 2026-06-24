@@ -1,6 +1,6 @@
 import React from "react";
-import { getUser, handleAuthCallback } from "./authClient.js";
-import { X } from "lucide-react";
+import { getUser, handleAuthCallback, logout } from "./authClient.js";
+import { CircleUserRound, LogOut, X } from "lucide-react";
 import App from "./App.jsx";
 import EventWorkspace from "./EventWorkspace.jsx";
 import AuthAccess from "./AuthAccess.jsx";
@@ -85,10 +85,25 @@ export default function Root() {
   if (!ready || !user) return <div className="state root-auth-state"><h2>Checking account...</h2></div>;
 
   return <div className="app-shell referral-root">
-    <header className="referral-root-header"><a className="brand referral-wordmark" href="/"><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></a><nav><a href="/providers">Providers</a><a href="/events">Events</a><a href="/dashboard">Dashboard</a><a href="/referral-room">Referral Room</a>{user.roles.includes("admin") ? <><a href="/referral-room-admin">Create session</a><a href="/referral-room-manager">Manager</a></> : null}</nav></header>
+    <header className="site-header warm-header">
+      <button className="brand" onClick={() => go("/")}><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></button>
+      <nav className="site-nav">
+        <button onClick={() => go("/")}>Providers</button>
+        <button onClick={() => go("/events")}>Events</button>
+        <button onClick={() => go("/dashboard")}>Dashboard</button>
+      </nav>
+      <div className="account-actions">
+        <button className="account-chip" onClick={() => go("/account-settings")}><CircleUserRound size={17} /><span>{firstName(user.name || user.email)}</span></button>
+        <button className="icon-button logout-arrow" onClick={signOut} title="Log out"><LogOut size={18} /></button>
+      </div>
+    </header>
     {notice ? <div className={notice.startsWith("Request received") ? "global-notice success" : "global-notice"}><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss"><X size={16} /></button></div> : null}
     {path === "/referral-room" ? <ReferralRoomProviderPage user={user} setNotice={setNotice} /> : null}
     {path === "/referral-room-admin" ? <ReferralRoomAdminPage user={user} setNotice={setNotice} /> : null}
     {path === "/referral-room-manager" ? <ReferralRoomManagerPage user={user} setNotice={setNotice} /> : null}
   </div>;
 }
+
+function go(path) { window.location.assign(path); }
+function firstName(value = "") { return String(value).split(/\s|@/)[0] || "Account"; }
+async function signOut() { await logout().catch(() => null); window.location.assign("/"); }
