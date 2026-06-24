@@ -470,6 +470,11 @@ function EventDetails({ data, loading, toggleSave }) {
 function DirectoryMultiSelect({ label, values = [], options = [], placeholder, onToggle }) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef(null);
+  const selectedLabel = values.length
+    ? values.length === 1
+      ? values[0]
+      : `${values.slice(0, 2).join(", ")}${values.length > 2 ? ` +${values.length - 2}` : ""}`
+    : placeholder;
   React.useEffect(() => {
     if (!open) return undefined;
     const close = (event) => {
@@ -478,14 +483,15 @@ function DirectoryMultiSelect({ label, values = [], options = [], placeholder, o
     window.addEventListener("pointerdown", close);
     return () => window.removeEventListener("pointerdown", close);
   }, [open]);
-  return <div className="directory-multi-select" ref={ref}>
+  return <div className={open ? "directory-multi-select open" : "directory-multi-select"} ref={ref}>
     <span>{label}</span>
     <button type="button" className={open ? "multi-select-trigger open" : "multi-select-trigger"} onClick={() => setOpen((current) => !current)}>
-      <strong>{values.length ? `${values.length} selected` : placeholder}</strong>
+      <strong>{selectedLabel}</strong>
       <ChevronDown size={16} />
     </button>
     {values.length ? <div className="selected-filter-chips">{values.map((value) => <button type="button" key={value} onClick={() => onToggle(value)}>{value}<X size={13} /></button>)}</div> : null}
     {open ? <div className="multi-select-menu">
+      <p className="multi-select-hint">Select all that apply</p>
       {options.length ? options.map((option) => {
         const selected = values.includes(option);
         return <button type="button" key={option} className={selected ? "selected" : ""} onClick={() => onToggle(option)}>
@@ -563,7 +569,7 @@ function LeafIcon() { return <HeartHandshake size={20} />; }
 function MugIcon() { return <Clock size={20} />; }
 function EventCount({ value, label }) { return <div className="event-count"><strong>{value}</strong><span>{label}</span></div>; }
 function EventInfo({ icon, label, value }) { if (!value) return null; return <div className="event-info">{React.cloneElement(icon, { size: 19 })}<span><small>{label}</small><strong>{value}</strong></span></div>; }
-function ViewMoreList({ shown, total, onMore }) { if (!total || shown >= total) return null; return <div className="view-more-row"><button type="button" className="button tertiary" onClick={onMore}>View more</button></div>; }
+function ViewMoreList({ shown, total, label = "items", onMore }) { if (!total || shown >= total) return null; return <div className="view-more-row"><button type="button" className="button tertiary" onClick={onMore}>Show more {label}</button></div>; }
 function State({ label }) { return <div className="state"><HeartHandshake /><h2>{label}</h2></div>; }
 function go(path) { window.location.assign(path); }
 function normalizeUser(current) {
