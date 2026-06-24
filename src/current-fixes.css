@@ -7415,7 +7415,7 @@ button.referral-room-preview-card:hover {
 
 /* Homepage: split editorial hero with the logo artwork as the visual anchor. */
 .directory-home-hero {
-  padding: clamp(26px, 4vw, 56px) 0 clamp(22px, 3vw, 38px) !important;
+  padding: clamp(14px, 2.2vw, 30px) 0 clamp(16px, 2.4vw, 30px) !important;
   overflow: visible !important;
   background:
     radial-gradient(circle at 74% 22%, rgba(255, 253, 248, .95) 0 22%, rgba(255, 250, 240, .72) 42%, rgba(244, 234, 217, .86) 78%),
@@ -7424,12 +7424,12 @@ button.referral-room-preview-card:hover {
 }
 
 .directory-home-shell {
-  width: min(1880px, calc(100% - 56px)) !important;
+  width: min(1760px, calc(100% - 48px)) !important;
   display: grid;
-  grid-template-columns: minmax(360px, .9fr) minmax(520px, 1.1fr);
-  gap: clamp(26px, 4vw, 70px);
+  grid-template-columns: minmax(360px, .82fr) minmax(520px, 1fr);
+  gap: clamp(20px, 3vw, 48px);
   align-items: stretch;
-  min-height: clamp(560px, 70vh, 820px);
+  min-height: clamp(430px, 58vh, 650px);
   margin: 0 auto;
 }
 
@@ -7437,20 +7437,20 @@ button.referral-room-preview-card:hover {
   align-content: center;
   justify-items: start !important;
   text-align: left !important;
-  padding: clamp(24px, 4vw, 58px) 0 !important;
+  padding: clamp(12px, 2.4vw, 34px) 0 !important;
 }
 
 .directory-location-pill {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  margin: 0 0 clamp(22px, 3vw, 46px) !important;
-  padding: 11px 18px;
+  margin: 0 0 clamp(16px, 2vw, 28px) !important;
+  padding: 9px 15px;
   border: 1px solid #e1d5c3;
   border-radius: 999px;
   background: rgba(255, 253, 248, .78);
   color: #397a58;
-  font-size: clamp(13px, 1.1vw, 17px);
+  font-size: clamp(12px, .95vw, 15px);
   font-weight: 850;
   line-height: 1;
   box-shadow: 0 10px 28px rgba(58, 44, 35, .05);
@@ -7464,10 +7464,10 @@ button.referral-room-preview-card:hover {
 }
 
 .directory-home-hero .directory-heading h1 {
-  max-width: 660px !important;
+  max-width: 600px !important;
   color: #1f493c !important;
-  font-size: clamp(74px, 8vw, 142px) !important;
-  line-height: .86 !important;
+  font-size: clamp(56px, 6.2vw, 104px) !important;
+  line-height: .9 !important;
   letter-spacing: 0 !important;
 }
 
@@ -7476,37 +7476,58 @@ button.referral-room-preview-card:hover {
 }
 
 .directory-home-hero .directory-heading .lede {
-  max-width: 680px !important;
-  margin-top: clamp(24px, 3vw, 44px) !important;
+  max-width: 610px !important;
+  margin-top: clamp(16px, 2vw, 28px) !important;
   color: #647066 !important;
-  font-size: clamp(18px, 1.7vw, 28px) !important;
-  line-height: 1.55 !important;
+  font-size: clamp(16px, 1.35vw, 22px) !important;
+  line-height: 1.48 !important;
 }
 
 .directory-hero-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
-  margin-top: clamp(28px, 4vw, 56px);
+  margin-top: clamp(20px, 2.8vw, 38px);
 }
 
-.directory-hero-actions .button {
-  min-height: 58px;
-  padding: 0 28px;
-  border-radius: 999px;
-  font-size: 17px;
-  font-weight: 850;
+.home-join-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 260px));
+  align-items: stretch;
 }
 
-.directory-hero-actions .hero-primary {
+.home-join-card {
+  min-height: 92px;
+  padding: 16px 18px;
+  display: grid;
+  gap: 6px;
+  align-content: center;
+  text-align: left;
+  border: 1px solid #d9cbb8;
+  border-radius: 18px;
+  background: rgba(255, 253, 248, .5);
+  color: #24493d;
+  font: inherit;
+  cursor: pointer;
+}
+
+.home-join-card.provider-card {
   background: #1f493c;
+  border-color: #1f493c;
   color: #fffdf8;
 }
 
-.directory-hero-actions .hero-secondary {
-  background: rgba(255, 253, 248, .36);
-  color: #24493d;
-  border: 1px solid #d9cbb8;
+.home-join-card strong {
+  font-size: 17px;
+  line-height: 1.1;
+}
+
+.home-join-card span {
+  color: inherit;
+  opacity: .72;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
 }
 
 .directory-hero-art {
@@ -7516,11 +7537,11 @@ button.referral-room-preview-card:hover {
   place-items: center;
   overflow: hidden;
   border: 1px solid rgba(218, 202, 176, .86);
-  border-radius: 0 0 32px 32px;
+  border-radius: 0 0 24px 24px;
   background:
     linear-gradient(180deg, rgba(255, 253, 248, .6), rgba(244, 239, 224, .74)),
     #fbf4e8;
-  box-shadow: inset 0 -140px 120px rgba(70, 93, 76, .16);
+  box-shadow: inset 0 -96px 90px rgba(70, 93, 76, .14);
 }
 
 .directory-hero-art::before {
@@ -7537,20 +7558,20 @@ button.referral-room-preview-card:hover {
 .directory-hero-art > img {
   position: relative;
   z-index: 0;
-  width: min(96%, 980px);
+  width: min(96%, 900px);
   height: auto;
-  transform: scale(1.18) translateY(5%);
+  transform: translateY(-2%);
   mix-blend-mode: multiply;
-  opacity: .93;
+  opacity: .96;
 }
 
 .home-verified-card {
   position: absolute;
   z-index: 2;
-  left: clamp(24px, 4vw, 72px);
-  bottom: clamp(24px, 5vw, 76px);
-  width: min(420px, calc(100% - 48px));
-  padding: 22px;
+  right: clamp(18px, 2.6vw, 42px);
+  bottom: clamp(18px, 2.6vw, 42px);
+  width: min(300px, calc(100% - 36px));
+  padding: 14px;
   border: 1px solid #eadfce;
   border-radius: 22px;
   background: rgba(255, 253, 248, .94);
@@ -7559,9 +7580,9 @@ button.referral-room-preview-card:hover {
 }
 
 .home-verified-card > p {
-  margin: 0 0 14px;
+  margin: 0 0 10px;
   color: #bd6d48;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: .16em;
   text-transform: uppercase;
@@ -7569,23 +7590,23 @@ button.referral-room-preview-card:hover {
 
 .home-verified-provider {
   display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
   align-items: center;
-  padding-bottom: 18px;
+  padding-bottom: 11px;
   border-bottom: 1px solid #eadfce;
 }
 
 .home-verified-provider > span {
-  width: 58px;
-  height: 58px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: #4f946f;
   color: #fffdf8;
   font-family: "Cormorant Garamond", Georgia, serif;
-  font-size: 24px;
+  font-size: 17px;
   font-weight: 700;
 }
 
@@ -7593,7 +7614,7 @@ button.referral-room-preview-card:hover {
   display: block;
   color: #24493d;
   font-family: "Cormorant Garamond", Georgia, serif;
-  font-size: 26px;
+  font-size: 18px;
   line-height: 1;
 }
 
@@ -7601,7 +7622,7 @@ button.referral-room-preview-card:hover {
   display: block;
   margin-top: 4px;
   color: #91978d;
-  font-size: 15px;
+  font-size: 11px;
   font-weight: 750;
 }
 
@@ -7609,24 +7630,25 @@ button.referral-room-preview-card:hover {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 16px;
+  margin-top: 10px;
+  font-size: 11px;
   color: #397a58;
   font-weight: 850;
 }
 
 .home-verified-line svg {
   flex: 0 0 auto;
-  width: 25px;
-  height: 25px;
-  padding: 5px;
+  width: 21px;
+  height: 21px;
+  padding: 4px;
   border-radius: 50%;
   background: #e2f0e7;
   color: #397a58;
 }
 
 .directory-home-hero .directory-search-panel {
-  width: min(1880px, calc(100% - 56px)) !important;
-  margin: clamp(18px, 3vw, 34px) auto 0 !important;
+  width: min(1760px, calc(100% - 48px)) !important;
+  margin: clamp(14px, 2vw, 24px) auto 0 !important;
   background: #24493d !important;
 }
 
@@ -7637,7 +7659,7 @@ button.referral-room-preview-card:hover {
   }
 
   .directory-hero-art {
-    min-height: 560px;
+    min-height: 430px;
     border-radius: 26px;
   }
 
@@ -7658,7 +7680,7 @@ button.referral-room-preview-card:hover {
   }
 
   .directory-home-hero .directory-heading h1 {
-    font-size: clamp(58px, 17vw, 82px) !important;
+    font-size: clamp(46px, 14vw, 70px) !important;
   }
 
   .directory-home-hero .directory-heading .lede {
@@ -7669,26 +7691,31 @@ button.referral-room-preview-card:hover {
     width: 100%;
   }
 
-  .directory-hero-actions .button {
+  .home-join-cards {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .home-join-card {
+    min-height: 78px;
     width: 100%;
-    min-height: 52px;
   }
 
   .directory-hero-art {
-    min-height: 430px;
+    min-height: 340px;
   }
 
   .directory-hero-art > img {
-    width: 118%;
-    transform: scale(1.06) translateY(-4%);
+    width: 100%;
+    transform: scale(.96) translateY(-2%);
   }
 
   .home-verified-card {
-    left: 16px;
+    left: auto;
     right: 16px;
     bottom: 16px;
-    width: auto;
-    padding: 16px;
+    width: min(280px, calc(100% - 32px));
+    padding: 13px;
     border-radius: 18px;
   }
 

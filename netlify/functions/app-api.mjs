@@ -248,7 +248,7 @@ export default async function handler(request) {
 
 async function bootstrap(user) {
   const [providerRecords, eventRecords, directoryOptions] = await Promise.all([list("directory"), list("events"), getDirectoryOptions()]);
-  const providers = providerRecords.map(normalizeProvider).filter((item) => item.isPublic).sort(providerSort);
+  const providers = shuffleList(providerRecords.map(normalizeProvider).filter((item) => item.isPublic));
   const events = eventRecords.map(normalizeEvent).filter((item) => item.isPublic);
   let savedProviderIds = [];
   let savedEventIds = [];
@@ -1621,6 +1621,14 @@ function statusKey(value) { const status = lower(value); if (status.includes("pe
 function providerSort(a, b) {
   if (a.order !== b.order) return a.order - b.order;
   return (a.name || "").localeCompare(b.name || "", "en", { sensitivity: "base" });
+}
+function shuffleList(values = []) {
+  const next = [...values];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+  return next;
 }
 function numberValue(value) {
   const valueOrNumber = Number(String(value || "").replace(/[^0-9.\-]/g, ""));

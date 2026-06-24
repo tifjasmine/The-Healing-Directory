@@ -226,13 +226,19 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
           <p className="directory-location-pill"><span />Serving New Jersey & Pennsylvania</p>
           <h1>Find <span>trusted</span> support.</h1>
           <p className="lede">A curated directory of therapists, wellness professionals, and holistic providers — matched to you by care need, not just location.</p>
-          <div className="directory-hero-actions">
-            <button className="button hero-primary" type="button" onClick={() => document.querySelector(".directory-search-panel input")?.focus()}>Find a provider</button>
-            <button className="button hero-secondary" type="button" onClick={() => go("/provider-signup")}>For providers <ArrowRight size={17} /></button>
+          <div className="directory-hero-actions home-join-cards">
+            <button className="home-join-card provider-card" type="button" onClick={() => go("/provider-signup")}>
+              <strong>Become a Provider</strong>
+              <span>Join a trusted, relationship-based healing network.</span>
+            </button>
+            <button className="home-join-card member-card" type="button" onClick={() => go("/signup")}>
+              <strong>Become a Member</strong>
+              <span>Save providers and events in one place.</span>
+            </button>
           </div>
         </div>
         <div className="directory-hero-art">
-          <img src="/directory-logo-strip.png" alt="The Healing Directory" />
+          <img src="/homepage-logo-photo.png" alt="The Healing Directory" />
           <div className="home-verified-card">
             <p>Recently joined</p>
             <div className="home-verified-provider">
