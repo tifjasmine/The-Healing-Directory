@@ -238,7 +238,7 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
           </div>
         </div>
         <div className="directory-hero-art">
-          <img src="/homepage-logo-photo.png" alt="The Healing Directory" />
+          <img src="/homepage-logo-transparent.png" alt="The Healing Directory" />
           <div className="home-verified-card">
             <p>Recently joined</p>
             <div className="home-verified-provider">
