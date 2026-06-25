@@ -223,7 +223,6 @@ export default function ProviderSignupPage() {
 }
 
 function Basics({ form, change, setValue, toggle, options }) {
-  return <Section title="The basics" text="Start with who you are and how people can reach you, colleagues and clients alike.">
     <Row><TextField label="Full name" value={form.name} onChange={change("name")} required placeholder="Dr. Jane Smith" /><TextField label="Pronouns" value={form.pronouns} onChange={change("pronouns")} placeholder="she/her, they/them..." /></Row>
     <Row><TextField label="Profession / title" value={form.profession} onChange={change("profession")} required placeholder="Licensed Therapist, Holistic Health Coach..." /><TextField label="License # / certification" value={form.licenseCertification} onChange={change("licenseCertification")} placeholder="LPC #000000, RYT-500..." /></Row>
     <Row><MultiSelect label="Gender Identity" values={form.genderIdentity} options={options.genderIdentity} onToggle={(value) => toggle("genderIdentity", value)} allowCustom={false} /><MultiSelect label="Racial / Ethnic Identity" values={form.racialEthnicIdentity} options={options.racialEthnicIdentity} onToggle={(value) => toggle("racialEthnicIdentity", value)} allowCustom={false} /></Row>
@@ -236,7 +235,6 @@ function Basics({ form, change, setValue, toggle, options }) {
 }
 
 function Care({ form, change, toggle, addOther, options }) {
-  return <Section title="Areas of care" text="Services, concerns, locations, availability, and payment.">
     <Row><MultiSelect label="Provider Type" values={form.providerType} options={options.providerType} onToggle={(value) => toggle("providerType", value)} onAddCustom={addOther("additionalProviderType")} customValue={form.additionalProviderType} customLabel="Additional Provider Type" required /><MultiSelect label="Concerns / areas of support" values={form.concerns} options={options.support} onToggle={(value) => toggle("concerns", value)} onAddCustom={addOther("additionalConcerns")} customValue={form.additionalConcerns} customLabel="Additional Concerns" required /></Row>
     <Row><MultiSelect label="Services offered" values={form.servicesOffered} options={options.services} onToggle={(value) => toggle("servicesOffered", value)} onAddCustom={addOther("additionalServices")} customValue={form.additionalServices} customLabel="Additional Services" required /><MultiSelect label="People served" values={form.populationsServed} options={options.populations} onToggle={(value) => toggle("populationsServed", value)} onAddCustom={addOther("additionalPopulations")} customValue={form.additionalPopulations} customLabel="Additional Populations" required /></Row>
     <Row><MultiSelect label="Payment / insurance" values={form.payType} options={options.payment} onToggle={(value) => toggle("payType", value)} onAddCustom={addOther("additionalPayTypes")} customValue={form.additionalPayTypes} customLabel="Additional Pay Types" required /><MultiSelect label="State" values={form.state} options={options.locations} onToggle={(value) => toggle("state", value)} onAddCustom={addOther("additionalStates")} customValue={form.additionalStates} customLabel="Additional States" required /></Row>
@@ -247,14 +245,12 @@ function Care({ form, change, toggle, addOther, options }) {
 }
 
 function Referral({ form, change, toggle, options }) {
-  return <Section title="Referral intel" text="Provider-only referral information.">
     <Row><MultiSelect label="Typical response time" values={form.typicalResponseTime} options={options.responseTime} onToggle={(value) => toggle("typicalResponseTime", value)} /><MultiSelect label="Preferred referral method" values={form.preferredReferralMethod} options={options.referralMethod} onToggle={(value) => toggle("preferredReferralMethod", value)} /></Row>
     <TextField label="Referral instructions" value={form.referralInstructions} onChange={change("referralInstructions")} textarea placeholder="What should another provider include when referring to you?" />
   </Section>;
 }
 
 function Collaboration({ form, change, toggle, addOther, options }) {
-  return <Section title="Collaboration" text="Provider-to-provider collaboration details.">
     <MultiSelect label="Collaboration interests" values={form.collaborationInterests} options={options.collaborationInterests} onToggle={(value) => toggle("collaborationInterests", value)} onAddCustom={addOther("otherCollaboration")} customValue={form.otherCollaboration} customLabel="Other Collaboration" />
     <TextField label="Collaboration details" value={form.collaborationDetails} onChange={change("collaborationDetails")} textarea placeholder="Workshops, referral relationships, provider discounts, consultation preferences, boundaries..." />
     <TextField label="Additional info" value={form.providerToProviderNotes} onChange={change("providerToProviderNotes")} textarea placeholder="Anything aligned providers should know before referring, collaborating, or reaching out." />
@@ -262,7 +258,6 @@ function Collaboration({ form, change, toggle, addOther, options }) {
 }
 
 function Human({ form, change, toggle, options }) {
-  return <Section title="The human side" text="Warm details to make the profile feel personal.">
     <Row><TextField label="My style in three words" value={form.styleWords} onChange={change("styleWords")} placeholder="Warm, direct, grounding..." /><TextField label="Clients describe me as" value={form.clientsDescribeMeAs} onChange={change("clientsDescribeMeAs")} placeholder="Compassionate, honest, calming..." /></Row>
     <Row><TextField label="My grounding ritual" value={form.groundingRitual} onChange={change("groundingRitual")} placeholder="A walk, hand on heart, tea..." /><TextField label="Outside sessions" value={form.outsideSessions} onChange={change("outsideSessions")} placeholder="Family, movement, creativity..." /></Row>
     <TextField label="Guiding belief" value={form.guidingBelief} onChange={change("guidingBelief")} placeholder="Healing happens when..." />
@@ -273,7 +268,6 @@ function Human({ form, change, toggle, options }) {
 }
 
 function Consent({ form, change, setValue }) {
-  return <Section title="Consent + agreement" text="Required confirmations.">
     <ConsentCheck checked={form.consentDirectory} onChange={(value) => setValue("consentDirectory", value)} title="I consent to being listed in The Healing Directory and confirm that I am who I say I am." text="This includes permission to display my approved provider profile." required />
     <ConsentCheck checked={form.consentCommunity} onChange={(value) => setValue("consentCommunity", value)} title="I agree to be an intentional, compassionate, respectful, and aligned provider within The Healing Directory community." text="This community is built around trust, care, integrity, collaboration, and respect." required />
     <ConsentCheck checked={form.infoOptIn} onChange={(value) => setValue("infoOptIn", value)} title="I would like to receive provider updates from The Healing Directory." text="Examples may include new providers, workshops, referral room updates, collaboration opportunities, and directory announcements." />
