@@ -8874,7 +8874,7 @@ button.referral-room-preview-card:hover {
   }
 }
 
-/* Mobile login: compact strip so the desktop headline never gets clipped. */
+/* Mobile login: compact version of the brand message, not the giant desktop block. */
 @media (max-width: 760px) {
   .auth-root .auth-redesign-shell {
     display: block !important;
@@ -8884,7 +8884,7 @@ button.referral-room-preview-card:hover {
     display: block !important;
     min-height: 0 !important;
     max-height: none !important;
-    padding: 14px 16px !important;
+    padding: 18px 18px 20px !important;
     border-radius: 18px 18px 0 0 !important;
     overflow: visible !important;
   }
@@ -8893,9 +8893,20 @@ button.referral-room-preview-card:hover {
     margin: 0 !important;
   }
 
-  .auth-root .auth-redesign-panel h1,
+  .auth-root .auth-redesign-panel h1 {
+    display: block !important;
+    max-width: 300px !important;
+    margin: 16px 0 0 !important;
+    font-size: clamp(30px, 10vw, 42px) !important;
+    line-height: .98 !important;
+  }
+
   .auth-root .auth-redesign-panel p:not(.brand-pill) {
-    display: none !important;
+    display: block !important;
+    max-width: 310px !important;
+    margin: 12px 0 0 !important;
+    font-size: 14px !important;
+    line-height: 1.38 !important;
   }
 
   .auth-root .auth-redesign-card {
@@ -8908,21 +8919,21 @@ button.referral-room-preview-card:hover {
 /* Mobile homepage art order: logo first, recently joined tucked below it. */
 @media (max-width: 760px) {
   .directory-hero-art {
-    min-height: 330px !important;
+    min-height: 285px !important;
     display: grid !important;
     align-content: start !important;
     justify-items: center !important;
-    padding-top: 4px !important;
+    padding-top: 0 !important;
   }
 
   .directory-hero-art > img {
-    width: min(98%, 405px) !important;
-    transform: translateY(0) !important;
+    width: min(100%, 405px) !important;
+    transform: translateY(-18px) !important;
   }
 
   .home-verified-card {
     top: auto !important;
-    bottom: 8px !important;
+    bottom: 4px !important;
     left: auto !important;
     right: 12px !important;
     transform: none !important;
@@ -8956,5 +8967,225 @@ button.referral-room-preview-card:hover {
 
   .directory-home-hero .directory-submit-button {
     grid-row: 5 !important;
+  }
+}
+
+/* Directory filter dropdowns should overlay cleanly and never shove the panel around. */
+.directory-home-hero .selected-filter-chips {
+  display: none !important;
+}
+
+.directory-home-hero .directory-multi-select {
+  position: relative !important;
+}
+
+.directory-home-hero .directory-multi-select.open {
+  z-index: 500 !important;
+}
+
+.directory-home-hero .multi-select-menu {
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  left: 0 !important;
+  right: auto !important;
+  width: min(360px, max(100%, 300px)) !important;
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  margin: 0 !important;
+  padding: 10px !important;
+  border: 1px solid #e3d5c7 !important;
+  border-radius: 16px !important;
+  background: #fffdf8 !important;
+  color: #2f2925 !important;
+  box-shadow: 0 18px 42px rgba(18, 43, 35, .26) !important;
+}
+
+.directory-home-hero .primary-filter-grid .directory-multi-select:nth-child(3) .multi-select-menu,
+.directory-home-hero .more-filter-grid .directory-multi-select:nth-child(3n) .multi-select-menu {
+  left: auto !important;
+  right: 0 !important;
+}
+
+.directory-home-hero .multi-select-menu button {
+  min-height: 42px !important;
+  padding: 8px 10px !important;
+  border-radius: 10px !important;
+  color: #2f2925 !important;
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+}
+
+@media (max-width: 760px) {
+  .directory-home-hero .multi-select-menu {
+    width: 100% !important;
+    max-height: 250px !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+
+  .directory-home-hero .primary-filter-grid .directory-multi-select:nth-child(3) .multi-select-menu,
+  .directory-home-hero .more-filter-grid .directory-multi-select:nth-child(3n) .multi-select-menu {
+    left: 0 !important;
+    right: 0 !important;
+  }
+}
+
+/* Provider detail cleanup: quieter header and Airtable paragraph rhythm. */
+.provider-detail-page .profile-band {
+  padding-bottom: clamp(18px, 3vw, 34px) !important;
+}
+
+.provider-detail-page .profile-hero {
+  padding-top: clamp(18px, 3vw, 32px) !important;
+  padding-bottom: clamp(18px, 3vw, 30px) !important;
+  align-items: center !important;
+}
+
+.provider-detail-page .profile-hero .title-line {
+  align-items: center !important;
+  gap: 10px 12px !important;
+}
+
+.provider-detail-page .profile-action-cluster {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.provider-detail-page .profile-verified-badge {
+  min-height: 38px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+}
+
+.provider-detail-page .profile-title {
+  margin-top: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.provider-detail-page .profile-title svg {
+  flex: 0 0 auto;
+  color: rgba(255, 253, 248, .82);
+}
+
+.provider-detail-page .profile-tag-group {
+  margin-top: 14px !important;
+}
+
+.provider-detail-page .content-section {
+  border-radius: 22px !important;
+}
+
+.provider-detail-page .content-section-toggle {
+  padding: clamp(22px, 3vw, 34px) clamp(22px, 3vw, 34px) !important;
+}
+
+.provider-detail-page .content-section-body {
+  padding: 0 clamp(22px, 3vw, 34px) clamp(24px, 3vw, 36px) !important;
+}
+
+.provider-detail-page .formatted-copy {
+  display: grid;
+  gap: 18px;
+}
+
+.provider-detail-page .formatted-copy p {
+  margin: 0 !important;
+  line-height: 1.62 !important;
+}
+
+@media (max-width: 760px) {
+  .provider-detail-page .profile-hero {
+    gap: 14px !important;
+  }
+
+  .provider-detail-page .profile-hero .avatar {
+    width: 88px !important;
+    height: 88px !important;
+  }
+
+  .provider-detail-page .profile-hero h1 {
+    font-size: clamp(42px, 12vw, 58px) !important;
+    line-height: .95 !important;
+  }
+
+  .provider-detail-page .profile-actions {
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .provider-detail-page .profile-action-cluster {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .provider-detail-page .content-section-toggle h2 {
+    font-size: clamp(30px, 9vw, 42px) !important;
+    line-height: 1.02 !important;
+  }
+}
+
+/* Member signup now uses the public chrome. */
+.member-signup-root .member-signup-page,
+.provider-signup-root .provider-join-page {
+  min-height: auto;
+}
+
+.member-signup-root .site-footer a,
+.provider-signup-root .site-footer a {
+  min-height: 38px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .member-signup-root .site-header.warm-header,
+  .provider-signup-root .site-header.warm-header {
+    grid-template-areas:
+      "brand brand"
+      "nav actions" !important;
+  }
+
+  .member-signup-root .site-header.warm-header .site-nav,
+  .provider-signup-root .site-header.warm-header .site-nav {
+    display: inline-flex !important;
+    position: static !important;
+    grid-area: nav !important;
+    width: auto !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .member-signup-root .site-header.warm-header .site-nav a,
+  .provider-signup-root .site-header.warm-header .site-nav a {
+    min-height: 42px !important;
+    padding: 0 12px !important;
+    border: 1px solid #e1d4c7 !important;
+    border-radius: 999px !important;
+    background: #fffdf8 !important;
+    font-size: 14px !important;
+  }
+
+  .member-signup-root .account-actions .signup-trigger,
+  .provider-signup-root .account-actions .signup-trigger {
+    display: none !important;
   }
 }

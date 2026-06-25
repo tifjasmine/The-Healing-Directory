@@ -787,7 +787,7 @@ function normalizeProvider(record) {
     accountType,
     order: numberValue(pick(f, FIELDS.provider.order)),
     email: text(pick(f, FIELDS.provider.email)), phone: text(pick(f, FIELDS.provider.phone)),
-    photo: attachment(pick(f, FIELDS.provider.photo)) || text(pick(f, FIELDS.provider.photoUrl)), bio: text(pick(f, FIELDS.provider.bio)),
+    photo: attachment(pick(f, FIELDS.provider.photo)) || text(pick(f, FIELDS.provider.photoUrl)), bio: longText(pick(f, FIELDS.provider.bio)),
     profession: text(pick(f, FIELDS.provider.profession)), pronouns: text(pick(f, FIELDS.provider.pronouns)),
     providerType: array(pick(f, FIELDS.provider.type)), services: array(pick(f, FIELDS.provider.services)),
     support: arrayExact(pick(f, FIELDS.provider.support)), populations: array(pick(f, FIELDS.provider.population)),
@@ -1666,6 +1666,7 @@ function emptyCell(value) {
   return false;
 }
 function text(value) { if (value == null) return ""; if (Array.isArray(value)) return value.map(text).filter(Boolean).join(", "); if (typeof value === "object") return text(value.name ?? value.label ?? value.value ?? value.text ?? value.url ?? ""); return clean(value); }
+function longText(value) { if (value == null) return ""; if (Array.isArray(value)) return value.map(longText).filter(Boolean).join("\n\n"); if (typeof value === "object") return longText(value.name ?? value.label ?? value.value ?? value.text ?? value.url ?? ""); return String(value ?? "").replace(/\r\n/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n[ \t]+/g, "\n").trim(); }
 function array(value) { return arrayRaw(value).map(text).flatMap((v) => v.split(/[,;\n]+/)).map(clean).filter(Boolean); }
 function arrayExact(value) { return arrayRaw(value).map(text).map(clean).filter(Boolean); }
 function arrayRaw(value) { return value == null ? [] : Array.isArray(value) ? value : [value]; }

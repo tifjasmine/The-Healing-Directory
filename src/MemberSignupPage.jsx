@@ -6,6 +6,7 @@ import {
   Check,
   CheckCircle2,
   Heart,
+  LogIn,
   Loader,
   Mail,
   Sparkles,
@@ -84,9 +85,9 @@ export default function MemberSignupPage() {
     }
   }
 
-  if (submitted) return <MemberSuccess email={form.email} />;
+  if (submitted) return <MemberChrome><MemberSuccess email={form.email} /></MemberChrome>;
 
-  return <div className="member-signup-page">
+  return <MemberChrome><div className="member-signup-page">
     <section className="member-signup-hero">
       <div>
         <p className="member-kicker">The Healing Directory</p>
@@ -125,7 +126,7 @@ export default function MemberSignupPage() {
         <div className="member-links"><a href="/login">Already have an account?</a><a href="/provider-signup">Become a provider</a></div>
       </form>
     </main>
-  </div>;
+  </div></MemberChrome>;
 }
 
 function MemberSuccess({ email }) {
@@ -146,6 +147,29 @@ function MemberSuccess({ email }) {
         <a className="member-submit member-success-link" href="/login"><Mail size={16} /> Go to login <ArrowRight size={15} /></a>
       </section>
     </main>
+  </div>;
+}
+
+function MemberChrome({ children }) {
+  return <div className="app-shell member-signup-root">
+    <header className="site-header warm-header">
+      <a className="brand" href="/">
+        <span><strong>The Healing Directory</strong><small>Relationship-based care</small></span>
+      </a>
+      <nav className="site-nav">
+        <a href="/">Providers</a>
+        <a href="/events">Events</a>
+      </nav>
+      <div className="account-actions">
+        <a className="button compact login-button" href="/login"><LogIn size={16} /> Login</a>
+        <a className="button compact signup-trigger" href="/provider-signup">Become a Provider</a>
+      </div>
+    </header>
+    {children}
+    <footer className="site-footer">
+      <div><strong>The Healing Directory</strong><p>Thoughtful connections for healing, wellness, and trusted referrals.</p></div>
+      <nav><a href="/terms">Terms and Conditions</a><a href="/privacy">Privacy Policy</a></nav>
+    </footer>
   </div>;
 }
 

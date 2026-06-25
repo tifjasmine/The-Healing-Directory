@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   Heart,
   HeartHandshake,
+  LogIn,
   Loader,
   Mail,
   Send,
@@ -176,10 +177,9 @@ export default function ProviderSignupPage() {
     }
   }
 
-  if (submitted) return <PendingApprovalPage warning={syncWarning} />;
+  if (submitted) return <ProviderChrome><PendingApprovalPage warning={syncWarning} /></ProviderChrome>;
 
-  return <div className="provider-join-page">
-    <ProviderSignupNav />
+  return <ProviderChrome><div className="provider-join-page">
     <header className="provider-join-hero">
       <div className="provider-join-inner">
         <p className="provider-join-kicker">The Healing Directory</p>
@@ -219,7 +219,7 @@ export default function ProviderSignupPage() {
       </form>
       <div className="provider-progress"><span style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} /></div>
     </main>
-  </div>;
+  </div></ProviderChrome>;
 }
 
 function Basics({ form, change, setValue, toggle, options }) {
@@ -283,7 +283,6 @@ function Consent({ form, change, setValue }) {
 
 function PendingApprovalPage({ warning }) {
   return <div className="provider-join-page">
-    <ProviderSignupNav />
     <header className="provider-join-hero">
       <div className="provider-join-inner provider-pending-hero">
         <p className="provider-join-kicker">The Healing Directory</p>
@@ -304,15 +303,27 @@ function PendingApprovalPage({ warning }) {
   </div>;
 }
 
-function ProviderSignupNav() {
-  return <nav className="provider-signup-nav" aria-label="Site navigation">
-    <a className="provider-signup-brand" href="/"><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></a>
-    <div>
+function ProviderChrome({ children }) {
+  return <div className="app-shell provider-signup-root">
+    <header className="site-header warm-header">
+      <a className="brand" href="/">
+        <span><strong>The Healing Directory</strong><small>Relationship-based care</small></span>
+      </a>
+      <nav className="site-nav">
       <a href="/">Providers</a>
       <a href="/events">Events</a>
-      <a className="provider-signup-login" href="/login">Login</a>
-    </div>
-  </nav>;
+      </nav>
+      <div className="account-actions">
+        <a className="button compact login-button" href="/login"><LogIn size={16} /> Login</a>
+        <a className="button compact signup-trigger" href="/signup">Become a Member</a>
+      </div>
+    </header>
+    {children}
+    <footer className="site-footer">
+      <div><strong>The Healing Directory</strong><p>Thoughtful connections for healing, wellness, and trusted referrals.</p></div>
+      <nav><a href="/terms">Terms and Conditions</a><a href="/privacy">Privacy Policy</a></nav>
+    </footer>
+  </div>;
 }
 
 function Section({ title, text, children }) {

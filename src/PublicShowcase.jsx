@@ -113,9 +113,9 @@ export default function PublicShowcase({ path }) {
       </button>
       <button className="menu-toggle icon-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X /> : <Menu />}</button>
       <nav className={menuOpen ? "site-nav open" : "site-nav"}>
-        <button onPointerDown={(event) => { event.preventDefault(); go("/"); }} onClick={() => go("/")}>Providers</button>
-        <button onPointerDown={(event) => { event.preventDefault(); go("/events"); }} onClick={() => go("/events")}>Events</button>
-        {user ? <button onPointerDown={(event) => { event.preventDefault(); go(dashboardPath); }} onClick={() => go(dashboardPath)}>Dashboard</button> : null}
+        <a href="/" onClick={() => setMenuOpen(false)}>Providers</a>
+        <a href="/events" onClick={() => setMenuOpen(false)}>Events</a>
+        {user ? <a href={dashboardPath} onClick={() => setMenuOpen(false)}>Dashboard</a> : null}
       </nav>
       <div className="account-actions">
         {!authReady ? (
@@ -368,8 +368,8 @@ function ProviderDetails({ data, loading, toggleSave }) {
   const saved = data.savedProviderIds.includes(provider.id);
   return <main className="provider-detail-page">
     <section className="profile-band"><div className="band-inner">
-      <div className="profile-actions"><button className="back-link" onClick={() => go("/")}><ArrowLeft size={16} /> Back to directory</button><button className={saved ? "button saved-profile" : "button outline-light"} onClick={() => toggleSave("provider", provider.id, !saved)}>{saved ? <CheckCircle2 size={16} /> : <Bookmark size={16} />}{saved ? "Saved provider" : "Save provider"}</button></div>
-      <div className="profile-hero"><Avatar item={provider} large /><div><p className="eyebrow">The Healing Directory</p><div className="title-line"><h1>{provider.name}</h1>{provider.pronouns ? <span className="pronouns">({provider.pronouns})</span> : null}{provider.verified ? <span className="status verified-dark"><CheckCircle2 size={13} /> Verified</span> : null}</div><p className="profile-title">{provider.profession || provider.providerType?.join(", ")}</p><div className="meta-row">{provider.location?.length ? <span><MapPin size={17} />{provider.location.join(", ")}</span> : null}{provider.providerType?.length ? <span><HeartHandshake size={17} />{provider.providerType.join(", ")}</span> : null}</div><ProfileTags label="Provider type" values={provider.providerType} /><ProfileTags label="Areas of support" values={provider.support} warm /></div></div>
+      <div className="profile-actions"><button className="back-link" onClick={() => go("/")}><ArrowLeft size={16} /> Back to directory</button><div className="profile-action-cluster">{provider.verified ? <span className="status verified-dark profile-verified-badge"><CheckCircle2 size={13} /> Verified</span> : null}<button className={saved ? "button saved-profile" : "button outline-light"} onClick={() => toggleSave("provider", provider.id, !saved)}>{saved ? <CheckCircle2 size={16} /> : <Bookmark size={16} />}{saved ? "Saved provider" : "Save provider"}</button></div></div>
+      <div className="profile-hero"><Avatar item={provider} large /><div><div className="title-line"><h1>{provider.name}</h1>{provider.pronouns ? <span className="pronouns">({provider.pronouns})</span> : null}</div><p className="profile-title"><HeartHandshake size={19} />{provider.providerType?.join(", ") || provider.profession}</p><div className="meta-row">{provider.location?.length ? <span><MapPin size={17} />{provider.location.join(", ")}</span> : null}</div><ProfileTags label="Areas of support" values={provider.support} warm /></div></div>
     </div></section>
     <section className="content-shell detail-grid profile-content-grid">
       <div className="detail-main">
@@ -507,8 +507,8 @@ function DirectoryMultiSelect({ label, values = [], options = [], placeholder, o
     const close = (event) => {
       if (!ref.current?.contains(event.target)) setOpen(false);
     };
-    window.addEventListener("pointerdown", close);
-    return () => window.removeEventListener("pointerdown", close);
+    document.addEventListener("pointerdown", close, true);
+    return () => document.removeEventListener("pointerdown", close, true);
   }, [open]);
   return <div className={open ? "directory-multi-select open" : "directory-multi-select"} ref={ref}>
     <span>{label}</span>
@@ -517,11 +517,11 @@ function DirectoryMultiSelect({ label, values = [], options = [], placeholder, o
       <ChevronDown size={16} />
     </button>
     {values.length ? <div className="selected-filter-chips">{values.map((value) => <button type="button" key={value} onClick={() => onToggle(value)}>{value}<X size={13} /></button>)}</div> : null}
-    {open ? <div className="multi-select-menu" onPointerDown={(event) => event.stopPropagation()}>
+    {open ? <div className="multi-select-menu" onPointerDown={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()} onTouchStart={(event) => event.stopPropagation()}>
       <p className="multi-select-hint">Select all that apply</p>
       {options.length ? options.map((option) => {
         const selected = values.includes(option);
-        return <button type="button" key={option} className={selected ? "selected" : ""} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => {
+        return <button type="button" key={option} className={selected ? "selected" : ""} onPointerDown={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()} onTouchStart={(event) => event.stopPropagation()} onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
           onToggle(option);
