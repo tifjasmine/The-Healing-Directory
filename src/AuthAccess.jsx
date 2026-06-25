@@ -19,6 +19,31 @@ export default function AuthAccess({ path }) {
   const [notice, setNotice] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [signupOpen, setSignupOpen] = React.useState(false);
+  const signupMenuRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!signupOpen) return undefined;
+
+    function closeSignup(event) {
+      if (signupMenuRef.current && !signupMenuRef.current.contains(event.target)) {
+        setSignupOpen(false);
+      }
+    }
+
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setSignupOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeSignup, true);
+    document.addEventListener("click", closeSignup, true);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeSignup, true);
+      document.removeEventListener("click", closeSignup, true);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [signupOpen]);
+
   const [storedInvite, setStoredInvite] = React.useState(() => sessionStorage.getItem("thd_invite_token") || "");
   const inviteFlow = mode === "reset-password" && (new URLSearchParams(window.location.search).get("flow") === "invite" || Boolean(storedInvite));
   const signingUp = mode === "signup";
@@ -97,10 +122,15 @@ export default function AuthAccess({ path }) {
   return <div className="app-shell auth-root">
     <header className="site-header">
       <a className="brand" href="/"><img src="/healing-directory-logo.svg" alt="" /><span><strong>The Healing Directory</strong><small>Relationship-based care</small></span></a>
-      <nav className="site-nav"><a href="/">Providers</a><a href="/events">Events</a></nav>
+      <nav className="site-nav">
+        <a href="/">Providers</a>
+        <a href="/events">Events</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/referral-room">The Referral Room</a>
+      </nav>
       <div className="account-actions">
         <a className="button compact login-button" href="/login"><LogIn size={16} /> Login</a>
-        <div className="signup-menu">
+        <div ref={signupMenuRef} className="signup-menu">
           <button type="button" className="button compact signup-trigger" onClick={() => setSignupOpen((open) => !open)}>Signup <ChevronDown size={16} /></button>
           {signupOpen ? <div className="signup-dropdown">
             <button type="button" onClick={() => window.location.assign("/provider-signup")}>Become a Provider</button>
@@ -112,12 +142,10 @@ export default function AuthAccess({ path }) {
     {notice ? <div className="global-notice"><span>{notice}</span></div> : null}
     <main className="auth-redesign"><section className="auth-redesign-shell">
       <div className="auth-redesign-panel">
-        <p className="brand-pill">Account access</p>
         <h1>Care, connection, and community.</h1>
         <p>Save trusted providers, manage events, and return to your dashboard.</p>
       </div>
       <form className="auth-redesign-card" onSubmit={submit}>
-        <p className="eyebrow ink">The Healing Directory</p>
         <h2>{title}</h2>
         <p>{intro}</p>
         {signingUp ? <div className="signup-choice" role="tablist" aria-label="Choose account type"><button type="button" className="active"><Users size={18} /><span><strong>Client</strong><small>Save providers and events.</small></span></button><button type="button" onClick={() => window.location.assign("/provider-signup")}><HeartHandshake size={18} /><span><strong>Provider</strong><small>Apply for reviewed access.</small></span></button></div> : null}
@@ -134,7 +162,21 @@ export default function AuthAccess({ path }) {
         <div className="auth-links">{mode === "login" ? <><a href="/forgot-password">Forgot password?</a><a href="/signup">Create an account</a></> : <a href="/login">Back to login</a>}</div>
       </form>
     </section></main>
+    <AuthFooter />
   </div>;
+}
+
+function AuthFooter() {
+  return <footer className="site-footer">
+    <div>
+      <strong>The Healing Directory</strong>
+      <p>Thoughtful connections for healing, wellness, and trusted referrals.</p>
+    </div>
+    <nav aria-label="Footer">
+      <button type="button" onClick={() => window.location.assign("/terms")}>Terms & Conditions</button>
+      <button type="button" onClick={() => window.location.assign("/privacy")}>Privacy Policy</button>
+    </nav>
+  </footer>;
 }
 
 function Field({ label, textarea, ...props }) {

@@ -181,18 +181,38 @@ function Page(props) {
 function SiteHeader({ route, user, authReady, navigate, onLogout, menuOpen, setMenuOpen }) {
   const [signupOpen, setSignupOpen] = React.useState(false);
   const headerRef = React.useRef(null);
+  const signupMenuRef = React.useRef(null);
   const admin = user?.roles?.includes("admin");
   const dashboardPath = user ? defaultDashboardPath(user) : "";
   const warm = ["/events", "/event-details", "/provider-details", "/add-event", "/edit-event"].includes(route.path);
   React.useEffect(() => {
     if (!menuOpen && !signupOpen) return undefined;
+
     function closeHeaderMenus(event) {
-      if (headerRef.current?.contains(event.target)) return;
-      setMenuOpen(false);
-      setSignupOpen(false);
+      const target = event.target;
+      if (signupOpen && signupMenuRef.current && !signupMenuRef.current.contains(target)) {
+        setSignupOpen(false);
+      }
+      if (menuOpen && headerRef.current && !headerRef.current.contains(target)) {
+        setMenuOpen(false);
+      }
     }
-    document.addEventListener("pointerdown", closeHeaderMenus);
-    return () => document.removeEventListener("pointerdown", closeHeaderMenus);
+
+    function closeOnEscape(event) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        setSignupOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", closeHeaderMenus, true);
+    document.addEventListener("click", closeHeaderMenus, true);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeHeaderMenus, true);
+      document.removeEventListener("click", closeHeaderMenus, true);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, [menuOpen, setMenuOpen, signupOpen]);
   const openSignup = (type) => {
     setSignupOpen(false);
@@ -218,7 +238,7 @@ function SiteHeader({ route, user, authReady, navigate, onLogout, menuOpen, setM
         ) : (
           <>
             <button className="button compact login-button" onClick={() => navigate("/login")}><LogIn size={16} /> Login</button>
-            <div className="signup-menu">
+            <div ref={signupMenuRef} className="signup-menu">
               <button className="button compact signup-trigger" onClick={() => setSignupOpen((open) => !open)}>Signup <ChevronDown size={16} /></button>
               {signupOpen ? <div className="signup-dropdown">
                 <button onClick={() => openSignup("provider")}>Become a Provider</button>
@@ -625,13 +645,11 @@ function AuthPage({ mode, navigate, setUser, setNotice }) {
     <main className="auth-redesign">
       <section className="auth-redesign-shell">
         <div className="auth-redesign-panel">
-          <p className="brand-pill">Account access</p>
           <h1>Care, connection, and community.</h1>
           <p>Save trusted providers, manage events, and participate in a relationship-based referral network.</p>
         </div>
 
         <form className="auth-redesign-card" onSubmit={submit}>
-          <p className="eyebrow ink">The Healing Directory</p>
           <h2>{title}</h2>
           <p>{subtitle}</p>
 

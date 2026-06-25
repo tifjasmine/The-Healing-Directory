@@ -8,6 +8,7 @@ export default function LegalChrome({ children }) {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [signupOpen, setSignupOpen] = React.useState(false);
   const headerRef = React.useRef(null);
+  const signupMenuRef = React.useRef(null);
 
   React.useEffect(() => {
     let alive = true;
@@ -21,13 +22,32 @@ export default function LegalChrome({ children }) {
 
   React.useEffect(() => {
     if (!menuOpen && !signupOpen) return undefined;
+
     function closeHeaderMenus(event) {
-      if (headerRef.current?.contains(event.target)) return;
-      setMenuOpen(false);
-      setSignupOpen(false);
+      const target = event.target;
+      if (signupOpen && signupMenuRef.current && !signupMenuRef.current.contains(target)) {
+        setSignupOpen(false);
+      }
+      if (menuOpen && headerRef.current && !headerRef.current.contains(target)) {
+        setMenuOpen(false);
+      }
     }
-    document.addEventListener("pointerdown", closeHeaderMenus);
-    return () => document.removeEventListener("pointerdown", closeHeaderMenus);
+
+    function closeOnEscape(event) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        setSignupOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", closeHeaderMenus, true);
+    document.addEventListener("click", closeHeaderMenus, true);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeHeaderMenus, true);
+      document.removeEventListener("click", closeHeaderMenus, true);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, [menuOpen, signupOpen]);
 
   async function signOut() {
@@ -55,7 +75,7 @@ export default function LegalChrome({ children }) {
         ) : (
           <>
             <button className="button compact login-button" onClick={() => go("/login")}><LogIn size={16} /> Login</button>
-            <div className="signup-menu">
+            <div ref={signupMenuRef} className="signup-menu">
               <button className="button compact signup-trigger" onClick={() => setSignupOpen((open) => !open)}>Signup <ChevronDown size={16} /></button>
               {signupOpen ? <div className="signup-dropdown">
                 <button onClick={() => go("/provider-signup")}>Become a Provider</button>
