@@ -345,10 +345,9 @@ function RoomPills({ sessions, selected, onSelect }) {
 
 function ProviderChip({ provider }) {
   const label = provider.name || "Provider Unlisted";
-  const fallbackEmoji = providerEmoji(provider.serviceType || provider.providerType || label);
   const content = <>
     <span className="provider-chip-photo">
-      <span className="provider-chip-emoji" aria-hidden="true">{fallbackEmoji}</span>
+      <span className="provider-chip-emoji" aria-hidden="true">✿</span>
       {provider.photo ? <img src={provider.photo} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
     </span>
     <span>{label}</span>
@@ -452,20 +451,6 @@ function shortNumericDate(value) {
   return Number.isNaN(time) || !time
     ? "Date TBD"
     : new Intl.DateTimeFormat(undefined, { month: "numeric", day: "numeric", year: "2-digit" }).format(time);
-}
-
-function providerEmoji(value) {
-  const text = normalize(value);
-  if (text.includes("acupunct")) return "🪡";
-  if (text.includes("massage") || text.includes("bodywork")) return "🤲";
-  if (text.includes("yoga") || text.includes("movement")) return "🧘";
-  if (text.includes("nutrition") || text.includes("diet")) return "🥗";
-  if (text.includes("energy") || text.includes("spiritual") || text.includes("sound")) return "✨";
-  if (text.includes("psychiat") || text.includes("medication")) return "🧠";
-  if (text.includes("therap") || text.includes("counsel") || text.includes("psycholog")) return "💬";
-  if (text.includes("somatic") || text.includes("nervous")) return "🌿";
-  if (text.includes("coach")) return "🧭";
-  return "💚";
 }
 
 function formatDate(value) {
