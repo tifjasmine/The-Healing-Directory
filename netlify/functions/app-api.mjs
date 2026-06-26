@@ -219,6 +219,7 @@ export default async function handler(request) {
       if (action === "me") return reply({ user: publicUser(user) });
       if (action === "directory-options") return reply({ directoryOptions: await getDirectoryOptions() });
       if (action === "event-options") return reply({ eventOptions: await getEventOptions() });
+      if (action === "referral-room-public-options") return reply(await referralRoomPublicOptions());
       if (action === "dashboard") return reply(await dashboard(requireUser(user)));
       if (action === "my-events") return reply(await myEvents(requireUser(user)));
       if (action === "saved-providers") return reply(await savedProviders(requireUser(user)));
@@ -232,6 +233,7 @@ export default async function handler(request) {
     const body = await request.json().catch(() => ({}));
 
     if (action === "signup-profile") return reply(await signupProfile(body));
+    if (action === "referral-room-interest") return reply(await referralRoomInterest(body));
     if (action === "toggle-provider") return reply(await toggleProvider(requireUser(user), body));
     if (action === "toggle-event") return reply(await toggleEvent(requireUser(user), body));
     if (action === "save-event") return reply(await saveEvent(requireUser(user), body));
@@ -555,6 +557,92 @@ async function accountSettings(user) {
   };
 }
 
+async function referralRoomPublicOptions() {
+  const records = await list("referralRoom").catch(() => []);
+  const today = startOfToday();
+  const sessions = records.map((record) => {
+    const f = record.fields || {};
+    const date = text(f["Session Date"] || f.Date || f["Date and Time"] || f.Start || "");
+    const name = text(f["Session Name"] || f.Name || "Referral Room");
+    const status = text(f.Status || "Open");
+    return {
+      id: record.id,
+      name,
+      date,
+      label: `${shortDate(date)} - ${name}`,
+      status
+    };
+  }).filter((session) => !["draft", "closed", "cancelled", "canceled"].includes(lower(session.status)))
+    .filter((session) => !session.date || dateValue(session.date) >= today)
+    .sort((a, b) => dateValue(a.date) - dateValue(b.date));
+  return { sessions };
+}
+
+async function referralRoomInterest(body) {
+  const name = required(body.name, "Name");
+  const email = requiredEmail(body.email);
+  const practiceName = required(body.practiceName, "Practice or business name");
+  const website = required(body.website, "Website");
+  const title = required(body.title, "Professional title");
+  const state = required(body.state, "State");
+  const dateLabels = await referralRoomInterestDateLabels(body.selectedDates);
+  const message = [
+    `Referral Room Interest Form`,
+    ``,
+    `Practice or business name: ${practiceName}`,
+    `Professional title or role: ${title}`,
+    `Website: ${website}`,
+    body.social ? `Social media: ${clean(body.social)}` : "",
+    body.phone ? `Phone: ${clean(body.phone)}` : "",
+    `State served: ${state}`,
+    body.city ? `City served: ${clean(body.city)}` : "",
+    body.specialties ? `Specialties: ${clean(body.specialties)}` : "",
+    body.acceptingClients ? `Accepting clients: ${clean(body.acceptingClients)}` : "",
+    body.insurance ? `Insurance: ${clean(body.insurance)}` : "",
+    dateLabels.length ? `Referral Room dates: ${dateLabels.join(", ")}` : "",
+    arrayLine("Circle themes", body.circleThemes),
+    arrayLine("Provider types to connect with", body.providerTypes),
+    arrayLine("Best days", body.days),
+    arrayLine("Best times", body.times),
+    body.notes ? `Notes: ${clean(body.notes)}` : "",
+  ].filter(Boolean).join("\n");
+
+  const application = {
+    name,
+    email,
+    phone: clean(body.phone),
+    website,
+    professionalTitle: title,
+    profession: title,
+    providerType: body.providerTypes,
+    concerns: body.circleThemes,
+    state,
+    physicalLocations: clean(body.city),
+    availabilitySpecifics: [
+      dateLabels.length ? `Referral Room date interest: ${dateLabels.join(", ")}` : "",
+      arrayLine("Best days", body.days),
+      arrayLine("Best times", body.times),
+      clean(body.notes)
+    ].filter(Boolean).join("\n"),
+    collaborationInterests: ["Referral Room"],
+    collaborationDetails: message,
+    providerToProviderNotes: message,
+  };
+
+  return signupProfile({
+    name,
+    email,
+    accountType: "provider",
+    phone: clean(body.phone),
+    website,
+    professionalTitle: title,
+    message,
+    areaInterest: [...ensureArray(body.circleThemes), ...ensureArray(body.providerTypes), ...dateLabels].join(", "),
+    application,
+    source: "referral-room-interest"
+  });
+}
+
 async function signupProfile(body) {
   const email = requiredEmail(body.email);
   const accountType = clean(body.accountType) || "client";
@@ -572,6 +660,7 @@ async function signupProfile(body) {
     professionalTitle: body.professionalTitle,
     message: body.message,
     areaInterest: body.areaInterest || body.interests || body.application?.areaInterest,
+    source: body.source || body.application?.source || "app",
     application: body.application || {}
   };
   const signup = await recordSignup(normalizedType, syncPayload);
@@ -1669,6 +1758,8 @@ function text(value) { if (value == null) return ""; if (Array.isArray(value)) r
 function longText(value) { if (value == null) return ""; if (Array.isArray(value)) return value.map(longText).filter(Boolean).join("\n\n"); if (typeof value === "object") return longText(value.name ?? value.label ?? value.value ?? value.text ?? value.url ?? ""); return String(value ?? "").replace(/\r\n/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n[ \t]+/g, "\n").trim(); }
 function array(value) { return arrayRaw(value).map(text).flatMap((v) => v.split(/[,;\n]+/)).map(clean).filter(Boolean); }
 function arrayExact(value) { return arrayRaw(value).map(text).map(clean).filter(Boolean); }
+function ensureArray(value) { return Array.isArray(value) ? value.map(clean).filter(Boolean) : clean(value) ? [clean(value)] : []; }
+function arrayLine(label, value) { const list = ensureArray(value); return list.length ? `${label}: ${list.join(", ")}` : ""; }
 function arrayRaw(value) { return value == null ? [] : Array.isArray(value) ? value : [value]; }
 function attachment(value) { const first = arrayRaw(value)[0]; return typeof first === "string" ? first : first?.url || first?.thumbnails?.large?.url || ""; }
 function truthy(value) { if (value === true || value === 1) return true; return ["true", "yes", "approved", "published", "active", "open", "1", "checked"].includes(lower(text(value))); }
@@ -1679,6 +1770,15 @@ function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function required(value, label) { const cleanValue = clean(value); if (!cleanValue) throw httpError(400, `${label} is required.`); return cleanValue; }
 function removeEmpty(fields, keepEmpty = false) { Object.keys(fields).forEach((key) => { if (fields[key] == null || (!keepEmpty && typeof fields[key] === "string" && !fields[key].trim())) delete fields[key]; }); }
 function dateValue(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) ? 0 : time; }
+function startOfToday() { const date = new Date(); date.setHours(0, 0, 0, 0); return date.getTime(); }
+function shortDate(value) { const time = dateValue(value); return time ? new Intl.DateTimeFormat("en-US", { month: "numeric", day: "numeric", year: "2-digit", hour: "numeric", minute: "2-digit" }).format(new Date(time)) : "Date TBD"; }
+async function referralRoomInterestDateLabels(selectedDates = []) {
+  const selected = ensureArray(selectedDates);
+  if (!selected.length) return [];
+  const options = await referralRoomPublicOptions().catch(() => ({ sessions: [] }));
+  const byId = new Map((options.sessions || []).map((session) => [session.id, session.label || session.name || session.id]));
+  return selected.map((id) => id === "future-not-listed" ? "Future dates not listed yet" : byId.get(id) || id);
+}
 function statusKey(value) { const status = lower(value); if (status.includes("pending") || status.includes("review")) return "pending"; if (status.includes("approved") || status.includes("published")) return "approved"; if (status.includes("declined") || status.includes("rejected")) return "declined"; return "other"; }
 function providerSort(a, b) {
   if (a.order !== b.order) return a.order - b.order;

@@ -9296,7 +9296,424 @@ button.referral-room-preview-card:hover {
   }
 
   .member-signup-root .account-actions .signup-trigger,
-  .provider-signup-root .account-actions .signup-trigger {
+.provider-signup-root .account-actions .signup-trigger {
     display: none !important;
+  }
+}
+
+/* Public Referral Room interest form. */
+.referral-interest-page {
+  min-height: 100vh;
+  background: #f3eddf;
+  color: #34433c;
+  font-family: "Mulish", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.referral-interest-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  min-height: 64px;
+  padding: 14px clamp(16px, 3vw, 32px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #ece4d2;
+  background: #fffdf7;
+}
+
+.referral-interest-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  color: #1e3d30;
+  text-decoration: none;
+}
+
+.referral-interest-brand svg {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+}
+
+.referral-interest-brand strong {
+  display: block;
+  color: #1e3d30;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.referral-interest-brand small {
+  display: block;
+  margin-top: 3px;
+  color: #b26a43;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: .2em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.referral-interest-nav > a:last-child {
+  color: #566159;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.referral-interest-hero {
+  padding: clamp(44px, 6vw, 80px) clamp(16px, 3vw, 32px);
+  background: #1e3d30;
+  text-align: center;
+}
+
+.referral-interest-hero > div {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.referral-interest-hero p {
+  width: fit-content;
+  margin: 0 auto 22px;
+  padding: 7px 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 253, 247, .18);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, .1);
+  color: rgba(255, 253, 247, .85);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+
+.referral-interest-hero p span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #7ec99a;
+}
+
+.referral-interest-hero h1 {
+  margin: 0 0 18px;
+  color: #fffdf7;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(36px, 5.5vw, 60px);
+  font-weight: 600;
+  letter-spacing: -.01em;
+  line-height: 1.02;
+}
+
+.referral-interest-hero h2 {
+  max-width: 52ch;
+  margin: 0 auto;
+  color: rgba(255, 253, 247, .7);
+  font: inherit;
+  font-size: clamp(15px, 1.6vw, 18px);
+  font-weight: 400;
+  line-height: 1.7;
+}
+
+.referral-interest-strip {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: clamp(28px, 4vw, 44px) clamp(16px, 3vw, 32px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.referral-interest-strip article {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.referral-interest-strip article > span,
+.referral-interest-success > span {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #e4eee6;
+  color: #2e5746;
+  font-size: 16px;
+}
+
+.referral-interest-strip strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #1e3d30;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.referral-interest-strip p {
+  margin: 0;
+  color: #697469;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.referral-interest-main {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: clamp(36px, 5vw, 60px) clamp(16px, 3vw, 24px) 90px;
+}
+
+.referral-interest-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.referral-interest-section-title {
+  margin: 24px 0 18px;
+  padding-bottom: 10px;
+  border-bottom: 1.5px solid #e3d8c1;
+  color: #b26a43;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.referral-interest-section-title:first-child {
+  margin-top: 0;
+}
+
+.referral-interest-grid {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.referral-interest-grid.two {
+  grid-template-columns: 1fr 1fr;
+}
+
+.referral-interest-field {
+  display: block;
+  margin-bottom: 14px;
+  color: #34433c;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+
+.referral-interest-field span {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.referral-interest-field b {
+  color: #bb6a40;
+}
+
+.referral-interest-field input,
+.referral-interest-field select,
+.referral-interest-field textarea {
+  width: 100%;
+  padding: 13px 16px;
+  border: 1.5px solid #d6ceba;
+  border-radius: 12px;
+  outline: 0;
+  background: #fffdf7;
+  color: #34433c;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  transition: border .15s ease;
+}
+
+.referral-interest-field textarea {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.referral-interest-field input:focus,
+.referral-interest-field select:focus,
+.referral-interest-field textarea:focus {
+  border-color: #3c7a57;
+}
+
+.referral-interest-options {
+  margin-bottom: 24px;
+}
+
+.referral-interest-options h4,
+.referral-interest-toggle-group h4 {
+  margin: 0 0 8px;
+  color: #34433c;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+
+.referral-interest-options h4 small {
+  color: #697469;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.referral-interest-options > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.referral-interest-options button {
+  min-height: 44px;
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1.5px solid #d6ceba;
+  border-radius: 11px;
+  background: #fffdf7;
+  color: #34433c;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.referral-interest-options button span {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #c8beaa;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 11px;
+}
+
+.referral-interest-options button.active {
+  border-color: #3c7a57;
+  background: #e4eee6;
+}
+
+.referral-interest-options button.active span {
+  border-color: #3c7a57;
+  background: #3c7a57;
+}
+
+.referral-interest-toggle-group > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.referral-interest-toggle-group button {
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1.5px solid #d6ceba;
+  border-radius: 999px;
+  background: #fffdf7;
+  color: #34433c;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.referral-interest-toggle-group button.active {
+  border-color: #1e3d30;
+  background: #1e3d30;
+  color: #fffdf7;
+}
+
+.referral-interest-error {
+  margin: 0 0 12px;
+  color: #9b432e;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.referral-interest-submit {
+  width: 100%;
+  min-height: 56px;
+  padding: 17px 24px;
+  border: 0;
+  border-radius: 14px;
+  background: #1e3d30;
+  color: #fffdf7;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  cursor: pointer;
+}
+
+.referral-interest-submit:disabled {
+  opacity: .66;
+  cursor: wait;
+}
+
+.referral-interest-note {
+  margin: 12px 0 0;
+  color: #9aa199;
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.referral-interest-success {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: clamp(44px, 6vw, 72px) clamp(16px, 3vw, 24px);
+  text-align: center;
+}
+
+.referral-interest-success > span {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 20px;
+  font-size: 30px;
+}
+
+.referral-interest-success h2 {
+  margin: 0 0 14px;
+  color: #1e3d30;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.referral-interest-success p {
+  max-width: 44ch;
+  margin: 0 auto 24px;
+  color: #697469;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.referral-interest-success a {
+  color: #1e3d30;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .referral-interest-nav {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .referral-interest-grid.two {
+    grid-template-columns: 1fr;
   }
 }
