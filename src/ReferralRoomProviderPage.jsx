@@ -347,15 +347,15 @@ function ProviderChip({ provider }) {
   const label = provider.name || "Provider Unlisted";
   const hasPhoto = Boolean(provider.photo);
   const content = <>
-    <span className={hasPhoto ? "provider-chip-photo" : "provider-chip-photo no-photo"}>
-      <span className="provider-chip-lotus" aria-hidden="true"><HeartFlowerMark /></span>
+    <i className={hasPhoto ? "provider-chip-photo" : "provider-chip-photo no-photo"} aria-hidden="true">
+      <i className="provider-chip-lotus"><HeartFlowerMark /></i>
       {hasPhoto ? <img src={provider.photo} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; event.currentTarget.parentElement?.classList.add("no-photo"); }} /> : null}
-    </span>
-    <span>{label}</span>
+    </i>
+    <strong className="provider-chip-label">{label}</strong>
   </>;
   return provider.profileId
     ? <a href={`/provider-details?id=${encodeURIComponent(provider.profileId)}`} className="provider-chip">{content}</a>
-    : <span className="provider-chip">{content}</span>;
+    : <div className="provider-chip">{content}</div>;
 }
 
 function HeartFlowerMark() {

@@ -144,7 +144,7 @@ export default function AuthAccess({ path }) {
         <h1>Care, connection, and community.</h1>
         <p>Save trusted providers, manage events, and return to your dashboard.</p>
       </div>
-      <form className="auth-redesign-card" onSubmit={submit}>
+      <form className={intro ? "auth-redesign-card" : "auth-redesign-card no-intro"} onSubmit={submit}>
         <h2>{title}</h2>
         {intro ? <p>{intro}</p> : null}
         {signingUp ? <div className="signup-choice" role="tablist" aria-label="Choose account type"><button type="button" className="active"><Users size={18} /><span><strong>Client</strong><small>Save providers and events.</small></span></button><button type="button" onClick={() => window.location.assign("/provider-signup")}><HeartHandshake size={18} /><span><strong>Provider</strong><small>Apply for reviewed access.</small></span></button></div> : null}

@@ -6942,10 +6942,15 @@ button.referral-room-preview-card:hover {
   width: 34px;
   height: 34px;
   flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   border: 0;
   border-radius: 999px;
   background: #2d604c;
+  color: #fff;
+  font-style: normal;
 }
 
 .referral-provider-page.room-experience .rule-provider-pills .provider-chip {
@@ -6988,6 +6993,7 @@ button.referral-room-preview-card:hover {
   align-items: center;
   justify-content: center;
   color: #fff;
+  font-style: normal;
 }
 
 .referral-provider-page.room-experience .provider-chip-lotus svg {
@@ -7007,6 +7013,12 @@ button.referral-room-preview-card:hover {
 
 .referral-provider-page.room-experience .provider-chip {
   padding-left: 5px;
+}
+
+.referral-provider-page.room-experience .provider-chip-label {
+  color: inherit;
+  font: inherit;
+  font-weight: 850;
 }
 
 /* Referral Room browse cards: keep the room list compact and scannable. */
@@ -7457,6 +7469,10 @@ button.referral-room-preview-card:hover {
   font-size: clamp(34px, 3.5vw, 46px) !important;
   font-weight: 600 !important;
   line-height: 1.05 !important;
+}
+
+.auth-root .auth-redesign-card.no-intro h2 {
+  margin-bottom: 14px !important;
 }
 
 .auth-root .auth-redesign-card > p:not(.eyebrow) {
