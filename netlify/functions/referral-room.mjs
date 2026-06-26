@@ -208,7 +208,7 @@ function normalizeSession(record, attendance, rules, providers = []) {
 
 function approvedProvider(item, providerMap) {
   const provider = providerFor(item, providerMap);
-  const fallbackName = item.providerName && !String(item.providerName).includes("@") ? item.providerName : "Approved provider";
+  const fallbackName = item.providerName && !String(item.providerName).includes("@") ? item.providerName : "Provider Unlisted";
   return {
     id: item.id,
     profileId: provider.id || "",
