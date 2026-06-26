@@ -55,7 +55,7 @@ export default function AuthAccess({ path }) {
       : "Client accounts get access right away to save providers and events."
     : inviteFlow
       ? "Create a password to finish accepting your provider invitation."
-    : "Log in to save providers, manage events, and return to your dashboard.";
+    : "";
 
   if (providerSignup) return <ProviderSignupPage />;
   if (signingUp) return <MemberSignupPage />;
@@ -146,7 +146,7 @@ export default function AuthAccess({ path }) {
       </div>
       <form className="auth-redesign-card" onSubmit={submit}>
         <h2>{title}</h2>
-        <p>{intro}</p>
+        {intro ? <p>{intro}</p> : null}
         {signingUp ? <div className="signup-choice" role="tablist" aria-label="Choose account type"><button type="button" className="active"><Users size={18} /><span><strong>Client</strong><small>Save providers and events.</small></span></button><button type="button" onClick={() => window.location.assign("/provider-signup")}><HeartHandshake size={18} /><span><strong>Provider</strong><small>Apply for reviewed access.</small></span></button></div> : null}
         {providerSignup ? <div className="signup-choice provider-only" role="tablist" aria-label="Choose account type"><button type="button" className="active"><HeartHandshake size={18} /><span><strong>Provider application</strong><small>Tell us about your work and fit.</small></span></button><button type="button" onClick={() => window.location.assign("/signup")}><Users size={18} /><span><strong>Client account</strong><small>Create immediate access.</small></span></button></div> : null}
         {signingUp || providerSignup ? <Field label="Full name" value={form.name} onChange={set("name")} required /> : null}

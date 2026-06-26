@@ -345,10 +345,11 @@ function RoomPills({ sessions, selected, onSelect }) {
 
 function ProviderChip({ provider }) {
   const label = provider.name || "Provider Unlisted";
+  const hasPhoto = Boolean(provider.photo);
   const content = <>
-    <span className="provider-chip-photo">
+    <span className={hasPhoto ? "provider-chip-photo" : "provider-chip-photo no-photo"}>
       <span className="provider-chip-lotus" aria-hidden="true"><HeartFlowerMark /></span>
-      {provider.photo ? <img src={provider.photo} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
+      {hasPhoto ? <img src={provider.photo} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; event.currentTarget.parentElement?.classList.add("no-photo"); }} /> : null}
     </span>
     <span>{label}</span>
   </>;

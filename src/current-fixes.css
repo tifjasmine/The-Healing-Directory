@@ -6948,6 +6948,17 @@ button.referral-room-preview-card:hover {
   background: #2d604c;
 }
 
+.referral-provider-page.room-experience .provider-chip-photo.no-photo {
+  width: 42px !important;
+  height: 42px !important;
+  flex-basis: 42px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #2d604c !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
 .referral-provider-page.room-experience .provider-chip-photo img,
 .referral-provider-page.room-experience .provider-chip-lotus {
   position: absolute;
@@ -6971,13 +6982,17 @@ button.referral-room-preview-card:hover {
 
 .referral-provider-page.room-experience .provider-chip-lotus svg {
   display: block;
-  width: 21px;
-  height: 21px;
+  width: 23px;
+  height: 23px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 3;
+}
+
+.referral-provider-page.room-experience .provider-chip-photo.no-photo .provider-chip-lotus {
+  color: #fff !important;
 }
 
 .referral-provider-page.room-experience .provider-chip {
