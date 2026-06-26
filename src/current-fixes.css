@@ -6970,9 +6970,13 @@ button.referral-room-preview-card:hover {
 
 .referral-provider-page.room-experience .provider-chip-lotus svg {
   display: block;
-  width: 21px;
-  height: 21px;
-  fill: currentColor;
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
 }
 
 .referral-provider-page.room-experience .provider-chip {
