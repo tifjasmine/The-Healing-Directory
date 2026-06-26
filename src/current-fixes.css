@@ -6977,10 +6977,71 @@ button.referral-room-preview-card:hover {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 4;
+  transform: translate(-1px, -2px);
 }
 
 .referral-provider-page.room-experience .provider-chip {
   padding-left: 5px;
+}
+
+/* Referral Room browse cards: keep the room list compact and scannable. */
+.referral-provider-page.room-experience .room-card-grid {
+  gap: 18px;
+}
+
+.referral-provider-page.room-experience .room-preview-card {
+  min-height: 300px;
+  padding: 22px 24px;
+  border-radius: 18px;
+}
+
+.referral-provider-page.room-experience .room-preview-top {
+  min-height: 30px;
+  gap: 9px;
+}
+
+.referral-provider-page.room-experience .room-preview-top > strong {
+  font-size: 14px;
+  letter-spacing: .05em;
+}
+
+.referral-provider-page.room-experience .room-preview-top .status {
+  min-height: 30px;
+  padding: 0 14px;
+  border-radius: 12px !important;
+  font-size: 14px;
+}
+
+.referral-provider-page.room-experience .room-preview-card h2 {
+  margin-top: 18px;
+  font-size: 34px;
+}
+
+.referral-provider-page.room-experience .room-preview-card p {
+  margin-top: 12px;
+  font-size: 16px;
+  line-height: 1.42;
+}
+
+.referral-provider-page.room-experience .room-preview-rule {
+  margin-bottom: 16px;
+}
+
+.referral-provider-page.room-experience .room-preview-meta {
+  font-size: 14px;
+}
+
+.referral-provider-page.room-experience .room-progress {
+  height: 8px;
+  margin: 10px 0 16px;
+}
+
+.referral-provider-page.room-experience .clickable-room-card .room-solid-button,
+.referral-provider-page.room-experience .clickable-room-card .room-outline-button {
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 14px;
 }
 
 .referral-provider-page.room-experience .room-hero aside,

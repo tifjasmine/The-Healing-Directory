@@ -126,7 +126,6 @@ export default function AuthAccess({ path }) {
         <a href="/">Providers</a>
         <a href="/events">Events</a>
         <a href="/dashboard">Dashboard</a>
-        <a href="/referral-room">The Referral Room</a>
       </nav>
       <div className="account-actions">
         <a className="button compact login-button" href="/login"><LogIn size={16} /> Login</a>
