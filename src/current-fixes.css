@@ -6948,10 +6948,20 @@ button.referral-room-preview-card:hover {
   background: #2d604c;
 }
 
+.referral-provider-page.room-experience .rule-provider-pills .provider-chip {
+  padding: 4px 10px 4px 4px !important;
+}
+
+.referral-provider-page.room-experience .rule-provider-pills .provider-chip-photo,
+.referral-provider-page.room-experience .rule-provider-pills .provider-chip-lotus {
+  box-sizing: border-box !important;
+  padding: 0 !important;
+}
+
 .referral-provider-page.room-experience .provider-chip-photo.no-photo {
-  width: 42px !important;
-  height: 42px !important;
-  flex-basis: 42px !important;
+  width: 36px !important;
+  height: 36px !important;
+  flex-basis: 36px !important;
   border: 0 !important;
   border-radius: 999px !important;
   background: #2d604c !important;
@@ -6982,8 +6992,8 @@ button.referral-room-preview-card:hover {
 
 .referral-provider-page.room-experience .provider-chip-lotus svg {
   display: block;
-  width: 23px;
-  height: 23px;
+  width: 21px;
+  height: 21px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
