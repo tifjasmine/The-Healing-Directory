@@ -347,7 +347,7 @@ function ProviderChip({ provider }) {
   const label = provider.name || "Provider Unlisted";
   const content = <>
     <span className="provider-chip-photo">
-      <span className="provider-chip-lotus" aria-hidden="true"><LotusMark /></span>
+      <span className="provider-chip-lotus" aria-hidden="true"><HeartFlowerMark /></span>
       {provider.photo ? <img src={provider.photo} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
     </span>
     <span>{label}</span>
@@ -357,12 +357,13 @@ function ProviderChip({ provider }) {
     : <span className="provider-chip">{content}</span>;
 }
 
-function LotusMark() {
+function HeartFlowerMark() {
   return <svg viewBox="0 0 32 32" focusable="false">
-    <path d="M16 5.5c4 3.1 6 6.6 6 10.4s-2 7.3-6 10.6c-4-3.3-6-6.8-6-10.6s2-7.3 6-10.4Z" />
-    <path d="M15.4 26.1c-4.9-.2-8.6-1.7-11-4.5-2.1-2.4-2.8-5.3-2.1-8.8 4.8.5 8.3 2.1 10.5 4.8 2.1 2.6 3 5.5 2.6 8.5Z" />
-    <path d="M16.6 26.1c4.9-.2 8.6-1.7 11-4.5 2.1-2.4 2.8-5.3 2.1-8.8-4.8.5-8.3 2.1-10.5 4.8-2.1 2.6-3 5.5-2.6 8.5Z" />
-    <path d="M6.5 24.5c2.5 2.2 5.7 3.4 9.5 3.4s7-1.2 9.5-3.4" />
+    <path d="M16 25.5C8.8 20.4 5.2 16 5.2 12.2c0-3.1 2.3-5.2 5.2-5.2 2.2 0 3.8 1.1 4.9 2.9C16.4 8.1 18 7 20.2 7c3 0 5.4 2.2 5.4 5.4 0 3.7-3.2 7.5-9.6 13.1Z" />
+    <path d="M10.7 14.8c2.4-.2 4.1.4 5 1.7.9 1.2 1 2.8.3 4.7-2.1-.2-3.8-.9-4.9-2.1-1.1-1.2-1.2-2.6-.4-4.3Z" />
+    <path d="M21.3 14.8c-2.4-.2-4.1.4-5 1.7-.9 1.2-1 2.8-.3 4.7 2.1-.2 3.8-.9 4.9-2.1 1.1-1.2 1.2-2.6.4-4.3Z" />
+    <path d="M16 20.9c0-3.1 1.3-5.5 4-7.2" />
+    <path d="M16 20.9c0-3.1-1.3-5.5-4-7.2" />
   </svg>;
 }
 
