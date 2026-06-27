@@ -121,6 +121,8 @@ const AIRTABLE_BOOTSTRAP_SCHEMAS = {
       { name: "Client Availability", type: "singleSelect", options: { choices: [{ name: "Yes" }, { name: "Limited availability" }, { name: "Waitlist only" }, { name: "Depends on the service" }, { name: "No" }] } },
       { name: "Insurance Accepted", type: "singleLineText" },
       { name: "Referral Room Sessions", type: "multipleRecordLinks", options: { linkedTableId: TABLES.referralRoom } },
+      { name: "Referral Room Date Interest", type: "multilineText" },
+      { name: "Future Referral Room Interest", type: "checkbox", options: { icon: "check", color: "greenBright" } },
       { name: "Circle Themes", type: "multipleSelects", options: { choices: [
         { name: "Women's Wellness" }, { name: "Anxiety + Stress" }, { name: "ADHD + Executive Functioning" }, { name: "Depression + Mood Support" },
         { name: "Postpartum + Parenting" }, { name: "Pregnancy + Birth Support" }, { name: "Trauma-Informed Care" }, { name: "Body-Based / Somatic Healing" },
@@ -133,7 +135,7 @@ const AIRTABLE_BOOTSTRAP_SCHEMAS = {
         { name: "OB/GYNs" }, { name: "Pediatric Providers" }, { name: "Pelvic Floor Therapists" }, { name: "Physical Therapists" },
         { name: "Occupational Therapists" }, { name: "Lactation Consultants" }, { name: "Doulas / Birth Workers" }, { name: "Chiropractors" },
         { name: "Massage Therapists" }, { name: "Acupuncturists" }, { name: "Somatic Practitioners" }, { name: "Yoga / Movement Providers" },
-        { name: "Nutritionists / Dietitians" }, { name: "Coaches" }, { name: "Couples / Relationship Providers" }
+        { name: "Nutritionists / Dietitians" }, { name: "Coaches" }, { name: "Couples / Relationship Providers" }, { name: "Other" }
       ] } },
       { name: "Best Days", type: "multipleSelects", options: { choices: [{ name: "Mon" }, { name: "Tue" }, { name: "Wed" }, { name: "Thu" }, { name: "Fri" }, { name: "Sat" }, { name: "Sun" }] } },
       { name: "Best Times", type: "multipleSelects", options: { choices: [{ name: "Morning" }, { name: "Early Afternoon" }, { name: "Late Afternoon" }, { name: "Evening" }] } },
@@ -664,13 +666,15 @@ async function referralRoomInterest(body) {
   const dateLabels = await referralRoomInterestDateLabels(body.selectedDates);
   const sessionIds = ensureArray(body.selectedDates).filter((id) => /^rec[a-zA-Z0-9]{14}$/.test(id));
   const dateNotes = dateLabels.includes("Future dates not listed yet") ? "Future dates not listed yet" : "";
+  const futureInterest = ensureArray(body.selectedDates).includes("future-not-listed") || Boolean(dateNotes);
+  const dateInterest = dateLabels.join(", ");
   const table = await ensureAirtableFields("referralOutsideProviders");
   const fields = {};
   setResolvedAlias(fields, table, ["Name", "Full Name"], name);
   setResolvedAlias(fields, table, ["Email", "Email Address"], email);
   setResolvedAlias(fields, table, ["Practice / Business Name", "Practice or Business Name", "Practice Name", "Business Name"], practiceName);
   setResolvedAlias(fields, table, ["Phone", "Phone Number"], clean(body.phone));
-  setResolvedAlias(fields, table, ["Website"], website);
+  setResolvedAlias(fields, table, ["Website"], normalizeWebsite(website));
   setResolvedAlias(fields, table, ["Social Media", "Social"], clean(body.social));
   setResolvedAlias(fields, table, ["Professional Title / Role", "Professional Title", "Professional Role", "Title"], title);
   setResolvedAlias(fields, table, ["Primary Specializations", "Specialties", "Primary Areas of Specialization", "Expertise"], clean(body.specialties));
@@ -679,6 +683,8 @@ async function referralRoomInterest(body) {
   setResolvedAlias(fields, table, ["Client Availability", "Accepting Clients", "Currently Accepting Clients"], clean(body.acceptingClients));
   setResolvedAlias(fields, table, ["Insurance Accepted", "Insurance", "Accepts Insurance"], clean(body.insurance));
   setResolvedAlias(fields, table, ["Referral Room Sessions", "Referral Room Dates", "Selected Dates", "Date Interest"], sessionIds.length ? sessionIds : dateLabels.join("\n"));
+  setResolvedAlias(fields, table, ["Referral Room Date Interest", "Date Interest Notes", "Selected Date Labels"], dateInterest);
+  setResolvedAlias(fields, table, ["Future Referral Room Interest", "Interested In Future Referral Rooms"], futureInterest);
   setResolvedAlias(fields, table, ["Circle Themes", "Theme Interest"], ensureArray(body.circleThemes).join("\n"));
   setResolvedAlias(fields, table, ["Providers to Connect With", "Provider Types to Connect With", "Provider Types", "Desired Provider Connections"], ensureArray(body.providerTypes).join("\n"));
   setResolvedAlias(fields, table, ["Best Days", "Days That Work Best"], ensureArray(body.days).join(", "));
@@ -1060,7 +1066,7 @@ async function optionRecords(key) {
       "Therapists / Counselors", "Psychologists", "Psychiatrists / Medication Providers", "Primary Care Providers", "OB/GYNs",
       "Pediatric Providers", "Pelvic Floor Therapists", "Physical Therapists", "Occupational Therapists", "Lactation Consultants",
       "Doulas / Birth Workers", "Chiropractors", "Massage Therapists", "Acupuncturists", "Somatic Practitioners",
-      "Yoga / Movement Providers", "Nutritionists / Dietitians", "Coaches", "Couples / Relationship Providers"
+      "Yoga / Movement Providers", "Nutritionists / Dietitians", "Coaches", "Couples / Relationship Providers", "Other"
     ],
     referralAvailabilityOptions: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Morning", "Early Afternoon", "Late Afternoon", "Evening"]
   };
@@ -1070,10 +1076,15 @@ async function optionRecords(key) {
       const f = record.fields || {};
       return text(f.Name || f.Option || f.Label || Object.values(f)[0]);
     }).filter(Boolean);
-    return values.length ? unique(values) : fallback[key] || [];
+    return values.length ? optionListWithOther(key, unique(values)) : fallback[key] || [];
   } catch {
     return fallback[key] || [];
   }
+}
+
+function optionListWithOther(key, values) {
+  if (!["referralCircleThemes", "referralConnectionTypes"].includes(key)) return values;
+  return values.some((value) => lower(value) === "other") ? values : [...values, "Other"];
 }
 
 async function metadataTable(key) {
@@ -1873,6 +1884,7 @@ function arrayRaw(value) { return value == null ? [] : Array.isArray(value) ? va
 function attachment(value) { const first = arrayRaw(value)[0]; return typeof first === "string" ? first : first?.url || first?.thumbnails?.large?.url || ""; }
 function truthy(value) { if (value === true || value === 1) return true; return ["true", "yes", "approved", "published", "active", "open", "1", "checked"].includes(lower(text(value))); }
 function clean(value) { return String(value ?? "").replace(/\s+/g, " ").trim(); }
+function normalizeWebsite(value) { const next = clean(value); return next && !/^https?:\/\//i.test(next) ? `https://${next}` : next; }
 function lower(value) { return clean(value).toLowerCase(); }
 function slug(value) { return lower(value).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "provider"; }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }

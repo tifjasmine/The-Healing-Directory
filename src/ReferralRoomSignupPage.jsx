@@ -46,6 +46,7 @@ const PROVIDER_TYPES = [
   "Nutritionists / Dietitians",
   "Coaches",
   "Couples / Relationship Providers",
+  "Other",
 ];
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -77,6 +78,7 @@ export default function ReferralRoomSignupPage() {
   const [sessions, setSessions] = React.useState([]);
   const [options, setOptions] = React.useState({ circleThemes: CIRCLE_THEMES, providerTypes: PROVIDER_TYPES, days: DAYS, times: TIMES });
   const [notice, setNotice] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState({});
   const [busy, setBusy] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
 
@@ -86,7 +88,7 @@ export default function ReferralRoomSignupPage() {
         setSessions(payload.sessions || []);
         setOptions({
           circleThemes: payload.circleThemes?.length ? payload.circleThemes : CIRCLE_THEMES,
-          providerTypes: payload.providerTypes?.length ? payload.providerTypes : PROVIDER_TYPES,
+          providerTypes: withOther(payload.providerTypes?.length ? payload.providerTypes : PROVIDER_TYPES),
           days: payload.days?.length ? payload.days : DAYS,
           times: payload.times?.length ? payload.times : TIMES,
         });
@@ -97,19 +99,26 @@ export default function ReferralRoomSignupPage() {
       });
   }, []);
 
-  const change = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
+  const change = (key) => (event) => {
+    setForm((current) => ({ ...current, [key]: event.target.value }));
+    setFieldErrors((current) => ({ ...current, [key]: "" }));
+  };
   const toggle = (key, value) => setForm((current) => ({ ...current, [key]: toggleValue(current[key], value) }));
 
   async function submit(event) {
     event.preventDefault();
     setNotice("");
-    if (!form.name.trim() || !validEmail(form.email) || !form.practiceName.trim() || !form.website.trim() || !form.title.trim() || !form.state.trim()) {
-      setNotice("Please complete the required fields before submitting.");
+    const errors = validateForm(form);
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      const firstKey = Object.keys(errors)[0];
+      setNotice(errors[firstKey]);
+      document.querySelector(`[data-field="${firstKey}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     setBusy(true);
     try {
-      await api("referral-room-interest", { method: "POST", body: form });
+      await api("referral-room-interest", { method: "POST", body: { ...form, website: normalizeWebsite(form.website) } });
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
@@ -130,7 +139,6 @@ export default function ReferralRoomSignupPage() {
 
     <section className="referral-interest-hero">
       <div>
-        <p><span />Provider interest form - open now</p>
         <h1>Join The Referral Room</h1>
         <h2>Small, curated circles where aligned providers meet, share how they work, and build the kind of referral relationships that actually serve clients well.</h2>
       </div>
@@ -150,23 +158,23 @@ export default function ReferralRoomSignupPage() {
       <form className="referral-interest-form" onSubmit={submit}>
         <SectionTitle>About you</SectionTitle>
         <div className="referral-interest-grid two">
-          <Field label="Full name" required value={form.name} onChange={change("name")} placeholder="Your full name" />
-          <Field label="Email address" required type="email" value={form.email} onChange={change("email")} placeholder="you@practice.com" />
+          <Field fieldKey="name" error={fieldErrors.name} label="Full name" required value={form.name} onChange={change("name")} placeholder="Your full name" />
+          <Field fieldKey="email" error={fieldErrors.email} label="Email address" required type="email" value={form.email} onChange={change("email")} placeholder="you@practice.com" />
         </div>
         <div className="referral-interest-grid two">
-          <Field label="Practice or business name" required value={form.practiceName} onChange={change("practiceName")} placeholder="Your practice name" />
+          <Field fieldKey="practiceName" error={fieldErrors.practiceName} label="Practice or business name" required value={form.practiceName} onChange={change("practiceName")} placeholder="Your practice name" />
           <Field label="Phone number" type="tel" value={form.phone} onChange={change("phone")} placeholder="(optional)" />
         </div>
         <div className="referral-interest-grid two">
-          <Field label="Website" required type="url" value={form.website} onChange={change("website")} placeholder="https://yourpractice.com" />
+          <Field fieldKey="website" error={fieldErrors.website} label="Website" required type="text" inputMode="url" value={form.website} onChange={change("website")} placeholder="www.yourpractice.com" />
           <Field label="Social media" value={form.social} onChange={change("social")} placeholder="Instagram, LinkedIn, etc. (optional)" />
         </div>
-        <Field label="Your professional title or role" required value={form.title} onChange={change("title")} placeholder="e.g. Licensed Therapist, Registered Dietitian, Somatic Practitioner, Doula..." />
+        <Field fieldKey="title" error={fieldErrors.title} label="Your professional title or role" required value={form.title} onChange={change("title")} placeholder="e.g. Licensed Therapist, Registered Dietitian, Somatic Practitioner, Doula..." />
 
         <SectionTitle>Your practice</SectionTitle>
         <Field label="Primary areas of specialization or expertise" value={form.specialties} onChange={change("specialties")} placeholder="e.g. Women's health, ADHD, grief, trauma, relationships..." />
         <div className="referral-interest-grid two">
-          <SelectField label="State you primarily serve clients" required value={form.state} onChange={change("state")} options={["New Jersey", "Pennsylvania", "Virtual / both"]} />
+          <SelectField fieldKey="state" error={fieldErrors.state} label="State you primarily serve clients" required value={form.state} onChange={change("state")} options={["New Jersey", "Pennsylvania", "Virtual / both"]} />
           <Field label="City you primarily serve clients" value={form.city} onChange={change("city")} placeholder="e.g. Princeton, Philadelphia..." />
         </div>
         <div className="referral-interest-grid two">
@@ -188,7 +196,7 @@ export default function ReferralRoomSignupPage() {
 
         {notice ? <p className="referral-interest-error">{notice}</p> : null}
         <button className="referral-interest-submit" type="submit" disabled={busy}>{busy ? "Submitting..." : "Submit my interest"}</button>
-        <p className="referral-interest-note">We will get back to you within 24 hours. We keep circles small and intentional, and we'll be in touch with next steps.</p>
+        <p className="referral-interest-note">We will get back to you within 24 hours with next steps.</p>
       </form>
     </main>}
   </div>;
@@ -198,12 +206,12 @@ function SectionTitle({ children }) {
   return <h3 className="referral-interest-section-title">{children}</h3>;
 }
 
-function Field({ label, required, textarea, ...props }) {
-  return <label className="referral-interest-field"><span>{label}{required ? <b> *</b> : null}</span>{textarea ? <textarea rows={5} {...props} /> : <input {...props} />}</label>;
+function Field({ fieldKey, error, label, required, textarea, ...props }) {
+  return <label className={`referral-interest-field${error ? " has-error" : ""}`} data-field={fieldKey || undefined}><span>{label}{required ? <b> *</b> : null}</span>{textarea ? <textarea rows={5} aria-invalid={error ? "true" : undefined} {...props} /> : <input aria-invalid={error ? "true" : undefined} {...props} />}{error ? <em>{error}</em> : null}</label>;
 }
 
-function SelectField({ label, required, options, ...props }) {
-  return <label className="referral-interest-field"><span>{label}{required ? <b> *</b> : null}</span><select {...props}><option value="">Select...</option>{options.map((option) => <option key={option}>{option}</option>)}</select></label>;
+function SelectField({ fieldKey, error, label, required, options, ...props }) {
+  return <label className={`referral-interest-field${error ? " has-error" : ""}`} data-field={fieldKey || undefined}><span>{label}{required ? <b> *</b> : null}</span><select aria-invalid={error ? "true" : undefined} {...props}><option value="">Select...</option>{options.map((option) => <option key={option}>{option}</option>)}</select>{error ? <em>{error}</em> : null}</label>;
 }
 
 function OptionGroup({ label, helper, values, options, onToggle }) {
@@ -227,7 +235,7 @@ function SuccessState() {
   return <main className="referral-interest-success">
     <span>✓</span>
     <h2>You're on the list</h2>
-    <p>Thank you for your interest. Each circle is kept small and intentional, so we'll review responses and reach out with details on your circle, date, and time within 24 hours.</p>
+    <p>Thank you for your interest. We'll review your response and reach out with next steps, dates, and circle details within 24 hours.</p>
     <a href="/">Back to The Healing Directory</a>
   </main>;
 }
@@ -249,6 +257,38 @@ function toggleValue(values, value) {
 
 function validEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function validWebsite(value) {
+  const next = normalizeWebsite(value);
+  try {
+    const url = new URL(next);
+    return Boolean(url.hostname.includes("."));
+  } catch {
+    return false;
+  }
+}
+
+function normalizeWebsite(value) {
+  const next = String(value || "").trim();
+  if (!next) return "";
+  return /^https?:\/\//i.test(next) ? next : `https://${next}`;
+}
+
+function validateForm(form) {
+  const errors = {};
+  if (!form.name.trim()) errors.name = "Please enter your full name.";
+  if (!validEmail(form.email)) errors.email = "Please enter a valid email address.";
+  if (!form.practiceName.trim()) errors.practiceName = "Please enter your practice or business name.";
+  if (!validWebsite(form.website)) errors.website = "Please enter a valid website, like www.yourpractice.com.";
+  if (!form.title.trim()) errors.title = "Please enter your professional title or role.";
+  if (!form.state.trim()) errors.state = "Please select the state you primarily serve.";
+  return errors;
+}
+
+function withOther(options) {
+  const list = Array.isArray(options) ? options : [];
+  return list.some((item) => String(item).toLowerCase() === "other") ? list : [...list, "Other"];
 }
 
 async function api(action, options = {}) {
