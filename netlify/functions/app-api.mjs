@@ -25,6 +25,10 @@ const TABLES = {
   referralRoom: process.env.AIRTABLE_REFERRAL_ROOM_TABLE_ID || "The Referral Room",
   attendance: process.env.AIRTABLE_ATTENDANCE_TABLE_ID || "The Referral Room Attendance",
   seatRules: process.env.AIRTABLE_SEAT_RULES_TABLE_ID || "Referral Room Seat Rules",
+  referralOutsideProviders: process.env.AIRTABLE_REFERRAL_OUTSIDE_PROVIDERS_TABLE_ID || "tblfoYIbJNrs4QBCq",
+  referralCircleThemes: process.env.AIRTABLE_REFERRAL_CIRCLE_THEMES_TABLE_ID || "Referral Room Circle Themes",
+  referralConnectionTypes: process.env.AIRTABLE_REFERRAL_CONNECTION_TYPES_TABLE_ID || "Referral Connection Types",
+  referralAvailabilityOptions: process.env.AIRTABLE_REFERRAL_AVAILABILITY_OPTIONS_TABLE_ID || "Referral Availability Options",
   connections: process.env.AIRTABLE_CONNECTIONS_TABLE_ID || "Provider Connections"
 };
 
@@ -47,6 +51,26 @@ const TABLE_ALIASES = {
     "Members/Clients",
     "Client Members",
     "User Members"
+  ],
+  referralOutsideProviders: [
+    process.env.AIRTABLE_REFERRAL_OUTSIDE_PROVIDERS_TABLE_ID,
+    "Referral Outside Providers",
+    "Referral Room Outside Providers",
+    "Outside Referral Providers",
+    "Outside Providers"
+  ],
+  referralCircleThemes: [
+    process.env.AIRTABLE_REFERRAL_CIRCLE_THEMES_TABLE_ID,
+    "Referral Room Circle Themes"
+  ],
+  referralConnectionTypes: [
+    process.env.AIRTABLE_REFERRAL_CONNECTION_TYPES_TABLE_ID,
+    "Referral Connection Types",
+    "Referral Provider Types"
+  ],
+  referralAvailabilityOptions: [
+    process.env.AIRTABLE_REFERRAL_AVAILABILITY_OPTIONS_TABLE_ID,
+    "Referral Availability Options"
   ]
 };
 
@@ -79,6 +103,47 @@ const AIRTABLE_BOOTSTRAP_SCHEMAS = {
       { name: "Status", type: "singleLineText" },
       { name: "Account Type", type: "singleLineText" },
       { name: "Source", type: "singleLineText" }
+    ]
+  },
+  referralOutsideProviders: {
+    name: "Referral Outside Providers",
+    fields: [
+      { name: "Name", type: "singleLineText" },
+      { name: "Email", type: "email" },
+      { name: "Practice / Business Name", type: "singleLineText" },
+      { name: "Phone", type: "phoneNumber" },
+      { name: "Website", type: "url" },
+      { name: "Social Media", type: "singleLineText" },
+      { name: "Professional Title / Role", type: "singleLineText" },
+      { name: "Primary Specializations", type: "multilineText" },
+      { name: "State Served", type: "singleSelect", options: { choices: [{ name: "New Jersey" }, { name: "Pennsylvania" }, { name: "Virtual / both" }] } },
+      { name: "City Served", type: "singleLineText" },
+      { name: "Client Availability", type: "singleSelect", options: { choices: [{ name: "Yes" }, { name: "Limited availability" }, { name: "Waitlist only" }, { name: "Depends on the service" }, { name: "No" }] } },
+      { name: "Insurance Accepted", type: "singleLineText" },
+      { name: "Referral Room Sessions", type: "multipleRecordLinks", options: { linkedTableId: TABLES.referralRoom } },
+      { name: "Circle Themes", type: "multipleSelects", options: { choices: [
+        { name: "Women's Wellness" }, { name: "Anxiety + Stress" }, { name: "ADHD + Executive Functioning" }, { name: "Depression + Mood Support" },
+        { name: "Postpartum + Parenting" }, { name: "Pregnancy + Birth Support" }, { name: "Trauma-Informed Care" }, { name: "Body-Based / Somatic Healing" },
+        { name: "Couples + Relationships" }, { name: "Teens + Young Adults" }, { name: "Burnout + Work Stress" }, { name: "Chronic Pain / Illness" },
+        { name: "Eating + Body Image" }, { name: "Grief + Loss" }, { name: "LGBTQIA+ Affirming Care" }, { name: "Neurodivergent-Affirming Care" },
+        { name: "Highly Sensitive People" }, { name: "Supporting Men" }, { name: "Family Support" }, { name: "Other" }
+      ] } },
+      { name: "Providers to Connect With", type: "multipleSelects", options: { choices: [
+        { name: "Therapists / Counselors" }, { name: "Psychologists" }, { name: "Psychiatrists / Medication Providers" }, { name: "Primary Care Providers" },
+        { name: "OB/GYNs" }, { name: "Pediatric Providers" }, { name: "Pelvic Floor Therapists" }, { name: "Physical Therapists" },
+        { name: "Occupational Therapists" }, { name: "Lactation Consultants" }, { name: "Doulas / Birth Workers" }, { name: "Chiropractors" },
+        { name: "Massage Therapists" }, { name: "Acupuncturists" }, { name: "Somatic Practitioners" }, { name: "Yoga / Movement Providers" },
+        { name: "Nutritionists / Dietitians" }, { name: "Coaches" }, { name: "Couples / Relationship Providers" }
+      ] } },
+      { name: "Best Days", type: "multipleSelects", options: { choices: [{ name: "Mon" }, { name: "Tue" }, { name: "Wed" }, { name: "Thu" }, { name: "Fri" }, { name: "Sat" }, { name: "Sun" }] } },
+      { name: "Best Times", type: "multipleSelects", options: { choices: [{ name: "Morning" }, { name: "Early Afternoon" }, { name: "Late Afternoon" }, { name: "Evening" }] } },
+      { name: "Notes", type: "multilineText" },
+      { name: "Submitted At", type: "dateTime", options: { timeZone: "client", dateFormat: { name: "local" }, timeFormat: { name: "12hour" } } },
+      { name: "Source", type: "singleLineText" },
+      { name: "Form Version", type: "singleLineText" },
+      { name: "Directory Profile", type: "multipleRecordLinks", options: { linkedTableId: TABLES.directory } },
+      { name: "Converted To Directory Profile", type: "checkbox", options: { icon: "check", color: "greenBright" } },
+      { name: "Review Status", type: "singleSelect", options: { choices: [{ name: "New Submission" }, { name: "Reviewing" }, { name: "Invite" }, { name: "Waitlist" }, { name: "Follow-Up Needed" }, { name: "Archive" }, { name: "Converted" }] } }
     ]
   }
 };
@@ -558,7 +623,12 @@ async function accountSettings(user) {
 }
 
 async function referralRoomPublicOptions() {
-  const records = await list("referralRoom").catch(() => []);
+  const [records, circleThemes, connectionTypes, availabilityOptions] = await Promise.all([
+    list("referralRoom").catch(() => []),
+    optionRecords("referralCircleThemes"),
+    optionRecords("referralConnectionTypes"),
+    optionRecords("referralAvailabilityOptions")
+  ]);
   const today = startOfToday();
   const sessions = records.map((record) => {
     const f = record.fields || {};
@@ -575,7 +645,13 @@ async function referralRoomPublicOptions() {
   }).filter((session) => !["draft", "closed", "cancelled", "canceled"].includes(lower(session.status)))
     .filter((session) => !session.date || dateValue(session.date) >= today)
     .sort((a, b) => dateValue(a.date) - dateValue(b.date));
-  return { sessions };
+  return {
+    sessions,
+    circleThemes,
+    providerTypes: connectionTypes,
+    days: availabilityOptions.filter((item) => ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].includes(lower(item))),
+    times: availabilityOptions.filter((item) => !["mon", "tue", "wed", "thu", "fri", "sat", "sun"].includes(lower(item)))
+  };
 }
 
 async function referralRoomInterest(body) {
@@ -586,61 +662,41 @@ async function referralRoomInterest(body) {
   const title = required(body.title, "Professional title");
   const state = required(body.state, "State");
   const dateLabels = await referralRoomInterestDateLabels(body.selectedDates);
-  const message = [
-    `Referral Room Interest Form`,
-    ``,
-    `Practice or business name: ${practiceName}`,
-    `Professional title or role: ${title}`,
-    `Website: ${website}`,
-    body.social ? `Social media: ${clean(body.social)}` : "",
-    body.phone ? `Phone: ${clean(body.phone)}` : "",
-    `State served: ${state}`,
-    body.city ? `City served: ${clean(body.city)}` : "",
-    body.specialties ? `Specialties: ${clean(body.specialties)}` : "",
-    body.acceptingClients ? `Accepting clients: ${clean(body.acceptingClients)}` : "",
-    body.insurance ? `Insurance: ${clean(body.insurance)}` : "",
-    dateLabels.length ? `Referral Room dates: ${dateLabels.join(", ")}` : "",
-    arrayLine("Circle themes", body.circleThemes),
-    arrayLine("Provider types to connect with", body.providerTypes),
-    arrayLine("Best days", body.days),
-    arrayLine("Best times", body.times),
-    body.notes ? `Notes: ${clean(body.notes)}` : "",
-  ].filter(Boolean).join("\n");
+  const sessionIds = ensureArray(body.selectedDates).filter((id) => /^rec[a-zA-Z0-9]{14}$/.test(id));
+  const dateNotes = dateLabels.includes("Future dates not listed yet") ? "Future dates not listed yet" : "";
+  const table = await ensureAirtableFields("referralOutsideProviders");
+  const fields = {};
+  setResolvedAlias(fields, table, ["Name", "Full Name"], name);
+  setResolvedAlias(fields, table, ["Email", "Email Address"], email);
+  setResolvedAlias(fields, table, ["Practice / Business Name", "Practice or Business Name", "Practice Name", "Business Name"], practiceName);
+  setResolvedAlias(fields, table, ["Phone", "Phone Number"], clean(body.phone));
+  setResolvedAlias(fields, table, ["Website"], website);
+  setResolvedAlias(fields, table, ["Social Media", "Social"], clean(body.social));
+  setResolvedAlias(fields, table, ["Professional Title / Role", "Professional Title", "Professional Role", "Title"], title);
+  setResolvedAlias(fields, table, ["Primary Specializations", "Specialties", "Primary Areas of Specialization", "Expertise"], clean(body.specialties));
+  setResolvedAlias(fields, table, ["State Served", "State"], state);
+  setResolvedAlias(fields, table, ["City Served", "City"], clean(body.city));
+  setResolvedAlias(fields, table, ["Client Availability", "Accepting Clients", "Currently Accepting Clients"], clean(body.acceptingClients));
+  setResolvedAlias(fields, table, ["Insurance Accepted", "Insurance", "Accepts Insurance"], clean(body.insurance));
+  setResolvedAlias(fields, table, ["Referral Room Sessions", "Referral Room Dates", "Selected Dates", "Date Interest"], sessionIds.length ? sessionIds : dateLabels.join("\n"));
+  setResolvedAlias(fields, table, ["Circle Themes", "Theme Interest"], ensureArray(body.circleThemes).join("\n"));
+  setResolvedAlias(fields, table, ["Providers to Connect With", "Provider Types to Connect With", "Provider Types", "Desired Provider Connections"], ensureArray(body.providerTypes).join("\n"));
+  setResolvedAlias(fields, table, ["Best Days", "Days That Work Best"], ensureArray(body.days).join(", "));
+  setResolvedAlias(fields, table, ["Best Times", "Time of Day That Works Best"], ensureArray(body.times).join(", "));
+  setResolvedAlias(fields, table, ["Notes", "Anything Else"], [dateNotes, clean(body.notes)].filter(Boolean).join("\n\n"));
+  setResolvedAlias(fields, table, ["Submitted At", "Created At"], new Date().toISOString());
+  setResolvedAlias(fields, table, ["Source"], "Referral Room Signup");
+  setResolvedAlias(fields, table, ["Form Version"], "referral-room-signup-v1");
+  setResolvedAlias(fields, table, ["Review Status", "Status"], "New Submission");
+  setResolvedAlias(fields, table, ["Converted To Directory Profile"], false);
+  removeEmpty(fields);
+  const record = await createSafe("referralOutsideProviders", fields);
 
-  const application = {
-    name,
-    email,
-    phone: clean(body.phone),
-    website,
-    professionalTitle: title,
-    profession: title,
-    providerType: body.providerTypes,
-    concerns: body.circleThemes,
-    state,
-    physicalLocations: clean(body.city),
-    availabilitySpecifics: [
-      dateLabels.length ? `Referral Room date interest: ${dateLabels.join(", ")}` : "",
-      arrayLine("Best days", body.days),
-      arrayLine("Best times", body.times),
-      clean(body.notes)
-    ].filter(Boolean).join("\n"),
-    collaborationInterests: ["Referral Room"],
-    collaborationDetails: message,
-    providerToProviderNotes: message,
+  return {
+    ok: true,
+    record: { id: record.id, table: "Referral Outside Providers" },
+    message: "We will get back to you within 24 hours."
   };
-
-  return signupProfile({
-    name,
-    email,
-    accountType: "provider",
-    phone: clean(body.phone),
-    website,
-    professionalTitle: title,
-    message,
-    areaInterest: [...ensureArray(body.circleThemes), ...ensureArray(body.providerTypes), ...dateLabels].join(", "),
-    application,
-    source: "referral-room-interest"
-  });
 }
 
 async function signupProfile(body) {
@@ -992,6 +1048,34 @@ async function selectOptions(key, fieldNames) {
   }
 }
 
+async function optionRecords(key) {
+  const fallback = {
+    referralCircleThemes: [
+      "Women's Wellness", "Anxiety + Stress", "ADHD + Executive Functioning", "Depression + Mood Support", "Postpartum + Parenting",
+      "Pregnancy + Birth Support", "Trauma-Informed Care", "Body-Based / Somatic Healing", "Couples + Relationships", "Teens + Young Adults",
+      "Burnout + Work Stress", "Chronic Pain / Illness", "Eating + Body Image", "Grief + Loss", "LGBTQIA+ Affirming Care",
+      "Neurodivergent-Affirming Care", "Highly Sensitive People", "Supporting Men", "Family Support", "Other"
+    ],
+    referralConnectionTypes: [
+      "Therapists / Counselors", "Psychologists", "Psychiatrists / Medication Providers", "Primary Care Providers", "OB/GYNs",
+      "Pediatric Providers", "Pelvic Floor Therapists", "Physical Therapists", "Occupational Therapists", "Lactation Consultants",
+      "Doulas / Birth Workers", "Chiropractors", "Massage Therapists", "Acupuncturists", "Somatic Practitioners",
+      "Yoga / Movement Providers", "Nutritionists / Dietitians", "Coaches", "Couples / Relationship Providers"
+    ],
+    referralAvailabilityOptions: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Morning", "Early Afternoon", "Late Afternoon", "Evening"]
+  };
+  try {
+    const records = await list(key);
+    const values = records.map((record) => {
+      const f = record.fields || {};
+      return text(f.Name || f.Option || f.Label || Object.values(f)[0]);
+    }).filter(Boolean);
+    return values.length ? unique(values) : fallback[key] || [];
+  } catch {
+    return fallback[key] || [];
+  }
+}
+
 async function metadataTable(key) {
   const tableNameOrId = await resolveAirtableTableName(key);
   const response = await fetch(`https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables`, {
@@ -1028,7 +1112,7 @@ async function resolveAirtableTableName(key) {
 
 function resolveTableCandidates(key) {
   const base = TABLES[key];
-  if (key === "providerSignups" || key === "clients") {
+  if (key === "providerSignups" || key === "clients" || key === "referralOutsideProviders") {
     return unique([base, ...TABLE_ALIASES[key]]);
   }
   return [base].filter(Boolean);
@@ -1065,6 +1149,31 @@ async function createAirtableTable(definition) {
   } catch {
     return null;
   }
+}
+
+async function ensureAirtableFields(key) {
+  const schema = AIRTABLE_BOOTSTRAP_SCHEMAS[key];
+  if (!schema?.fields?.length) return null;
+  const table = await metadataTable(key);
+  if (!table?.id) return table;
+  const existing = new Set((table.fields || []).map((field) => lower(field.name)));
+  for (const field of schema.fields) {
+    if (existing.has(lower(field.name))) continue;
+    await createAirtableField(table.id, field);
+  }
+  TABLE_META_CACHE.clear();
+  return metadataTable(key).catch(() => table);
+}
+
+async function createAirtableField(tableId, field) {
+  const response = await fetch(`https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables/${tableId}/fields`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${TOKEN()}`, "Content-Type": "application/json" },
+    body: JSON.stringify(field)
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw httpError(response.status, payload.error?.message || `Airtable field creation failed (${response.status}).`);
+  return payload;
 }
 
 async function getAirtableTables() {

@@ -75,14 +75,26 @@ const EMPTY = {
 export default function ReferralRoomSignupPage() {
   const [form, setForm] = React.useState(EMPTY);
   const [sessions, setSessions] = React.useState([]);
+  const [options, setOptions] = React.useState({ circleThemes: CIRCLE_THEMES, providerTypes: PROVIDER_TYPES, days: DAYS, times: TIMES });
   const [notice, setNotice] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
 
   React.useEffect(() => {
     api("referral-room-public-options")
-      .then((payload) => setSessions(payload.sessions || []))
-      .catch(() => setSessions([]));
+      .then((payload) => {
+        setSessions(payload.sessions || []);
+        setOptions({
+          circleThemes: payload.circleThemes?.length ? payload.circleThemes : CIRCLE_THEMES,
+          providerTypes: payload.providerTypes?.length ? payload.providerTypes : PROVIDER_TYPES,
+          days: payload.days?.length ? payload.days : DAYS,
+          times: payload.times?.length ? payload.times : TIMES,
+        });
+      })
+      .catch(() => {
+        setSessions([]);
+        setOptions({ circleThemes: CIRCLE_THEMES, providerTypes: PROVIDER_TYPES, days: DAYS, times: TIMES });
+      });
   }, []);
 
   const change = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
@@ -131,6 +143,10 @@ export default function ReferralRoomSignupPage() {
     </section>
 
     {submitted ? <SuccessState /> : <main className="referral-interest-main">
+      <aside className="referral-interest-nonmember-note">
+        <strong>Just want to connect without becoming a member?</strong>
+        <p>No problem. You do not need to join The Healing Directory to network with other providers in The Referral Room.</p>
+      </aside>
       <form className="referral-interest-form" onSubmit={submit}>
         <SectionTitle>About you</SectionTitle>
         <div className="referral-interest-grid two">
@@ -160,13 +176,13 @@ export default function ReferralRoomSignupPage() {
 
         <SectionTitle>Circle interest</SectionTitle>
         <OptionGroup label="Which upcoming Referral Room dates interest you?" helper="Select all that apply." values={form.selectedDates} options={[...sessions.map((session) => ({ label: session.label, value: session.id })), { label: "Future dates not listed yet", value: FUTURE_DATE_VALUE }]} onToggle={(value) => toggle("selectedDates", value)} />
-        <OptionGroup label="Which theme-based circles interest you?" helper="Select all that apply." values={form.circleThemes} options={CIRCLE_THEMES.map((label) => ({ label, value: label }))} onToggle={(value) => toggle("circleThemes", value)} />
-        <OptionGroup label="What kinds of providers would you love to connect with?" helper="Select all that apply." values={form.providerTypes} options={PROVIDER_TYPES.map((label) => ({ label, value: label }))} onToggle={(value) => toggle("providerTypes", value)} />
+        <OptionGroup label="Which theme-based circles interest you?" helper="Select all that apply." values={form.circleThemes} options={options.circleThemes.map((label) => ({ label, value: label }))} onToggle={(value) => toggle("circleThemes", value)} />
+        <OptionGroup label="What kinds of providers would you love to connect with?" helper="Select all that apply." values={form.providerTypes} options={options.providerTypes.map((label) => ({ label, value: label }))} onToggle={(value) => toggle("providerTypes", value)} />
 
         <SectionTitle>Availability</SectionTitle>
         <div className="referral-interest-grid two">
-          <ToggleGroup label="Days that work best" values={form.days} options={DAYS} onToggle={(value) => toggle("days", value)} />
-          <ToggleGroup label="Time of day that works best" values={form.times} options={TIMES} onToggle={(value) => toggle("times", value)} />
+          <ToggleGroup label="Days that work best" values={form.days} options={options.days} onToggle={(value) => toggle("days", value)} />
+          <ToggleGroup label="Time of day that works best" values={form.times} options={options.times} onToggle={(value) => toggle("times", value)} />
         </div>
         <Field label="Anything else you'd like us to know?" textarea value={form.notes} onChange={change("notes")} placeholder="Share anything about your interest, availability, practice, or the kinds of connections you're hoping to make..." />
 

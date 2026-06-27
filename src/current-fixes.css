@@ -9463,19 +9463,48 @@ button.referral-room-preview-card:hover {
 }
 
 .referral-interest-main {
-  max-width: 700px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: clamp(36px, 5vw, 60px) clamp(16px, 3vw, 24px) 90px;
+  padding: clamp(28px, 4vw, 48px) clamp(16px, 3vw, 24px) 72px;
 }
 
 .referral-interest-form {
+  padding: clamp(22px, 4vw, 34px);
   display: flex;
   flex-direction: column;
   gap: 0;
+  border: 1px solid #e0d3bd;
+  border-radius: 18px;
+  background: rgba(255, 253, 247, .72);
+  box-shadow: 0 18px 40px rgba(66, 52, 34, .07);
+}
+
+.referral-interest-nonmember-note {
+  margin: 0 0 16px;
+  padding: 15px 18px;
+  border: 1px solid #d9e6dc;
+  border-radius: 14px;
+  background: #e7f1ea;
+  color: #2d604c;
+}
+
+.referral-interest-nonmember-note strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #1e3d30;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.referral-interest-nonmember-note p {
+  margin: 0;
+  color: #526158;
+  font-size: 13.5px;
+  line-height: 1.5;
 }
 
 .referral-interest-section-title {
-  margin: 24px 0 18px;
+  margin: 20px 0 16px;
   padding-bottom: 10px;
   border-bottom: 1.5px solid #e3d8c1;
   color: #b26a43;
@@ -9492,7 +9521,7 @@ button.referral-room-preview-card:hover {
 .referral-interest-grid {
   display: grid;
   gap: 14px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .referral-interest-grid.two {
@@ -9501,7 +9530,7 @@ button.referral-room-preview-card:hover {
 
 .referral-interest-field {
   display: block;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   color: #34433c;
   font-size: 13px;
   font-weight: 800;
@@ -9546,7 +9575,7 @@ button.referral-room-preview-card:hover {
 }
 
 .referral-interest-options {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .referral-interest-options h4,
@@ -9567,13 +9596,13 @@ button.referral-room-preview-card:hover {
 
 .referral-interest-options > div {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 8px;
 }
 
 .referral-interest-options button {
-  min-height: 44px;
-  padding: 11px 14px;
+  min-height: 42px;
+  padding: 10px 13px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -9618,8 +9647,8 @@ button.referral-room-preview-card:hover {
 }
 
 .referral-interest-toggle-group button {
-  min-height: 36px;
-  padding: 8px 14px;
+  min-height: 34px;
+  padding: 7px 13px;
   border: 1.5px solid #d6ceba;
   border-radius: 999px;
   background: #fffdf7;
@@ -9715,5 +9744,26 @@ button.referral-room-preview-card:hover {
 
   .referral-interest-grid.two {
     grid-template-columns: 1fr;
+  }
+
+  .referral-interest-main {
+    padding-top: 22px;
+  }
+
+  .referral-interest-form {
+    padding: 20px 16px 22px;
+    border-radius: 16px;
+  }
+
+  .referral-interest-nonmember-note {
+    padding: 14px 15px;
+  }
+
+  .referral-interest-options > div {
+    grid-template-columns: 1fr;
+  }
+
+  .referral-interest-options button {
+    min-height: 40px;
   }
 }
