@@ -9806,3 +9806,65 @@ button.referral-room-preview-card:hover {
     min-height: 40px;
   }
 }
+
+/* Homepage search refinement: fuller first filter row and quieter profile sections. */
+.directory-home-hero .directory-search-panel .primary-filter-grid {
+  grid-column: 1 / -1 !important;
+  width: min(1240px, 100%) !important;
+  justify-self: center !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.directory-home-hero .directory-search-panel .more-filter-grid {
+  width: min(1240px, 100%) !important;
+  justify-self: center !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.directory-home-hero .directory-filter-actions {
+  grid-column: 1 / -1 !important;
+  width: min(1240px, 100%) !important;
+  justify-self: center !important;
+  justify-content: flex-end !important;
+}
+
+.directory-home-hero .multi-select-trigger {
+  width: 100% !important;
+  justify-content: space-between !important;
+  padding: 0 18px !important;
+}
+
+.provider-row .tag-row span {
+  background: #e7f3ee !important;
+  color: #0f6d54 !important;
+}
+
+.provider-row .tag-row span:nth-child(even) {
+  background: #fff1d2 !important;
+  color: #785616 !important;
+}
+
+.profile-content-grid .content-section.no-section-heading .content-section-body {
+  margin-top: 0;
+}
+
+@media (max-width: 1180px) {
+  .directory-home-hero .directory-search-panel .primary-filter-grid,
+  .directory-home-hero .directory-search-panel .more-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .directory-home-hero .directory-search-panel .primary-filter-grid,
+  .directory-home-hero .directory-search-panel .more-filter-grid {
+    width: min(100%, 420px) !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .directory-home-hero .directory-filter-actions {
+    width: min(100%, 420px) !important;
+    justify-content: stretch !important;
+  }
+}

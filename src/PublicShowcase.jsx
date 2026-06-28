@@ -272,7 +272,7 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
         <div className="directory-heading">
           <p className="directory-location-pill"><span />Serving New Jersey & Pennsylvania</p>
           <h1>Find <span>trusted</span> support.</h1>
-          <p className="lede">A curated directory of mental health, physical wellness, and holistic care providers — matched to you by care need, not just location.</p>
+          <p className="lede">A curated community of mental health, physical wellness, and holistic care providers built around trusted relationships and thoughtful connection.</p>
           {!user ? <div className="directory-hero-actions home-join-cards">
             <button className="home-join-card provider-card" type="button" onClick={() => go("/provider-signup")}>
               <strong>Become a Provider</strong>
@@ -298,26 +298,25 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
       <div className="band-inner directory-search-panel">
         <div className="directory-search-heading">
           <h2>Find the right provider</h2>
-          <p>Mental health, physical wellness & holistic care providers across NJ & PA</p>
         </div>
         <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search for provider..." /></label>
         <div className="directory-filter-grid primary-filter-grid">
-          <DirectoryMultiSelect label="Provider type" values={filters.type} onToggle={(value) => toggleFilter("type", value)} options={choices.type} placeholder="All provider types" />
-          <DirectoryMultiSelect label="Area of support" values={filters.support} onToggle={(value) => toggleFilter("support", value)} options={choices.support} placeholder="All areas of support" />
-          <DirectoryMultiSelect label="Population" values={filters.population} onToggle={(value) => toggleFilter("population", value)} options={choices.population} placeholder="All people" />
+          <DirectoryMultiSelect label="Service" values={filters.service} onToggle={(value) => toggleFilter("service", value)} options={choices.service} placeholder="All services" />
+          <DirectoryMultiSelect label="Location" values={filters.location} onToggle={(value) => toggleFilter("location", value)} options={choices.location} placeholder="All locations" />
+          <DirectoryMultiSelect label="Provider vibe" values={filters.vibe} onToggle={(value) => toggleFilter("vibe", value)} options={choices.vibe} placeholder="All vibes" />
+          <DirectoryMultiSelect label="Payment" values={filters.payment} onToggle={(value) => toggleFilter("payment", value)} options={choices.payment} placeholder="All payment" />
+          <DirectoryMultiSelect label="Availability" values={filters.availability} onToggle={(value) => toggleFilter("availability", value)} options={choices.availability} placeholder="All availability" />
+          <DirectoryMultiSelect label="Background" values={filters.identity} onToggle={(value) => toggleFilter("identity", value)} options={choices.identity} placeholder="All backgrounds" />
         </div>
         <div className="directory-filter-actions">
           <button type="button" className={filtersOpen ? "filter-toggle-button active" : "filter-toggle-button"} onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? "Fewer filters" : "+ More filters"}{activeFilterCount ? ` (${activeFilterCount})` : ""}<ChevronDown size={16} /></button>
           {activeFilterCount ? <button type="button" className="clear-filter-button" onClick={clearFilters}>Clear all</button> : null}
         </div>
         <div className={filtersOpen ? "directory-filter-grid more-filter-grid open" : "directory-filter-grid more-filter-grid"}>
-          <DirectoryMultiSelect label="Payment" values={filters.payment} onToggle={(value) => toggleFilter("payment", value)} options={choices.payment} placeholder="All payment" />
-          <DirectoryMultiSelect label="Provider vibe" values={filters.vibe} onToggle={(value) => toggleFilter("vibe", value)} options={choices.vibe} placeholder="All vibes" />
-          <DirectoryMultiSelect label="Location" values={filters.location} onToggle={(value) => toggleFilter("location", value)} options={choices.location} placeholder="All locations" />
-          {!canUseProviderFilters ? <DirectoryMultiSelect label="Availability" values={filters.availability} onToggle={(value) => toggleFilter("availability", value)} options={choices.availability} placeholder="All availability" /> : null}
-          <DirectoryMultiSelect label="Service" values={filters.service} onToggle={(value) => toggleFilter("service", value)} options={choices.service} placeholder="All services" />
-          <DirectoryMultiSelect label="Racial / Ethnic Identity" values={filters.identity} onToggle={(value) => toggleFilter("identity", value)} options={choices.identity} placeholder="All identities" />
           <DirectoryMultiSelect label="Gender Identity" values={filters.genderIdentity} onToggle={(value) => toggleFilter("genderIdentity", value)} options={choices.genderIdentity} placeholder="All gender identities" />
+          <DirectoryMultiSelect label="Provider type" values={filters.type} onToggle={(value) => toggleFilter("type", value)} options={choices.type} placeholder="All provider types" />
+          <DirectoryMultiSelect label="Area of support" values={filters.support} onToggle={(value) => toggleFilter("support", value)} options={choices.support} placeholder="All areas of support" />
+          <DirectoryMultiSelect label="Population" values={filters.population} onToggle={(value) => toggleFilter("population", value)} options={choices.population} placeholder="All people" />
         </div>
         {canUseProviderFilters ? <div className={filtersOpen ? "provider-only-filter-block open" : "provider-only-filter-block"}>
           <div className="provider-only-filter-copy"><LockKeyhole size={15} /><span>Provider connection filters</span></div>
@@ -393,14 +392,13 @@ function ProviderDetails({ data, loading, toggleSave }) {
     </div></section>
     <section className="content-shell detail-grid profile-content-grid">
       <div className="detail-main">
-        <ContentSection kicker="About" title={`A little about ${firstName(provider.name)}`} defaultOpen><FormattedText value={provider.bio || "Profile details are being completed."} /></ContentSection>
-        <ContentSection kicker="Specialties & support" title="Areas of care" defaultOpen={false}><p>These selections highlight the provider's main areas of focus. They are not necessarily an exhaustive list of everyone this provider supports.</p><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>
-        <HumanSideSection provider={provider} defaultOpen={false} />
-        <ProviderConnectionSection provider={provider} defaultOpen={false} />
+        <ContentSection showHeader={false}><FormattedText value={provider.bio || "Profile details are being completed."} /></ContentSection>
+        <ContentSection showHeader={false}><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>
+        <HumanSideSection provider={provider} showHeader={false} />
+        <ProviderConnectionSection provider={provider} showHeader={false} />
       </div>
       <aside className="profile-sidebar">
         <DetailPanel className="contact-panel" title="Connect" defaultOpen={false}>
-          <p>Reach out directly to learn more about availability, fit, and next steps.</p>
           {provider.consultationLink ? <a className="button full" href={href(provider.consultationLink)} target="_blank" rel="noreferrer">Book consultation <ArrowRight size={16} /></a> : provider.website ? <a className="button full" href={href(provider.website)} target="_blank" rel="noreferrer">Visit website <ArrowRight size={16} /></a> : null}
           {provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}
           {provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}
@@ -556,8 +554,9 @@ function DirectoryMultiSelect({ label, values = [], options = [], placeholder, o
 function Avatar({ item, large }) { return <div className={large ? "avatar large" : "avatar"}>{item.photo ? <img src={item.photo} alt="" /> : <span>{initials(item.name)}</span>}</div>; }
 function ProfileTags({ label, values = [], warm }) { if (!values.length) return null; return <div className={warm ? "profile-tag-group warm" : "profile-tag-group"}><strong>{label}</strong><div>{values.map((value) => <span key={value}>{value}</span>)}</div></div>; }
 function CareGroup({ label, values = [], warm, neutral }) { return <div className={`care-group${warm ? " warm" : ""}${neutral ? " neutral" : ""}`}><strong>{label}</strong><div className="tag-row large-tags">{values.length ? values.map((value) => <span key={value}>{value}</span>) : <span>Not listed</span>}</div></div>; }
-function ContentSection({ kicker, title, children, defaultOpen = true }) {
+function ContentSection({ kicker, title, children, defaultOpen = true, showHeader = true }) {
   const [open, setOpen] = React.useState(defaultOpen);
+  if (!showHeader) return <section className="content-section open no-section-heading"><div className="content-section-body">{children}</div></section>;
   return <section className={open ? "content-section open" : "content-section collapsed"}>
     <button type="button" className="content-section-toggle" onClick={() => setOpen((current) => !current)} aria-expanded={open}>
       <span><span className="eyebrow ink">{kicker}</span><h2>{title}</h2></span>
@@ -581,7 +580,7 @@ function FormattedText({ value }) {
   return <div className="formatted-copy">{(blocks.length ? blocks : [String(value || "").trim()]).map((block, index) => <p key={`${index}-${block.slice(0, 12)}`}>{block}</p>)}</div>;
 }
 function Info({ icon, label, value }) { if (!value) return null; return <div className="info-line">{React.cloneElement(icon, { size: 17 })}<span><small>{label}</small>{value}</span></div>; }
-function HumanSideSection({ provider, defaultOpen = true }) {
+function HumanSideSection({ provider, defaultOpen = true, showHeader = true }) {
   const prompts = [
     { label: "My style in three words", value: provider.styleWords, icon: <SparkIcon /> },
     { label: "Clients describe me as", value: provider.clientDescriptors, icon: <SmileIcon /> },
@@ -591,19 +590,17 @@ function HumanSideSection({ provider, defaultOpen = true }) {
     { label: "What I wish people knew about healing", value: provider.healingWish, icon: <HeartHandshake size={20} /> },
     { label: "Favorite comfort practice", value: provider.comfortPractice, icon: <LeafIcon /> },
   ].filter((item) => item.value);
-  if (!provider.humanSide && !provider.funFact && !provider.vibe?.length && !prompts.length) return null;
-  return <ContentSection kicker="Get to know your provider" title="The human side" defaultOpen={defaultOpen}>
+  if (!provider.humanSide && !provider.funFact && !prompts.length) return null;
+  return <ContentSection kicker="Get to know your provider" title="The human side" defaultOpen={defaultOpen} showHeader={showHeader}>
     {provider.humanSide ? <p>{provider.humanSide}</p> : null}
     {prompts.length ? <div className="human-grid">{prompts.map((item) => <DetailPrompt key={item.label} {...item} />)}</div> : null}
-    {provider.vibe?.length ? <div className="detail-chip-block"><strong>Vibe</strong><div className="tag-row large-tags">{provider.vibe.map((value) => <span key={value}>{value}</span>)}</div></div> : null}
     {provider.funFact ? <div className="long-note"><strong>Fun facts</strong><p>{provider.funFact}</p></div> : null}
   </ContentSection>;
 }
-function ProviderConnectionSection({ provider, defaultOpen = true }) {
+function ProviderConnectionSection({ provider, defaultOpen = true, showHeader = true }) {
   const hasConnection = provider.referralMethod || provider.referralInstructions || provider.providerNotes || provider.collaborationDetails || provider.collaborationInterests?.length;
   if (!hasConnection) return null;
-  return <ContentSection kicker="Provider-only" title="Provider connection details" defaultOpen={defaultOpen}>
-    <p>A quick look at how this provider likes to connect, collaborate, consult, and receive aligned referrals from other providers.</p>
+  return <ContentSection kicker="Provider-only" title="Provider connection details" defaultOpen={defaultOpen} showHeader={showHeader}>
     <div className="connection-grid">
       <DetailPrompt label="Best way to connect" value={provider.referralMethod} icon={<Phone size={20} />} />
       <DetailPrompt label="Connection / referral notes" value={provider.referralInstructions} icon={<Mail size={20} />} />
