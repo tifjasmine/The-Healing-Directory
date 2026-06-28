@@ -9853,6 +9853,42 @@ button.referral-room-preview-card:hover {
   margin-top: 0;
 }
 
+.provider-detail-page .content-section-toggle {
+  padding-bottom: 8px !important;
+}
+
+.provider-detail-page .content-section-toggle .eyebrow {
+  margin-bottom: 0 !important;
+}
+
+.provider-detail-page .content-section-body {
+  padding-top: 0 !important;
+}
+
+.provider-detail-page .content-section-body,
+.provider-detail-page .formatted-copy {
+  margin-top: 6px !important;
+}
+
+.provider-detail-page .profile-content-grid {
+  margin-top: clamp(18px, 3vw, 34px) !important;
+  align-items: start !important;
+  gap: clamp(18px, 2.4vw, 30px) !important;
+}
+
+.provider-detail-page .profile-content-grid .content-section,
+.provider-detail-page .profile-content-grid .contact-panel {
+  padding: clamp(22px, 3vw, 34px) !important;
+}
+
+.provider-detail-page .content-section-toggle {
+  padding: 0 0 10px !important;
+}
+
+.provider-detail-page .content-section-body {
+  padding: 0 !important;
+}
+
 @media (max-width: 1180px) {
   .directory-home-hero .directory-search-panel .primary-filter-grid,
   .directory-home-hero .directory-search-panel .more-filter-grid {
