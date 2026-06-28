@@ -282,7 +282,7 @@ function DirectoryPage({ data, loading, navigate, toggleSave }) {
   return <main>
     <section className="directory-intro page-band dark-band">
       <div className="band-inner directory-heading">
-        <p className="eyebrow">The Healing Directory</p><h1>Find the right support.</h1><p className="lede">Browse trusted therapists, wellness professionals, and healing providers by specialty, services, and areas of support.</p>
+        <p className="eyebrow">The Healing Directory</p><h1>Find the right support.</h1><p className="lede">Browse trusted mental health, physical wellness, and holistic care providers by specialty, services, and areas of support.</p>
         <div className="trust-panel"><CheckCircle2 size={24} /><p><strong>Verified Member</strong> means this provider has been personally introduced within our trusted referral community. It is not a guarantee of fit, availability, or outcomes, but it does mean they are part of a relationship-based network built around connection, collaboration, and thoughtful referrals.</p></div>
       </div>
       <div className="band-inner directory-search-panel">

@@ -272,7 +272,7 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
         <div className="directory-heading">
           <p className="directory-location-pill"><span />Serving New Jersey & Pennsylvania</p>
           <h1>Find <span>trusted</span> support.</h1>
-          <p className="lede">A curated directory of therapists, wellness professionals, and holistic providers — matched to you by care need, not just location.</p>
+          <p className="lede">A curated directory of mental health, physical wellness, and holistic care providers — matched to you by care need, not just location.</p>
           {!user ? <div className="directory-hero-actions home-join-cards">
             <button className="home-join-card provider-card" type="button" onClick={() => go("/provider-signup")}>
               <strong>Become a Provider</strong>
@@ -298,7 +298,7 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
       <div className="band-inner directory-search-panel">
         <div className="directory-search-heading">
           <h2>Find the right provider</h2>
-          <p>Therapists, wellness professionals & holistic providers across NJ & PA</p>
+          <p>Mental health, physical wellness & holistic care providers across NJ & PA</p>
         </div>
         <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search for provider..." /></label>
         <div className="directory-filter-grid primary-filter-grid">

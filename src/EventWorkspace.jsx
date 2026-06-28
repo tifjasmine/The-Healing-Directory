@@ -23,7 +23,7 @@ export default function EventWorkspace({ path }) {
         window.location.replace(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
         return;
       }
-      setUser({ email: current.email || "", name: current.name || current.userMetadata?.full_name || "" });
+      setUser({ email: current.email || "", name: current.name || current.userMetadata?.full_name || "", canEditEventHost: false });
       setReady(true);
     });
   }, []);
@@ -85,12 +85,23 @@ function HostedEventCard({ event }) {
 function EventEditor({ user, editing }) {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id") || params.get("recordId");
-  const [form, setForm] = React.useState({ eventName: "", category: "", eventAudience: "Community", eventType: "Workshop", date: "", endTime: "", locationType: "Virtual", addressLink: "", registrationLink: "", imageUrl: "", eventImageUpload: null, description: "" });
+  const [form, setForm] = React.useState({ eventName: "", category: "", eventAudience: "Community", eventType: "Workshop", date: "", endTime: "", locationType: "Virtual", addressLink: "", registrationLink: "", imageUrl: "", eventImageUpload: null, description: "", alternateEventHost: "" });
   const [options, setOptions] = React.useState(EVENT_OPTION_FALLBACKS);
   const [currentEvent, setCurrentEvent] = React.useState(null);
+  const [canEditEventHost, setCanEditEventHost] = React.useState(Boolean(user.canEditEventHost));
   const [loading, setLoading] = React.useState(editing);
   const [saving, setSaving] = React.useState(false);
   const [message, setMessage] = React.useState("");
+  React.useEffect(() => {
+    let live = true;
+    api("me")
+      .then(({ user: current }) => {
+        if (!live) return;
+        setCanEditEventHost(Boolean(current?.canEditEventHost || current?.roles?.includes("admin")));
+      })
+      .catch(() => {});
+    return () => { live = false; };
+  }, []);
   React.useEffect(() => {
     api("event-options").then(({ eventOptions = {} }) => {
       setOptions({
@@ -110,16 +121,17 @@ function EventEditor({ user, editing }) {
     }
     api("event", { query: { id } }).then(({ event }) => {
       setCurrentEvent(event);
-      if (lower(event.hostEmail) && lower(event.hostEmail) !== lower(user.email)) {
+      setCanEditEventHost((current) => current || Boolean(event.canEditEventHost));
+      if (lower(event.hostEmail) && lower(event.hostEmail) !== lower(user.email) && !event.canEditEventHost) {
         setMessage("This event belongs to another provider account. Open the event from the account that created it.");
         return;
       }
-      setForm({ eventName: event.name || "", category: event.category || "", eventAudience: event.audience || "Community", eventType: event.eventType || "Workshop", date: localDate(event.start), endTime: localDate(event.end), locationType: event.locationType || "Virtual", addressLink: event.address || "", registrationLink: event.registration || "", imageUrl: event.image || "", eventImageUpload: null, description: event.description || "" });
+      setForm({ eventName: event.name || "", category: event.category || "", eventAudience: event.audience || "Community", eventType: event.eventType || "Workshop", date: localDate(event.start), endTime: localDate(event.end), locationType: event.locationType || "Virtual", addressLink: event.address || "", registrationLink: event.registration || "", imageUrl: event.image || "", eventImageUpload: null, description: event.description || "", alternateEventHost: event.alternateEventHost || "" });
     }).catch((error) => setMessage(error.message)).finally(() => setLoading(false));
   }, [editing, id, user.email]);
   const change = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
   const setValue = (key, value) => setForm((current) => ({ ...current, [key]: value }));
-  const canEdit = !editing || !currentEvent?.hostEmail || lower(currentEvent.hostEmail) === lower(user.email);
+  const canEdit = !editing || !currentEvent?.hostEmail || lower(currentEvent.hostEmail) === lower(user.email) || canEditEventHost;
   async function submit(event) {
     event.preventDefault(); setSaving(true); setMessage("");
     if (!canEdit) {
@@ -149,6 +161,7 @@ function EventEditor({ user, editing }) {
       <p className="eyebrow ink">Event details</p><h2>{editing ? "Update the listing." : "Share the details."}</h2>
       {locked ? <div className="editor-message">{message}</div> : null}
       <div className="host-email-card"><label>{editing ? "Connected Host Email" : "Host Email"} *</label><strong>{user.email}</strong><p>{editing ? "This is locked to the logged-in provider account so the event stays connected to the correct dashboard." : "This event stays connected to your provider account."}</p></div>
+      {canEditEventHost ? <div className="host-email-card alternate-host-card"><label>Event Host</label><input value={form.alternateEventHost} onChange={change("alternateEventHost")} placeholder="Optional alternate host name" /><p>This saves to Alternate Event Host in Airtable. Leave blank to use the connected host.</p></div> : null}
       {editing ? <div className="editor-alert"><Info size={18} /><span><strong>Changes are pending review.</strong><small>When you save edits, this event moves to Pending Review so updated details can be checked before being marked approved again.</small></span></div> : null}
       <EditorSection number="01" title="Basic information" text="Name the event and choose how it should be categorized."><EditorField label="Event Name" value={form.eventName} onChange={change("eventName")} placeholder="Ex: Nervous System Reset Circle" required /><EditorSelect label="Category" value={form.category} onChange={change("category")} options={options.category} placeholder="Choose a category" /><EditorSelect label="Event Audience" value={form.eventAudience} onChange={change("eventAudience")} options={options.audience} /><EditorSelect label="Event Type" value={form.eventType} onChange={change("eventType")} options={options.eventType} /></EditorSection>
       <EditorSection number="02" title="Time and location" text={editing ? "Update when it is happening and where people should go." : "Add when it is happening and where people should go."}><EditorField label="Start Date + Time" type="datetime-local" value={form.date} onChange={change("date")} required /><EditorField label="End Date + Time" type="datetime-local" value={form.endTime} onChange={change("endTime")} required /><EditorSelect label="Location Type" value={form.locationType} onChange={change("locationType")} options={options.locationType} /><EditorField label="Address or Link" value={form.addressLink} onChange={change("addressLink")} placeholder="Zoom link, registration page, studio address, etc." /><EditorField label="Registration Link" value={form.registrationLink} onChange={change("registrationLink")} placeholder="Optional" /><EventImageUpload value={form.eventImageUpload} imageUrl={form.imageUrl} onChange={(value) => setValue("eventImageUpload", value)} /></EditorSection>
