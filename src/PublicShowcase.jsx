@@ -301,22 +301,22 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
         </div>
         <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search for provider..." /></label>
         <div className="directory-filter-grid primary-filter-grid">
+          <DirectoryMultiSelect label="Provider type" values={filters.type} onToggle={(value) => toggleFilter("type", value)} options={choices.type} placeholder="All provider types" />
+          <DirectoryMultiSelect label="Area of support" values={filters.support} onToggle={(value) => toggleFilter("support", value)} options={choices.support} placeholder="All areas of support" />
           <DirectoryMultiSelect label="Service" values={filters.service} onToggle={(value) => toggleFilter("service", value)} options={choices.service} placeholder="All services" />
+          <DirectoryMultiSelect label="Population" values={filters.population} onToggle={(value) => toggleFilter("population", value)} options={choices.population} placeholder="All people" />
           <DirectoryMultiSelect label="Location" values={filters.location} onToggle={(value) => toggleFilter("location", value)} options={choices.location} placeholder="All locations" />
           <DirectoryMultiSelect label="Provider vibe" values={filters.vibe} onToggle={(value) => toggleFilter("vibe", value)} options={choices.vibe} placeholder="All vibes" />
+        </div>
+        <div className={filtersOpen ? "directory-filter-grid more-filter-grid open" : "directory-filter-grid more-filter-grid"}>
           <DirectoryMultiSelect label="Payment" values={filters.payment} onToggle={(value) => toggleFilter("payment", value)} options={choices.payment} placeholder="All payment" />
           <DirectoryMultiSelect label="Availability" values={filters.availability} onToggle={(value) => toggleFilter("availability", value)} options={choices.availability} placeholder="All availability" />
           <DirectoryMultiSelect label="Background" values={filters.identity} onToggle={(value) => toggleFilter("identity", value)} options={choices.identity} placeholder="All backgrounds" />
+          <DirectoryMultiSelect label="Gender Identity" values={filters.genderIdentity} onToggle={(value) => toggleFilter("genderIdentity", value)} options={choices.genderIdentity} placeholder="All gender identities" />
         </div>
         <div className="directory-filter-actions">
           <button type="button" className={filtersOpen ? "filter-toggle-button active" : "filter-toggle-button"} onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? "Fewer filters" : "+ More filters"}{activeFilterCount ? ` (${activeFilterCount})` : ""}<ChevronDown size={16} /></button>
           {activeFilterCount ? <button type="button" className="clear-filter-button" onClick={clearFilters}>Clear all</button> : null}
-        </div>
-        <div className={filtersOpen ? "directory-filter-grid more-filter-grid open" : "directory-filter-grid more-filter-grid"}>
-          <DirectoryMultiSelect label="Gender Identity" values={filters.genderIdentity} onToggle={(value) => toggleFilter("genderIdentity", value)} options={choices.genderIdentity} placeholder="All gender identities" />
-          <DirectoryMultiSelect label="Provider type" values={filters.type} onToggle={(value) => toggleFilter("type", value)} options={choices.type} placeholder="All provider types" />
-          <DirectoryMultiSelect label="Area of support" values={filters.support} onToggle={(value) => toggleFilter("support", value)} options={choices.support} placeholder="All areas of support" />
-          <DirectoryMultiSelect label="Population" values={filters.population} onToggle={(value) => toggleFilter("population", value)} options={choices.population} placeholder="All people" />
         </div>
         {canUseProviderFilters ? <div className={filtersOpen ? "provider-only-filter-block open" : "provider-only-filter-block"}>
           <div className="provider-only-filter-copy"><LockKeyhole size={15} /><span>Provider connection filters</span></div>
@@ -392,10 +392,10 @@ function ProviderDetails({ data, loading, toggleSave }) {
     </div></section>
     <section className="content-shell detail-grid profile-content-grid">
       <div className="detail-main">
-        <ContentSection showHeader={false}><FormattedText value={provider.bio || "Profile details are being completed."} /></ContentSection>
-        <ContentSection showHeader={false}><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>
-        <HumanSideSection provider={provider} showHeader={false} />
-        <ProviderConnectionSection provider={provider} showHeader={false} />
+        <ContentSection title={`A little about ${firstName(provider.name)}`}><FormattedText value={provider.bio || "Profile details are being completed."} /></ContentSection>
+        <ContentSection title="Areas of care"><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>
+        <HumanSideSection provider={provider} />
+        <ProviderConnectionSection provider={provider} />
       </div>
       <aside className="profile-sidebar">
         <DetailPanel className="contact-panel" title="Connect" defaultOpen={false}>
@@ -559,7 +559,7 @@ function ContentSection({ kicker, title, children, defaultOpen = true, showHeade
   if (!showHeader) return <section className="content-section open no-section-heading"><div className="content-section-body">{children}</div></section>;
   return <section className={open ? "content-section open" : "content-section collapsed"}>
     <button type="button" className="content-section-toggle" onClick={() => setOpen((current) => !current)} aria-expanded={open}>
-      <span><span className="eyebrow ink">{kicker}</span><h2>{title}</h2></span>
+      <span>{kicker ? <span className="eyebrow ink">{kicker}</span> : null}<h2>{title}</h2></span>
       <ChevronDown size={19} />
     </button>
     {open ? <div className="content-section-body">{children}</div> : null}
@@ -591,7 +591,7 @@ function HumanSideSection({ provider, defaultOpen = true, showHeader = true }) {
     { label: "Favorite comfort practice", value: provider.comfortPractice, icon: <LeafIcon /> },
   ].filter((item) => item.value);
   if (!provider.humanSide && !provider.funFact && !prompts.length) return null;
-  return <ContentSection kicker="Get to know your provider" title="The human side" defaultOpen={defaultOpen} showHeader={showHeader}>
+  return <ContentSection title="The human side" defaultOpen={defaultOpen} showHeader={showHeader}>
     {provider.humanSide ? <p>{provider.humanSide}</p> : null}
     {prompts.length ? <div className="human-grid">{prompts.map((item) => <DetailPrompt key={item.label} {...item} />)}</div> : null}
     {provider.funFact ? <div className="long-note"><strong>Fun facts</strong><p>{provider.funFact}</p></div> : null}
@@ -600,7 +600,7 @@ function HumanSideSection({ provider, defaultOpen = true, showHeader = true }) {
 function ProviderConnectionSection({ provider, defaultOpen = true, showHeader = true }) {
   const hasConnection = provider.referralMethod || provider.referralInstructions || provider.providerNotes || provider.collaborationDetails || provider.collaborationInterests?.length;
   if (!hasConnection) return null;
-  return <ContentSection kicker="Provider-only" title="Provider connection details" defaultOpen={defaultOpen} showHeader={showHeader}>
+  return <ContentSection title="Provider connection details" defaultOpen={defaultOpen} showHeader={showHeader}>
     <div className="connection-grid">
       <DetailPrompt label="Best way to connect" value={provider.referralMethod} icon={<Phone size={20} />} />
       <DetailPrompt label="Connection / referral notes" value={provider.referralInstructions} icon={<Mail size={20} />} />

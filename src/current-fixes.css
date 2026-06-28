@@ -9822,6 +9822,10 @@ button.referral-room-preview-card:hover {
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
 }
 
+.directory-home-hero .directory-search-heading h2 {
+  font-size: clamp(46px, 5.2vw, 82px) !important;
+}
+
 .directory-home-hero .directory-filter-actions {
   grid-column: 1 / -1 !important;
   width: min(1240px, 100%) !important;
