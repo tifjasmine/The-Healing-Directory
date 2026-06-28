@@ -529,16 +529,32 @@ function ClientSavedList({ items, kind, navigate }) {
   })}</div>;
 }
 
-function EventForm({ route, editing, navigate, setNotice, refresh }) {
+function EventForm({ route, editing, navigate, setNotice, refresh, user, setUser }) {
   const recordId = route.query.get("id") || route.query.get("recordId");
-  const [form, setForm] = React.useState({ eventName: "", category: "", eventAudience: "Community", eventType: "Workshop", date: "", endTime: "", locationType: "Virtual", addressLink: "", registrationLink: "", description: "" });
+  const [form, setForm] = React.useState({ eventName: "", category: "", eventAudience: "Community", eventType: "Workshop", date: "", endTime: "", locationType: "Virtual", addressLink: "", registrationLink: "", description: "", alternateEventHost: "" });
+  const [canEditEventHost, setCanEditEventHost] = React.useState(Boolean(user?.canEditEventHost || user?.roles?.includes("admin")));
   const [loading, setLoading] = React.useState(Boolean(editing));
   const [saving, setSaving] = React.useState(false);
-  React.useEffect(() => { if (editing && recordId) api("event", { query: { id: recordId } }).then(({ event }) => setForm({ eventName: event.name, category: event.category, eventAudience: event.audience, eventType: event.eventType, date: localDate(event.start), endTime: localDate(event.end), locationType: event.locationType, addressLink: event.address, registrationLink: event.registration, description: event.description })).finally(() => setLoading(false)); }, [editing, recordId]);
+  React.useEffect(() => {
+    if (user?.canEditEventHost || user?.roles?.includes("admin")) {
+      setCanEditEventHost(true);
+      return undefined;
+    }
+    let live = true;
+    api("me")
+      .then(({ user: current }) => {
+        if (!live) return;
+        if (current) setUser?.((existing) => ({ ...(existing || {}), ...current }));
+        setCanEditEventHost(Boolean(current?.canEditEventHost || current?.roles?.includes("admin")));
+      })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [user?.canEditEventHost, user?.roles, setUser]);
+  React.useEffect(() => { if (editing && recordId) api("event", { query: { id: recordId } }).then(({ event }) => { setCanEditEventHost((current) => current || Boolean(event.canEditEventHost)); setForm({ eventName: event.name, category: event.category, eventAudience: event.audience, eventType: event.eventType, date: localDate(event.start), endTime: localDate(event.end), locationType: event.locationType, addressLink: event.address, registrationLink: event.registration, description: event.description, alternateEventHost: event.alternateEventHost || "" }); }).finally(() => setLoading(false)); }, [editing, recordId]);
   const change = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
   async function submit(event) { event.preventDefault(); setSaving(true); try { const result = await api("save-event", { method: "POST", body: { ...form, recordId: editing ? recordId : "" } }); setNotice("Your event was saved and moved to Pending Review."); await refresh(); navigate(`/event-details?id=${result.event.id}`); } catch (error) { setNotice(error.message); } finally { setSaving(false); } }
   if (loading) return <LoadingState label="Loading event editor" />;
-  return <main><PageTitle eyebrow={editing ? "Edit Event" : "Add Event"} title={editing ? "Update your event listing." : "Create an event listing."} text="Submitted changes return to Pending Review before they appear publicly." /><section className="content-shell narrow"><form className="editor-form" onSubmit={submit}><FormSection number="01" title="Basic information"><Field label="Event name" value={form.eventName} onChange={change("eventName")} required /><Field label="Category" value={form.category} onChange={change("category")} placeholder="Wellness, therapy, community..." required /><SelectField label="Audience" value={form.eventAudience} onChange={change("eventAudience")} options={["Community", "For Providers"]} /><SelectField label="Event type" value={form.eventType} onChange={change("eventType")} options={["Workshop", "Circle", "Training", "Referral Room", "Retreat", "Other"]} /></FormSection><FormSection number="02" title="Time and place"><Field label="Start date and time" type="datetime-local" value={form.date} onChange={change("date")} required /><Field label="End date and time" type="datetime-local" value={form.endTime} onChange={change("endTime")} required /><SelectField label="Location type" value={form.locationType} onChange={change("locationType")} options={["Virtual", "In Person", "Hybrid"]} /><Field label="Address or meeting link" value={form.addressLink} onChange={change("addressLink")} /><Field label="Registration link" value={form.registrationLink} onChange={change("registrationLink")} /></FormSection><FormSection number="03" title="Description" single><Field label="What should attendees know?" value={form.description} onChange={change("description")} textarea required /></FormSection><div className="form-actions"><button type="button" className="button tertiary" onClick={() => navigate("/my-events")}>Cancel</button><button className="button" disabled={saving}>{saving ? <RefreshCw className="spin" size={16} /> : <Save size={16} />}{saving ? "Saving" : "Save event"}</button></div></form></section></main>;
+  return <main><PageTitle eyebrow={editing ? "Edit Event" : "Add Event"} title={editing ? "Update your event listing." : "Create an event listing."} text="Submitted changes return to Pending Review before they appear publicly." /><section className="content-shell narrow"><form className="editor-form" onSubmit={submit}><FormSection number="01" title="Basic information"><Field label="Event name" value={form.eventName} onChange={change("eventName")} required />{canEditEventHost ? <Field label="Event host" value={form.alternateEventHost} onChange={change("alternateEventHost")} placeholder="Leave blank to use the original host" /> : null}<Field label="Category" value={form.category} onChange={change("category")} placeholder="Wellness, therapy, community..." required /><SelectField label="Audience" value={form.eventAudience} onChange={change("eventAudience")} options={["Community", "For Providers"]} /><SelectField label="Event type" value={form.eventType} onChange={change("eventType")} options={["Workshop", "Circle", "Training", "Referral Room", "Retreat", "Other"]} /></FormSection><FormSection number="02" title="Time and place"><Field label="Start date and time" type="datetime-local" value={form.date} onChange={change("date")} required /><Field label="End date and time" type="datetime-local" value={form.endTime} onChange={change("endTime")} required /><SelectField label="Location type" value={form.locationType} onChange={change("locationType")} options={["Virtual", "In Person", "Hybrid"]} /><Field label="Address or meeting link" value={form.addressLink} onChange={change("addressLink")} /><Field label="Registration link" value={form.registrationLink} onChange={change("registrationLink")} /></FormSection><FormSection number="03" title="Description" single><Field label="What should attendees know?" value={form.description} onChange={change("description")} textarea required /></FormSection><div className="form-actions"><button type="button" className="button tertiary" onClick={() => navigate("/my-events")}>Cancel</button><button className="button" disabled={saving}>{saving ? <RefreshCw className="spin" size={16} /> : <Save size={16} />}{saving ? "Saving" : "Save event"}</button></div></form></section></main>;
 }
 
 function AdminEvents({ navigate, setNotice }) {
@@ -825,6 +841,7 @@ function normalizeUser(user) {
     name: user?.name || metadata.full_name || metadata.name || "",
     roles: user?.roles || appMetadata.roles || [],
     userMetadata: metadata,
+    canEditEventHost: Boolean(user?.canEditEventHost),
   };
 }
 function isProviderUser(user) {

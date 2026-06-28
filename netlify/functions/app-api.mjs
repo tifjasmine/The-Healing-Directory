@@ -186,6 +186,7 @@ const FIELDS = {
     website: ["Website", "Web Site"], consult: ["Consultation / Booking Link", "Consultation Link", "Booking Link", "Schedule Link"],
     approved: ["Approved", "Published", "Show in Directory", "Public"],
     verified: ["Verified", "Verified Member", "Referral Room"],
+    admin: ["Admin", "Administrator"],
     status: ["Status", "Approval Status", "Request Status"],
     inviteSent: ["Invite Sent", "Approval Email Sent", "Provider Invite Sent", "Supabase Invite Sent"],
     inviteSentAt: ["Invite Sent At", "Approval Email Sent At", "Provider Invite Sent At", "Supabase Invite Sent At"],
@@ -217,7 +218,7 @@ const FIELDS = {
     vibe: ["What's Your Vibe?", "What’s Your Vibe?", "Provider Vibe", "Vibe"]
   },
   event: {
-    name: ["Event Name", "Name"], hostName: ["Host Name"], hostEmail: ["Host Email"],
+    name: ["Event Name", "Name"], hostName: ["Host Name"], hostEmail: ["Host Email"], alternateHost: ["Alternate Event Host"],
     category: ["Category"], audience: ["Event Audience", "Visibility"], type: ["Event Type"],
     start: ["Date", "Start Date", "Start Date + Time"], end: ["End Time", "End Date"],
     locationType: ["Location Type"], address: ["Address/Link", "Address or Link"],
@@ -283,7 +284,7 @@ export default async function handler(request) {
       if (action === "bootstrap") return reply(await bootstrap(user));
       if (action === "provider") return reply(await getProvider(url.searchParams.get("id"), user));
       if (action === "event") return reply(await getEvent(url.searchParams.get("id"), user));
-      if (action === "me") return reply({ user: publicUser(user) });
+      if (action === "me") return reply({ user: await publicUserWithPermissions(user) });
       if (action === "directory-options") return reply({ directoryOptions: await getDirectoryOptions() });
       if (action === "event-options") return reply({ eventOptions: await getEventOptions() });
       if (action === "referral-room-public-options") return reply(await referralRoomPublicOptions());
@@ -329,7 +330,7 @@ async function bootstrap(user) {
     savedEventIds = eventSaves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r)).flatMap(eventIds);
   }
 
-  return { configured: true, user: publicUser(user), providers, events, directoryOptions, savedProviderIds: unique(savedProviderIds), savedEventIds: unique(savedEventIds) };
+  return { configured: true, user: await publicUserWithPermissions(user), providers, events, directoryOptions, savedProviderIds: unique(savedProviderIds), savedEventIds: unique(savedEventIds) };
 }
 
 async function getProvider(id, user) {
@@ -350,9 +351,9 @@ async function getEvent(id, user) {
   if (!id) throw httpError(400, "Missing event ID.");
   const event = normalizeEvent(await get("events", id));
   const owns = Boolean(user?.email && lower(event.hostEmail) === lower(user.email));
-  const admin = isAdmin(user);
+  const admin = await canEditEventHost(user);
   if (!event.isPublic && !owns && !admin) throw httpError(404, "Event not found.");
-  return { event };
+  return { event: { ...event, canEditEventHost: admin } };
 }
 
 async function dashboard(user) {
@@ -380,10 +381,11 @@ async function dashboard(user) {
 async function myEvents(user) {
   const [events, saves, account] = await Promise.all([list("events"), list("savedEvents"), ensureSavedItemAccount(user)]);
   const normalized = events.map(normalizeEvent);
-  const hosted = normalized.filter((event) => lower(event.hostEmail) === lower(user.email));
+  const adminHostEditor = await canEditEventHost(user);
+  const hosted = adminHostEditor ? normalized : normalized.filter((event) => lower(event.hostEmail) === lower(user.email));
   const ids = unique(saves.filter((r) => belongsTo(r, user.email, account?.id) && activeRecord(r)).flatMap(eventIds));
   const saved = ids.map((id) => normalized.find((event) => event.id === id)).filter(Boolean);
-  return { hosted, saved };
+  return { hosted, saved, canEditEventHost: adminHostEditor };
 }
 
 async function savedProviders(user) {
@@ -453,10 +455,9 @@ async function toggleEvent(user, body) {
 async function saveEvent(user, body) {
   const uploadedImageUrl = await uploadProviderAsset(body.eventImageUpload, user.email || body.eventName, "event-image");
   const imageUrl = uploadedImageUrl || clean(body.imageUrl);
+  const canEditHost = await canEditEventHost(user);
   const fields = {
     "Event Name": required(body.eventName, "Event name"),
-    "Host Name": publicUser(user)?.name || user.email.split("@")[0],
-    "Host Email": user.email,
     "Category": clean(body.category),
     "Event Audience": clean(body.eventAudience),
     "Event Type": clean(body.eventType),
@@ -470,11 +471,21 @@ async function saveEvent(user, body) {
     "Event Image URL": imageUrl,
     "Status": "Pending Review"
   };
+  if (!body.recordId) {
+    fields["Host Name"] = publicUser(user)?.name || user.email.split("@")[0];
+    fields["Host Email"] = user.email;
+  }
+  if (canEditHost && body.alternateEventHost !== undefined) {
+    fields["Alternate Event Host"] = clean(body.alternateEventHost);
+  }
   removeEmpty(fields);
+  if (canEditHost && body.alternateEventHost !== undefined && !clean(body.alternateEventHost)) {
+    fields["Alternate Event Host"] = "";
+  }
 
   if (body.recordId) {
     const current = normalizeEvent(await get("events", body.recordId));
-    if (lower(current.hostEmail) !== lower(user.email) && !isAdmin(user)) throw httpError(403, "You cannot edit this event.");
+    if (lower(current.hostEmail) !== lower(user.email) && !canEditHost) throw httpError(403, "You cannot edit this event.");
     return { ok: true, event: normalizeEvent(await updateSafe("events", body.recordId, fields)) };
   }
   return { ok: true, event: normalizeEvent(await createSafe("events", fields)) };
@@ -985,9 +996,11 @@ function normalizeProfile(record) {
 function normalizeEvent(record) {
   const f = record.fields || {};
   const status = text(pick(f, FIELDS.event.status)) || "Pending Review";
+  const hostName = text(pick(f, FIELDS.event.hostName));
+  const alternateEventHost = text(pick(f, FIELDS.event.alternateHost));
   return {
     id: record.id, name: text(pick(f, FIELDS.event.name)) || "Event",
-    hostName: text(pick(f, FIELDS.event.hostName)), hostEmail: text(pick(f, FIELDS.event.hostEmail)),
+    hostName: alternateEventHost || hostName, originalHostName: hostName, alternateEventHost, hostEmail: text(pick(f, FIELDS.event.hostEmail)),
     category: text(pick(f, FIELDS.event.category)), audience: text(pick(f, FIELDS.event.audience)),
     eventType: text(pick(f, FIELDS.event.type)), start: text(pick(f, FIELDS.event.start)), end: text(pick(f, FIELDS.event.end)),
     locationType: text(pick(f, FIELDS.event.locationType)), address: text(pick(f, FIELDS.event.address)),
@@ -1789,8 +1802,18 @@ async function optionalUser(request) {
   }
 }
 function isAdmin(user) { return (user?.roles || user?.app_metadata?.roles || []).includes("admin"); }
+async function canEditEventHost(user) {
+  if (!user?.email) return false;
+  if (isAdmin(user)) return true;
+  const record = await findDirectoryByEmail(user.email).catch(() => null);
+  return truthy(pick(record?.fields || {}, FIELDS.provider.admin));
+}
 function hasProviderAccess(user) { const roles = user?.roles || user?.app_metadata?.roles || []; const type = lower(user?.user_metadata?.account_type || user?.userMetadata?.account_type || user?.user_metadata?.accountType || user?.userMetadata?.accountType); return roles.includes("admin") || roles.includes("provider") || type === "provider"; }
 function publicUser(user) { return user ? { id: user.id, email: user.email, name: user.user_metadata?.full_name || user.userMetadata?.full_name || "", roles: user.roles || user.app_metadata?.roles || [], accountType: user.user_metadata?.account_type || user.userMetadata?.account_type || user.user_metadata?.accountType || user.userMetadata?.accountType || "" } : null; }
+async function publicUserWithPermissions(user) {
+  const current = publicUser(user);
+  return current ? { ...current, canEditEventHost: await canEditEventHost(user) } : null;
+}
 function belongsTo(record, email, accountRecordId = "") {
   const fields = record.fields || {};
   if (accountRecordId) {
