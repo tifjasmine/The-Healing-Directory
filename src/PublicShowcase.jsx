@@ -392,8 +392,8 @@ function ProviderDetails({ data, loading, toggleSave }) {
     </div></section>
     <section className="content-shell detail-grid profile-content-grid">
       <div className="detail-main">
-        <ContentSection title={`A little about ${firstName(provider.name)}`}><FormattedText value={provider.bio || "Profile details are being completed."} /></ContentSection>
-        <ContentSection title="Areas of care"><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>
+        <ContentSection kicker="About"><FormattedText value={provider.bio || "Profile details are being completed."} /></ContentSection>
+        <ContentSection kicker="Specialties & support"><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>
         <HumanSideSection provider={provider} />
         <ProviderConnectionSection provider={provider} />
       </div>
@@ -591,7 +591,7 @@ function HumanSideSection({ provider, defaultOpen = true, showHeader = true }) {
     { label: "Favorite comfort practice", value: provider.comfortPractice, icon: <LeafIcon /> },
   ].filter((item) => item.value);
   if (!provider.humanSide && !provider.funFact && !prompts.length) return null;
-  return <ContentSection title="The human side" defaultOpen={defaultOpen} showHeader={showHeader}>
+  return <ContentSection kicker="Get to know your provider" defaultOpen={defaultOpen} showHeader={showHeader}>
     {provider.humanSide ? <p>{provider.humanSide}</p> : null}
     {prompts.length ? <div className="human-grid">{prompts.map((item) => <DetailPrompt key={item.label} {...item} />)}</div> : null}
     {provider.funFact ? <div className="long-note"><strong>Fun facts</strong><p>{provider.funFact}</p></div> : null}
@@ -600,7 +600,7 @@ function HumanSideSection({ provider, defaultOpen = true, showHeader = true }) {
 function ProviderConnectionSection({ provider, defaultOpen = true, showHeader = true }) {
   const hasConnection = provider.referralMethod || provider.referralInstructions || provider.providerNotes || provider.collaborationDetails || provider.collaborationInterests?.length;
   if (!hasConnection) return null;
-  return <ContentSection title="Provider connection details" defaultOpen={defaultOpen} showHeader={showHeader}>
+  return <ContentSection kicker="Provider-only" defaultOpen={defaultOpen} showHeader={showHeader}>
     <div className="connection-grid">
       <DetailPrompt label="Best way to connect" value={provider.referralMethod} icon={<Phone size={20} />} />
       <DetailPrompt label="Connection / referral notes" value={provider.referralInstructions} icon={<Mail size={20} />} />
