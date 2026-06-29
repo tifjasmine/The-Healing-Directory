@@ -12,6 +12,7 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
   const [selectedId, setSelectedId] = React.useState("");
   const [form, setForm] = React.useState({ serviceType: "", specialtyFocus: "", notes: "" });
   const [busy, setBusy] = React.useState("");
+  const [submittedRequest, setSubmittedRequest] = React.useState(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -71,8 +72,9 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
       setNotice(result.request.status === "Waitlist"
         ? `Your request was added to the waitlist: ${result.request.reason}.`
         : "Your Referral Room request was received.");
+      setSubmittedRequest({ ...result.request, sessionId: selectedSession.id });
       await load();
-      setPage("rsvps");
+      setPage("details");
     } catch (error) {
       setNotice(error.message);
     } finally {
@@ -118,6 +120,7 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
               sessions={sessions}
               session={selectedSession}
               request={selectedRequest}
+              submitted={submittedRequest?.sessionId === selectedSession.id ? submittedRequest : null}
               form={form}
               setForm={setForm}
               onSelect={(session) => chooseSession(session, "details")}
@@ -190,7 +193,7 @@ function BrowseView({ sessions, attendance, onDetails, onRequest }) {
   );
 }
 
-function DetailsView({ sessions, session, request, form, setForm, onSelect, onBrowse, onManage, onSubmit, onRemove, busy }) {
+function DetailsView({ sessions, session, request, submitted, form, setForm, onSelect, onBrowse, onManage, onSubmit, onRemove, busy }) {
   if (!session) return <RoomEmpty title="No room selected" text="Choose a room from Browse to see details." />;
   const fullRules = session.rules.filter((rule) => rule.remaining <= 0 || !rule.accepting);
 
@@ -214,7 +217,7 @@ function DetailsView({ sessions, session, request, form, setForm, onSelect, onBr
             <RuleLedger rules={session.rules} approvedProviders={session.approvedProviders || []} />
           </section>
         </article>
-        <SideSeatPanel request={request} session={session} form={form} setForm={setForm} onManage={onManage} onSubmit={onSubmit} onRemove={onRemove} busy={busy} />
+        <SideSeatPanel request={request} submitted={submitted} session={session} form={form} setForm={setForm} onManage={onManage} onSubmit={onSubmit} onRemove={onRemove} busy={busy} />
       </div>
     </section>
   );
@@ -257,7 +260,7 @@ function RsvpColumn({ title, items, onManage }) {
   );
 }
 
-function SideSeatPanel({ request, session, form, setForm, onManage, onSubmit, onRemove, busy }) {
+function SideSeatPanel({ request, submitted, session, form, setForm, onManage, onSubmit, onRemove, busy }) {
   const openRules = (session.rules || []).filter((rule) => rule.accepting !== false && rule.remaining > 0 && session.remaining > 0);
   const selectedRule = (session.rules || []).find((item) => normalize(item.serviceType) === normalize(form?.serviceType));
   const waitlist = form?.serviceType && (session.remaining <= 0 || !selectedRule || selectedRule.remaining <= 0 || selectedRule.accepting === false);
@@ -265,7 +268,12 @@ function SideSeatPanel({ request, session, form, setForm, onManage, onSubmit, on
     <aside className="room-side-panel">
       <section className="seat-card">
         <h2>Your seat</h2>
-        {request ? (
+        {submitted ? (
+          <div className="seat-submit-complete">
+            <strong>Submission complete</strong>
+            <p>Someone will confirm your spot in The Referral Room soon. Looking forward to connecting and learning more about what you do!</p>
+          </div>
+        ) : request ? (
           <>
             <div className="seat-chip"><Status value={request.status} /><strong>{request.serviceType || "Provider type"}</strong></div>
             <button className="room-outline-button" type="button" onClick={onManage}>Manage RSVP</button>
