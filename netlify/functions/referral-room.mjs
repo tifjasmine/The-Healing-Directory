@@ -88,15 +88,12 @@ async function requestSeat(user, body) {
 
   const fields = {
     "Name": `${user.email} - ${session.name}`,
-    "Session": [sessionId],
-    "Provider Email": user.email,
+    "Session Name": [sessionId],
     "Email": user.email,
-    "Provider Name": clean(body.providerName) || displayName(user),
     "Service Type": serviceType,
-    "Specialty Focus": clean(body.specialtyFocus),
+    "Specialty / Focus Area": clean(body.specialtyFocus),
     "Notes": clean(body.notes),
     "Signup Status": status,
-    "Status": status,
     "Waitlist Reason": reason,
     "Attended": false,
     "Verified After Attendance": false,
@@ -155,11 +152,10 @@ async function updateRequest(user, body) {
   const verified = body.verified === true;
   const fields = {
     "Signup Status": status,
-    "Status": status,
     "Waitlist Reason": clean(body.reason),
     "Attended": attended || verified,
     "Verified After Attendance": verified,
-    "Manager Note": clean(body.managerNote),
+    "Notes": clean(body.managerNote),
   };
   removeEmpty(fields, true);
   return { ok: true, request: normalizeAttendance(await update("attendance", id, fields)), admin: user.email };
