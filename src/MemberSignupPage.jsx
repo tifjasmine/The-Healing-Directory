@@ -62,7 +62,7 @@ export default function MemberSignupPage() {
     }
     setBusy(true);
     try {
-      await signup(form.email, form.password, {
+      const authResult = await signup(form.email, form.password, {
         full_name: form.name,
         account_type: "client",
         area_interest: form.areaInterest,
@@ -77,6 +77,10 @@ export default function MemberSignupPage() {
           application: { areaInterest: form.areaInterest },
         },
       });
+      if (authResult?.access_token) {
+        window.location.assign("/client-dashboard");
+        return;
+      }
       setSubmitted(true);
     } catch (error) {
       setNotice(memberErrorMessage(error));
@@ -102,7 +106,7 @@ export default function MemberSignupPage() {
           <span><Heart size={18} /></span>
           <div>
             <h2>Create your member account</h2>
-            <p>Members get immediate access after email verification.</p>
+            <p>Members get immediate access after signup.</p>
           </div>
         </div>
 
