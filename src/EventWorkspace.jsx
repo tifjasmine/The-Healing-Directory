@@ -1,7 +1,7 @@
 import React from "react";
 import { getAccessToken, getUser, logout, refreshSession } from "./authClient.js";
 import {
-  ArrowLeft, CalendarDays, CircleUserRound, Clock, ExternalLink, LogOut, Mail,
+  ArrowLeft, CalendarDays, CircleUserRound, Clock, ExternalLink, LogOut,
   Image as ImageIcon, Info, MapPin, Pencil, Plus, RefreshCw, Search, Save, Send, Sparkles,
 } from "lucide-react";
 
@@ -63,11 +63,10 @@ function MyEvents({ user }) {
   return <main className="my-events-page">
     <section className="my-events-hero"><div>
       <div className="workspace-actions"><button onClick={() => go("/events")}><ArrowLeft size={16} /> Browse Events</button><button className="warm" onClick={() => go("/add-event")}><Plus size={16} /> Add Event</button></div>
-      <p className="eyebrow">The Healing Directory</p><h1>Manage your<br />hosted events.</h1><p>View the workshops, circles, trainings, referral room events, and healing offerings connected to your provider email.</p>
-    </div><aside><Sparkles /><strong>{hosted.length}</strong><span>events connected to your provider email</span><div><Mail size={16} />{user.email}</div></aside></section>
+      <p className="eyebrow">The Healing Directory</p><h1>Manage your<br />hosted events.</h1>
+    </div></section>
     <section className="my-events-panel">
       <div className="my-events-heading"><div><p className="eyebrow ink">My Events</p><h2>Your event listings.</h2></div><button className="button event-gold" onClick={() => go("/add-event")}><Plus size={17} /> Add Event</button></div>
-      <div className="connected-email"><span><strong>Connected provider email</strong><small>Events show here when the Host Email on the event matches this email.</small></span><div>{user.email}</div></div>
       <label className="workspace-search"><Search size={20} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search event name, category, type, audience..." /></label>
       <div className="workspace-filters">{Object.keys(counts).map((key) => <button key={key} className={filter === key ? "active" : ""} onClick={() => setFilter(key)}>{capitalize(key)} <span>{counts[key]}</span></button>)}</div>
     </section>
