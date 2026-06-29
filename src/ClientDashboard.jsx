@@ -4,7 +4,7 @@ import { ArrowRight, CalendarDays, ChevronDown, CircleUserRound, HeartHandshake,
 
 const API = "/.netlify/functions/app-api";
 
-export default function ClientDashboard({ hideHeader = false }) {
+export default function ClientDashboard({ hideHeader = false, previewUser = null, previewPayload = null, readOnly = false }) {
   const [user, setUser] = React.useState(null);
   const [payload, setPayload] = React.useState(null);
   const [tab, setTab] = React.useState("events");
@@ -16,6 +16,11 @@ export default function ClientDashboard({ hideHeader = false }) {
   const headerRef = React.useRef(null);
 
   React.useEffect(() => {
+    if (previewUser && previewPayload) {
+      setUser(previewUser);
+      setPayload({ counts: {}, savedProviders: [], savedProviderItems: [], savedEvents: [], ...previewPayload });
+      return;
+    }
     getUser().then((current) => {
       if (!current) {
         window.location.replace("/login?next=/client-dashboard");
@@ -39,7 +44,7 @@ export default function ClientDashboard({ hideHeader = false }) {
         })
         .catch(() => setPayload({ counts: {}, savedProviders: [], savedProviderItems: [], savedEvents: [] }));
     });
-  }, []);
+  }, [previewUser, previewPayload]);
 
   React.useEffect(() => {
     const next = {};
@@ -65,6 +70,7 @@ export default function ClientDashboard({ hideHeader = false }) {
   const savedProviders = payload.savedProviderItems || [];
 
   async function saveProviderNote(item) {
+    if (readOnly) return;
     const providerId = item.provider?.id;
     if (!providerId) return;
     setSavingNote(providerId);
@@ -106,7 +112,7 @@ export default function ClientDashboard({ hideHeader = false }) {
       <section className="client-dashboard-content">
         <div className="client-saved-panel">
           <div className="client-tabs"><button className={tab === "events" ? "active" : ""} onClick={() => setTab("events")}>Saved Workshops</button><button className={tab === "providers" ? "active" : ""} onClick={() => setTab("providers")}>Saved Providers</button></div>
-          {tab === "events" ? <SavedList items={savedEvents} kind="event" /> : <SavedList items={savedProviders} kind="provider" noteDrafts={noteDrafts} setNoteDrafts={setNoteDrafts} savingNote={savingNote} savedNotes={savedNotes} openNotes={openNotes} setOpenNotes={setOpenNotes} onSaveNote={saveProviderNote} />}
+          {tab === "events" ? <SavedList items={savedEvents} kind="event" /> : <SavedList items={savedProviders} kind="provider" noteDrafts={noteDrafts} setNoteDrafts={setNoteDrafts} savingNote={savingNote} savedNotes={savedNotes} openNotes={openNotes} setOpenNotes={setOpenNotes} onSaveNote={saveProviderNote} readOnly={readOnly} />}
         </div>
       </section>
     </main>
@@ -115,7 +121,7 @@ export default function ClientDashboard({ hideHeader = false }) {
 
 function ClientStat({ label, value }) { return <div className="client-stat"><span>{label}</span><strong>{Number(value || 0)}</strong></div>; }
 
-function SavedList({ items, kind, noteDrafts = {}, setNoteDrafts, savingNote, savedNotes = {}, openNotes = {}, setOpenNotes, onSaveNote }) {
+function SavedList({ items, kind, noteDrafts = {}, setNoteDrafts, savingNote, savedNotes = {}, openNotes = {}, setOpenNotes, onSaveNote, readOnly = false }) {
   if (!items.length) return <div className="client-empty"><h2>No saved {kind === "event" ? "workshops" : "providers"} yet</h2><p>{kind === "event" ? "When you save a workshop, circle, or healing experience, it will show up here." : "Providers you save will become your private healing shortlist."}</p><button className="button client-side-button" onClick={() => go(kind === "event" ? "/events" : "/")}>{kind === "event" ? "Browse Workshops" : "Find Providers"}</button></div>;
   return <div className={`client-saved-list ${kind === "event" ? "event-list" : "provider-list"}`}>{items.map((item, index) => {
     const record = item.event || item.provider || item;
@@ -124,13 +130,13 @@ function SavedList({ items, kind, noteDrafts = {}, setNoteDrafts, savingNote, sa
     if (kind === "provider") {
       const open = Boolean(openNotes[record.id]);
       return <article className="saved-provider-note-card compact" key={record.id || item.id || index}>
-        <div className="saved-provider-main"><button className="saved-provider-photo-button" type="button" onClick={() => go(path)}>{record.photo ? <img src={record.photo} alt="" /> : <span>{initials(title)}</span>}</button><button className="saved-provider-title-button" type="button" onClick={() => go(path)}><strong>{title}</strong><small>{providerTypeLabel(record) || record.profession || record.email || "Provider"}</small></button><button className="saved-note-toggle" type="button" aria-expanded={open} onClick={() => setOpenNotes?.((current) => ({ ...current, [record.id]: !open }))}><span>{noteDrafts[record.id] ? "Edit note" : "Add note"}</span><ChevronDown size={17} /></button><ArrowRight size={18} /></div>
+        <div className="saved-provider-main"><button className="saved-provider-photo-button" type="button" onClick={() => go(path)}>{record.photo ? <img src={record.photo} alt="" /> : <span>{initials(title)}</span>}</button><button className="saved-provider-title-button" type="button" onClick={() => go(path)}><strong>{title}</strong><small>{providerTypeLabel(record) || record.profession || record.email || "Provider"}</small></button><button className="saved-note-toggle" type="button" aria-expanded={open} onClick={() => setOpenNotes?.((current) => ({ ...current, [record.id]: !open }))}><span>{readOnly ? "View note" : noteDrafts[record.id] ? "Edit note" : "Add note"}</span><ChevronDown size={17} /></button><ArrowRight size={18} /></div>
         {open ? <div className="saved-note-editor"><label className="private-note-field">
             <span>Private note</span>
             <small>Only you can see this. Providers cannot see your notes.</small>
-            <textarea value={noteDrafts[record.id] || ""} onChange={(event) => setNoteDrafts?.((current) => ({ ...current, [record.id]: event.target.value }))} placeholder="Add a reminder for yourself..." rows={3} />
+            <textarea value={noteDrafts[record.id] || ""} disabled={readOnly} onChange={(event) => setNoteDrafts?.((current) => ({ ...current, [record.id]: event.target.value }))} placeholder="Add a reminder for yourself..." rows={3} />
           </label>
-          <button className="button tertiary note-save-button" type="button" disabled={savingNote === record.id} onClick={() => onSaveNote?.(item)}>{savingNote === record.id ? <RefreshCw className="spin" size={15} /> : <Save size={15} />}{savedNotes[record.id] ? "Saved" : "Save note"}</button></div> : noteDrafts[record.id] ? <p className="saved-note-preview">{notePreview(noteDrafts[record.id])}</p> : null}
+          {!readOnly ? <button className="button tertiary note-save-button" type="button" disabled={savingNote === record.id} onClick={() => onSaveNote?.(item)}>{savingNote === record.id ? <RefreshCw className="spin" size={15} /> : <Save size={15} />}{savedNotes[record.id] ? "Saved" : "Save note"}</button> : null}</div> : noteDrafts[record.id] ? <p className="saved-note-preview">{notePreview(noteDrafts[record.id])}</p> : null}
       </article>;
     }
     return <button key={record.id || item.id || index} className="client-saved-row saved-event-row" onClick={() => go(path)}>{record.image ? <img src={record.image} alt="" /> : <span className="client-saved-mark"><CalendarDays size={19} /></span>}<span><strong>{title}</strong><small>{formatDate(record.start || record.date)}</small></span><ArrowRight size={18} /></button>;

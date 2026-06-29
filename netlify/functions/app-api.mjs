@@ -294,6 +294,7 @@ export default async function handler(request) {
       if (action === "my-events") return reply(await myEvents(requireUser(user)));
       if (action === "saved-providers") return reply(await savedProviders(requireUser(user)));
       if (action === "admin-events") return reply(await adminEvents(requireAdmin(user)));
+      if (action === "view-as") return reply(await adminViewAs(await requirePreviewAdmin(user), url.searchParams.get("email")));
       if (action === "account-settings") return reply(await accountSettings(requireUser(user)));
       if (action === "my-profile") return reply(await myProfile(requireUser(user)));
       return reply({ error: "Unknown action." }, 404);
@@ -530,6 +531,92 @@ async function adminEvents() {
   const records = await list("events");
   const events = records.map(normalizeEvent).sort((a, b) => dateValue(b.created || b.start) - dateValue(a.created || a.start));
   return { events, counts: events.reduce((out, event) => { const key = statusKey(event.status); out[key] = (out[key] || 0) + 1; out.total += 1; return out; }, { total: 0 }) };
+}
+
+async function adminViewAs(_admin, email) {
+  const targetEmail = requiredEmail(email);
+  const preview = await dashboardPreviewForEmail(targetEmail);
+  return { ok: true, ...preview };
+}
+
+async function dashboardPreviewForEmail(email) {
+  const cleanEmail = requiredEmail(email);
+  const [providers, events, providerSaves, eventSaves, memberAccount, directoryAccount] = await Promise.all([
+    list("directory"),
+    list("events"),
+    list("savedProviders"),
+    list("savedEvents"),
+    findSignupByEmail("client", cleanEmail).catch(() => null),
+    findDirectoryByEmail(cleanEmail).catch(() => null),
+  ]);
+  const accountType = previewAccountType(memberAccount, directoryAccount);
+  const accountRecord = accountType === "provider" ? directoryAccount || memberAccount : memberAccount || directoryAccount;
+  const account = previewAccountDetails(cleanEmail, accountType, accountRecord);
+  const providerMap = new Map(providers.map((record) => [record.id, normalizeProvider(record)]));
+  const eventMap = new Map(events.map((record) => [record.id, normalizeEvent(record)]));
+  const matchesTarget = (record) => [memberAccount?.id, directoryAccount?.id, ""].some((id) => belongsTo(record, cleanEmail, id));
+  const myProviderSaves = providerSaves.filter((record) => matchesTarget(record) && activeRecord(record));
+  const myEventSaves = eventSaves.filter((record) => matchesTarget(record) && activeRecord(record));
+  const savedProviderItems = myProviderSaves.map((record) => {
+    const provider = providerMap.get(providerIds(record)[0]);
+    if (!provider) return null;
+    return {
+      id: record.id,
+      active: activeRecord(record),
+      notes: text(pick(record.fields || {}, SAVE_FIELD_SETS.providerSave.notes)),
+      savedAt: text(pick(record.fields || {}, ["Saved At", "Created", "Created At", "Created Date", "Date"])),
+      provider
+    };
+  }).filter(Boolean);
+  const savedProviders = unique(myProviderSaves.flatMap(providerIds)).map((id) => providerMap.get(id)).filter(Boolean);
+  const savedEvents = unique(myEventSaves.flatMap(eventIds)).map((id) => eventMap.get(id)).filter(Boolean);
+  const myEvents = accountType === "provider"
+    ? events.map(normalizeEvent).filter((event) => lower(event.hostEmail) === lower(cleanEmail))
+    : [];
+  const upcoming = savedEvents.filter((event) => event.start && new Date(event.start).getTime() >= Date.now()).length;
+  return {
+    user: {
+      email: cleanEmail,
+      name: account.name || cleanEmail,
+      roles: accountType === "provider" ? ["provider"] : [],
+      accountType,
+      userMetadata: { full_name: account.name || cleanEmail, account_type: accountType },
+    },
+    account,
+    accountType,
+    dashboard: {
+      account,
+      savedProviders,
+      savedProviderItems,
+      savedEvents,
+      myEvents,
+      referralRequests: [],
+      referralSessions: [],
+      counts: { savedProviders: savedProviders.length, savedEvents: savedEvents.length, upcomingEvents: upcoming }
+    }
+  };
+}
+
+function previewAccountType(memberAccount, directoryAccount) {
+  const memberType = lower(text(pick(memberAccount?.fields || {}, SAVE_FIELD_SETS.clientSignup.accountType)));
+  const directoryType = lower(text(pick(directoryAccount?.fields || {}, FIELDS.provider.accountType)));
+  if (memberType === "provider" || directoryType === "provider") return "provider";
+  return "client";
+}
+
+function previewAccountDetails(email, accountType, record) {
+  const fields = record?.fields || {};
+  const names = accountType === "provider" ? FIELDS.provider.name : SAVE_FIELD_SETS.clientSignup.name;
+  const interests = accountType === "provider"
+    ? array(pick(fields, FIELDS.provider.type))
+    : array(pick(fields, SAVE_FIELD_SETS.clientSignup.areaInterest));
+  return {
+    id: record?.id || "",
+    name: text(pick(fields, names)) || email,
+    email,
+    accountType,
+    interests
+  };
 }
 
 async function updateAdminEvent(user, body) {
@@ -1324,6 +1411,10 @@ async function safeAirtableSignup(table, accountType, body) {
     const nextFields = { ...fields };
     if (!body.overwriteName) delete nextFields[mapped.name];
     nextFields[mapped.status] = body.status;
+    const existingAccountType = lower(text(pick(existing.fields || {}, [mapped.accountType])));
+    if (existingAccountType === "provider" && lower(body.accountType) !== "provider") {
+      delete nextFields[mapped.accountType];
+    }
     try {
       return updateSafe(table, existing.id, nextFields);
     } catch (error) {
@@ -1607,14 +1698,22 @@ async function ensureSaverAccount(user) {
 }
 
 async function ensureSavedItemAccount(user) {
+  const accountType = await savedItemAccountType(user);
   return ensureMemberAccount({
     email: user.email,
     name: publicUser(user)?.name || user.email.split("@")[0],
-    accountType: "client",
+    accountType,
     status: "Approved",
     areaInterest: user.user_metadata?.area_interest || user.userMetadata?.area_interest || user.user_metadata?.areaInterest || user.userMetadata?.areaInterest,
     source: "app"
   });
+}
+
+async function savedItemAccountType(user) {
+  if (accountTypeForUser(user) === "provider") return "provider";
+  const directory = await findDirectoryByEmail(user.email).catch(() => null);
+  const directoryType = lower(text(pick(directory?.fields || {}, FIELDS.provider.accountType)));
+  return directoryType === "provider" ? "provider" : "client";
 }
 
 async function findSaverAccount(user) {
@@ -1628,10 +1727,11 @@ async function findSavedItemAccount(user) {
 }
 
 async function ensureMemberAccount(body) {
+  const accountType = lower(body.accountType) === "provider" ? "provider" : "client";
   const record = await safeAirtableSignup("clients", "client", {
     name: body.name,
     email: body.email,
-    accountType: "client",
+    accountType,
     status: body.status || "Approved",
     areaInterest: body.areaInterest,
     source: body.source || "app",
@@ -1803,6 +1903,11 @@ async function airtable(key, id = "", options = {}) {
 
 function requireUser(user) { if (!user?.email) throw httpError(401, "Please log in."); return user; }
 function requireAdmin(user) { requireUser(user); if (!isAdmin(user)) throw httpError(403, "Administrator access is required."); return user; }
+async function requirePreviewAdmin(user) {
+  requireUser(user);
+  if (isAdmin(user) || await canEditEventHost(user)) return user;
+  throw httpError(403, "Administrator access is required.");
+}
 async function optionalUser(request) {
   if (!request?.headers?.get("authorization")) return null;
   try {

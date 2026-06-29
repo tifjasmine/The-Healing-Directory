@@ -11,6 +11,7 @@ import ReferralRoomAdminPage from "./ReferralRoomAdminPage.jsx";
 import ReferralRoomProviderPage from "./ReferralRoomProviderPage.jsx";
 import ReferralRoomSignupPage from "./ReferralRoomSignupPage.jsx";
 import ReferralRoomManagerPage from "./ReferralRoomManagerPage.jsx";
+import AdminViewAsPage from "./AdminViewAsPage.jsx";
 import TermsPage from "./TermsPage.jsx";
 import PrivacyPage from "./PrivacyPage.jsx";
 import "./event-workspace-theme.css";
@@ -80,6 +81,7 @@ export default function Root() {
   if (AUTH_ROUTES.has(path)) return <AuthAccess path={path} />;
   if (LEGAL_ROUTES.has(path)) return path === "/terms" ? <TermsPage /> : <PrivacyPage />;
   if (PUBLIC_REFERRAL_ROUTES.has(path)) return <ReferralRoomSignupPage />;
+  if (path === "/admin/view-as") return <AdminViewAsPage />;
   if (SHOWCASE_ROUTES.has(path)) return <PublicShowcase path={path} />;
   if (EVENT_WORKSPACE_ROUTES.has(path)) return <EventWorkspace path={path} />;
   if (path === "/client-dashboard") return <ClientDashboard />;

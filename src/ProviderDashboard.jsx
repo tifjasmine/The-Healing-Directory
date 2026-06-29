@@ -15,7 +15,7 @@ import {
 
 const API = "/.netlify/functions/app-api";
 
-export default function ProviderDashboard({ hideHeader = false }) {
+export default function ProviderDashboard({ hideHeader = false, previewUser = null, previewPayload = null, readOnly = false }) {
   const [user, setUser] = React.useState(null);
   const [payload, setPayload] = React.useState(null);
   const [tab, setTab] = React.useState("providers");
@@ -25,6 +25,11 @@ export default function ProviderDashboard({ hideHeader = false }) {
   const [savedNotes, setSavedNotes] = React.useState({});
 
   React.useEffect(() => {
+    if (previewUser && previewPayload) {
+      setUser(previewUser);
+      setPayload({ ...emptyPayload(), ...previewPayload });
+      return;
+    }
     getUser().then((current) => {
       if (!current) {
         window.location.replace("/login?next=/dashboard");
@@ -43,7 +48,7 @@ export default function ProviderDashboard({ hideHeader = false }) {
       setUser(normalized);
       loadDashboard().then(setPayload).catch(() => setPayload(emptyPayload()));
     });
-  }, []);
+  }, [previewUser, previewPayload]);
 
   React.useEffect(() => {
     const next = {};
@@ -63,6 +68,7 @@ export default function ProviderDashboard({ hideHeader = false }) {
   ];
 
   async function saveProviderNote(item) {
+    if (readOnly) return;
     const providerId = item.provider?.id;
     if (!providerId) return;
     setSavingNote(providerId);
@@ -98,7 +104,10 @@ export default function ProviderDashboard({ hideHeader = false }) {
           <h1>Welcome back, {firstName(user.name || user.email)}.</h1>
           <p>Saved providers, workshops, your events, and The Referral Room requests live here.</p>
         </div>
-        <button className="button provider-dashboard-primary" type="button" onClick={() => go("/edit-profile")}>Edit profile <ArrowRight size={16} /></button>
+        <div className="provider-dashboard-hero-actions">
+          {payload.canEditEventHost ? <button className="button provider-dashboard-secondary" type="button" onClick={() => go("/admin/view-as")}>View as user</button> : null}
+          <button className="button provider-dashboard-primary" type="button" onClick={() => go("/edit-profile")}>Edit profile <ArrowRight size={16} /></button>
+        </div>
       </section>
 
       <section className="simple-dashboard-shell">
@@ -112,7 +121,7 @@ export default function ProviderDashboard({ hideHeader = false }) {
           ))}
         </div>
 
-        {tab === "providers" ? <SavedProviderPanel items={payload.savedProviderItems} noteDrafts={noteDrafts} setNoteDrafts={setNoteDrafts} savingNote={savingNote} savedNotes={savedNotes} openNotes={openNotes} setOpenNotes={setOpenNotes} onSaveNote={saveProviderNote} /> : null}
+        {tab === "providers" ? <SavedProviderPanel items={payload.savedProviderItems} noteDrafts={noteDrafts} setNoteDrafts={setNoteDrafts} savingNote={savingNote} savedNotes={savedNotes} openNotes={openNotes} setOpenNotes={setOpenNotes} onSaveNote={saveProviderNote} readOnly={readOnly} /> : null}
         {tab === "events" ? <SavedEventPanel items={payload.savedEvents} /> : null}
         {tab === "mine" ? <MyEventsPanel items={payload.myEvents} referralRequests={payload.referralRequests} /> : null}
         {tab === "referral" ? <ReferralPanel items={payload.referralRequests} sessions={payload.referralSessions} /> : null}
@@ -121,7 +130,7 @@ export default function ProviderDashboard({ hideHeader = false }) {
   </div>;
 }
 
-function SavedProviderPanel({ items, noteDrafts, setNoteDrafts, savingNote, savedNotes, openNotes, setOpenNotes, onSaveNote }) {
+function SavedProviderPanel({ items, noteDrafts, setNoteDrafts, savingNote, savedNotes, openNotes, setOpenNotes, onSaveNote, readOnly = false }) {
   if (!items.length) return <EmptyPanel title="No saved providers yet" text="Save providers from the directory and they will show up here for referrals or follow-up." action="Browse providers" path="/" />;
   return <div className="simple-dashboard-list">
     {items.map((item) => {
@@ -136,7 +145,7 @@ function SavedProviderPanel({ items, noteDrafts, setNoteDrafts, savingNote, save
             <small>{providerTypeLabel(provider) || provider.profession || provider.email || "Provider"}</small>
           </button>
           <button className="saved-note-toggle" type="button" aria-expanded={open} onClick={() => setOpenNotes((current) => ({ ...current, [providerId]: !open }))}>
-            <span>{noteDrafts[providerId] ? "Edit note" : "Add note"}</span>
+            <span>{readOnly ? "View note" : noteDrafts[providerId] ? "Edit note" : "Add note"}</span>
             <ChevronDown size={17} />
           </button>
           <ArrowRight size={18} />
@@ -145,12 +154,12 @@ function SavedProviderPanel({ items, noteDrafts, setNoteDrafts, savingNote, save
           <label className="private-note-field">
             <span>Private note</span>
             <small>Only you can see this. Providers cannot see your notes.</small>
-            <textarea value={noteDrafts[providerId] || ""} onChange={(event) => setNoteDrafts((current) => ({ ...current, [providerId]: event.target.value }))} placeholder="Add a reminder, referral context, or why this provider felt aligned..." rows={3} />
+            <textarea value={noteDrafts[providerId] || ""} disabled={readOnly} onChange={(event) => setNoteDrafts((current) => ({ ...current, [providerId]: event.target.value }))} placeholder="Add a reminder, referral context, or why this provider felt aligned..." rows={3} />
           </label>
-          <button className="button tertiary note-save-button" type="button" disabled={savingNote === providerId} onClick={() => onSaveNote(item)}>
+          {!readOnly ? <button className="button tertiary note-save-button" type="button" disabled={savingNote === providerId} onClick={() => onSaveNote(item)}>
             {savingNote === providerId ? <RefreshCw className="spin" size={15} /> : <Save size={15} />}
             {savedNotes[providerId] ? "Saved" : "Save note"}
-          </button>
+          </button> : null}
         </div> : noteDrafts[providerId] ? <p className="saved-note-preview">{savedNotes[providerId] ? "Note saved." : "Private note saved."}</p> : null}
       </article>;
     })}
@@ -336,6 +345,7 @@ async function loadDashboard() {
     ...dashboard,
     savedProviderItems: (savedProviders.items || []).filter((item) => item.active !== false),
     myEvents: myEvents.hosted || [],
+    canEditEventHost: Boolean(myEvents.canEditEventHost),
     referralRequests: (referralRoom.attendance || []).filter((item) => !item.attended),
     referralSessions: referralRoom.sessions || [],
   };
