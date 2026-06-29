@@ -31,7 +31,7 @@ export default function AdminViewAsPage() {
       window.history.replaceState({}, "", url);
     } catch (caught) {
       setPreview(null);
-      setError(caught.message || "Preview could not load.");
+      setError(caught.message || "No user found for that email.");
     } finally {
       setBusy(false);
     }

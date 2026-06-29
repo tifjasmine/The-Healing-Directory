@@ -560,6 +560,7 @@ async function dashboardPreviewForEmail(email) {
     findDirectoryByEmail(cleanEmail).catch(() => null),
   ]);
   const accountType = previewAccountType(memberAccount, providerSignup, directoryAccount);
+  if (!memberAccount && !providerSignup && !directoryAccount) throw httpError(404, "No user found for that email.");
   const accountRecord = accountType === "provider" ? directoryAccount || providerSignup || memberAccount : memberAccount || directoryAccount || providerSignup;
   const account = previewAccountDetails(cleanEmail, accountType, accountRecord);
   const providerMap = new Map(providers.map((record) => [record.id, normalizeProvider(record)]));
