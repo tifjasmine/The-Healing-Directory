@@ -178,17 +178,17 @@ function normalizeSession(record, attendance, rules, providers = []) {
   const f = record.fields || {};
   const id = record.id;
   const linkedAttendance = attendance.filter((item) => item.sessionId === id);
-  const acceptedAttendance = linkedAttendance.filter(isSeatHolding);
+  const acceptedAttendance = uniqueAttendance(linkedAttendance.filter(isSeatHolding));
   const providerMap = {
     byEmail: new Map(providers.filter((item) => item.email).map((item) => [lower(item.email), item])),
     byId: new Map(providers.filter((item) => item.id).map((item) => [item.id, item])),
   };
   const accepted = acceptedAttendance.length;
   const totalSeats = Number(value(f, ["Total Seats", "Total Seat Cap", "Total Limit"])) || totalSeatsFromNotes(text(value(f, ["Notes"]))) || 8;
-  const sessionRules = rules.map(normalizeRule).filter((rule) => rule.sessionId === id).map((rule) => {
-    const approvedProviders = acceptedAttendance
+  const sessionRules = uniqueRulesByType(rules.map(normalizeRule).filter((rule) => rule.sessionId === id)).map((rule) => {
+    const approvedProviders = uniqueApprovedProviders(acceptedAttendance
       .filter((item) => providerTypeMatches(attendanceServiceType(item, providerMap), rule.serviceType))
-      .map((item) => approvedProvider(item, providerMap));
+      .map((item) => approvedProvider(item, providerMap)));
     const taken = approvedProviders.length;
     return { ...rule, taken, remaining: Math.max(rule.seatLimit - taken, 0), approvedProviders };
   });
@@ -198,8 +198,39 @@ function normalizeSession(record, attendance, rules, providers = []) {
     status: text(value(f, ["Status"])) || "Open", description: text(value(f, ["Description"])),
     notes: text(value(f, ["Notes", "Internal Notes"])), totalSeats, accepted,
     remaining: Math.max(totalSeats - accepted, 0), rules: sessionRules,
-    approvedProviders: acceptedAttendance.map((item) => approvedProvider(item, providerMap)),
+    approvedProviders: uniqueApprovedProviders(acceptedAttendance.map((item) => approvedProvider(item, providerMap))),
   };
+}
+
+function uniqueRulesByType(rules = []) {
+  const seen = new Set();
+  return rules.filter((rule) => {
+    const key = compact(rule.serviceType);
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function uniqueAttendance(items = []) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = compact([item.providerIds?.[0], item.email, item.serviceType, item.sessionId].filter(Boolean).join("|")) || item.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function uniqueApprovedProviders(providers = []) {
+  const seen = new Set();
+  return providers.filter((provider) => {
+    const key = compact([provider.profileId, provider.email, provider.name, provider.serviceType].filter(Boolean).join("|")) || provider.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function approvedProvider(item, providerMap) {
