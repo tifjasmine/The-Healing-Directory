@@ -550,16 +550,17 @@ async function adminViewAs(_admin, email) {
 
 async function dashboardPreviewForEmail(email) {
   const cleanEmail = requiredEmail(email);
-  const [providers, events, providerSaves, eventSaves, memberAccount, directoryAccount] = await Promise.all([
+  const [providers, events, providerSaves, eventSaves, memberAccount, providerSignup, directoryAccount] = await Promise.all([
     list("directory"),
     list("events"),
     list("savedProviders"),
     list("savedEvents"),
     findSignupByEmail("client", cleanEmail).catch(() => null),
+    findSignupByEmail("provider", cleanEmail).catch(() => null),
     findDirectoryByEmail(cleanEmail).catch(() => null),
   ]);
-  const accountType = previewAccountType(memberAccount, directoryAccount);
-  const accountRecord = accountType === "provider" ? directoryAccount || memberAccount : memberAccount || directoryAccount;
+  const accountType = previewAccountType(memberAccount, providerSignup, directoryAccount);
+  const accountRecord = accountType === "provider" ? directoryAccount || providerSignup || memberAccount : memberAccount || directoryAccount || providerSignup;
   const account = previewAccountDetails(cleanEmail, accountType, accountRecord);
   const providerMap = new Map(providers.map((record) => [record.id, normalizeProvider(record)]));
   const eventMap = new Map(events.map((record) => [record.id, normalizeEvent(record)]));
@@ -606,11 +607,25 @@ async function dashboardPreviewForEmail(email) {
   };
 }
 
-function previewAccountType(memberAccount, directoryAccount) {
+function previewAccountType(memberAccount, providerSignup, directoryAccount) {
   const memberType = lower(text(pick(memberAccount?.fields || {}, SAVE_FIELD_SETS.clientSignup.accountType)));
+  const providerSignupType = lower(text(pick(providerSignup?.fields || {}, SAVE_FIELD_SETS.providerSignup.accountType)));
   const directoryType = lower(text(pick(directoryAccount?.fields || {}, FIELDS.provider.accountType)));
-  if (memberType === "provider" || directoryType === "provider") return "provider";
+  if (memberType === "provider" || providerSignupType === "provider" || directoryType === "provider") return "provider";
+  if (providerSignup) return "provider";
+  if (hasDirectoryProviderSignals(directoryAccount)) return "provider";
   return "client";
+}
+
+function hasDirectoryProviderSignals(directoryAccount) {
+  const fields = directoryAccount?.fields || {};
+  return Boolean(directoryAccount && (
+    array(pick(fields, FIELDS.provider.type)).length ||
+    truthy(pick(fields, FIELDS.provider.approved)) ||
+    truthy(pick(fields, FIELDS.provider.inviteApproved)) ||
+    truthy(pick(fields, FIELDS.provider.inviteSent)) ||
+    lower(text(pick(fields, FIELDS.provider.status))) === "active"
+  ));
 }
 
 function previewAccountDetails(email, accountType, record) {
@@ -1764,14 +1779,7 @@ async function resolvedAccountType(user) {
   const memberType = lower(text(pick(memberAccount?.fields || {}, SAVE_FIELD_SETS.clientSignup.accountType)));
   if (memberType === "provider") return "provider";
   const directoryFields = directoryAccount?.fields || {};
-  const hasProviderSignals = Boolean(directoryAccount && (
-    array(pick(directoryFields, FIELDS.provider.type)).length ||
-    truthy(pick(directoryFields, FIELDS.provider.approved)) ||
-    truthy(pick(directoryFields, FIELDS.provider.inviteApproved)) ||
-    truthy(pick(directoryFields, FIELDS.provider.inviteSent)) ||
-    lower(text(pick(directoryFields, FIELDS.provider.status))) === "active"
-  ));
-  return hasProviderSignals ? "provider" : "client";
+  return hasDirectoryProviderSignals(directoryAccount) ? "provider" : "client";
 }
 
 function accountInterests(accountRecord, signupRecord, accountType) {
