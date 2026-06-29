@@ -185,6 +185,7 @@ const FIELDS = {
     availabilitySpecifics: ["Current Availability", "Availability Specifics", "Availability Details", "Availability Notes"],
     website: ["Website", "Web Site"], consult: ["Consultation / Booking Link", "Consultation Link", "Booking Link", "Schedule Link"],
     approved: ["Approved", "Published", "Show in Directory", "Public"],
+    inviteApproved: ["MOBILE APPROVE HERE"],
     verified: ["Verified", "Verified Member", "Referral Room"],
     admin: ["Admin", "Administrator"],
     status: ["Status", "Approval Status", "Request Status"],
@@ -549,8 +550,8 @@ async function providerApprovedInvite(user, body, request) {
   const fields = record.fields || {};
   const email = requiredEmail(body.email || text(pick(fields, FIELDS.provider.email)));
   const name = clean(body.name || text(pick(fields, FIELDS.provider.name)) || email.split("@")[0]);
-  const approved = truthy(body.approved ?? pick(fields, FIELDS.provider.approved));
-  if (!approved) throw httpError(400, "Provider is not approved yet.");
+  const inviteApproved = truthy(body.inviteApproved ?? pick(fields, FIELDS.provider.inviteApproved));
+  if (!inviteApproved) throw httpError(400, "Provider invite is not approved yet.");
 
   const alreadySent = truthy(pick(fields, FIELDS.provider.inviteSent));
   if (alreadySent && lower(body.force) !== "true" && body.force !== true) {

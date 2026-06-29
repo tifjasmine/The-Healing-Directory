@@ -70,7 +70,7 @@ In Airtable, add optional fields to the Directory table:
 
 Create an Airtable Automation:
 
-- Trigger: when `Approved` is checked and `Invite Sent` is not checked.
+- Trigger: when `MOBILE APPROVE HERE` is checked and `Invite Sent` is not checked.
 - Action: Webhook / Send web request.
 - Method: `POST`
 - URL: `https://thehealingdirectory.com/.netlify/functions/app-api?action=provider-approved-invite`
