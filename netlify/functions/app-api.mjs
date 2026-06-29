@@ -220,7 +220,7 @@ const FIELDS = {
     vibe: ["What's Your Vibe?", "What’s Your Vibe?", "Provider Vibe", "Vibe"]
   },
   event: {
-    name: ["Event Name", "Name"], hostName: ["Host Name"], hostEmail: ["Host Email"], alternateHost: ["Alternate Event Host"],
+    name: ["Event Name", "Name"], hostName: ["Name (from Host Name)", "Host Name"], hostRecord: ["Host Name"], hostEmail: ["Email (from Host Name)", "Host Email"], alternateHost: ["Alternate Event Host"],
     category: ["Category"], audience: ["Event Audience", "Visibility"], type: ["Event Type"],
     start: ["Date", "Start Date", "Start Date + Time"], end: ["End Time", "End Date"],
     locationType: ["Location Type"], address: ["Address/Link", "Address or Link"],
@@ -458,6 +458,7 @@ async function saveEvent(user, body) {
   const uploadedImageUrl = await uploadProviderAsset(body.eventImageUpload, user.email || body.eventName, "event-image");
   const imageUrl = uploadedImageUrl || clean(body.imageUrl);
   const canEditHost = await canEditEventHost(user);
+  const table = await metadataTable("events").catch(() => null);
   const fields = {
     "Event Name": required(body.eventName, "Event name"),
     "Category": clean(body.category),
@@ -474,8 +475,9 @@ async function saveEvent(user, body) {
     "Status": "Pending Review"
   };
   if (!body.recordId) {
-    fields["Host Name"] = publicUser(user)?.name || user.email.split("@")[0];
-    fields["Host Email"] = user.email;
+    const hostRecord = await findDirectoryByEmail(user.email).catch(() => null);
+    setResolvedAlias(fields, table, FIELDS.event.hostRecord, hostRecord?.id || publicUser(user)?.name || user.email.split("@")[0]);
+    setResolvedAlias(fields, table, FIELDS.event.hostEmail, user.email);
   }
   if (canEditHost && body.alternateEventHost !== undefined) {
     fields["Alternate Event Host"] = clean(body.alternateEventHost);
@@ -532,8 +534,9 @@ async function adminEvents() {
 
 async function updateAdminEvent(user, body) {
   if (!body.recordId) throw httpError(400, "Missing event ID.");
+  const table = await metadataTable("events").catch(() => null);
   const fields = {};
-  if (body.status !== undefined) fields.Status = clean(body.status);
+  if (body.status !== undefined) setResolvedAlias(fields, table, FIELDS.event.status, clean(body.status));
   if (body.eventName !== undefined) fields["Event Name"] = clean(body.eventName);
   if (body.description !== undefined) fields.Description = String(body.description || "").trim();
   if (body.adminNotes !== undefined) fields["Admin Notes"] = String(body.adminNotes || "").trim();
@@ -1519,6 +1522,7 @@ function setMappedField(fields, fieldName, value) {
 function setAirtableValue(fields, table, fieldName, value) {
   if (!fieldName) return;
   const field = table?.fields?.find((item) => item.name === fieldName);
+  if (field && isComputedField(field)) return;
   if (field?.type === "multipleRecordLinks") {
     const links = arrayRaw(value).map(clean).filter((item) => item.startsWith("rec"));
     if (links.length) fields[fieldName] = links;
@@ -1544,6 +1548,10 @@ function setAirtableValue(fields, table, fieldName, value) {
   else nextValue = clean(value);
   if (Array.isArray(nextValue) ? !nextValue.length : nextValue === "" || nextValue === undefined || nextValue === null) return;
   fields[fieldName] = nextValue;
+}
+
+function isComputedField(field) {
+  return ["aiText", "autoNumber", "barcode", "button", "createdBy", "createdTime", "externalSyncSource", "formula", "lastModifiedBy", "lastModifiedTime", "lookup", "multipleLookupValues", "rollup"].includes(field?.type);
 }
 
 async function ensureDirectoryAccountForUser(user, fallback) {

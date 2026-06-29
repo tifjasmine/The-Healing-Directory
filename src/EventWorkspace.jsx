@@ -153,7 +153,7 @@ function EventEditor({ user, editing }) {
         <div className="workspace-actions"><button onClick={() => go(editing ? "/my-events" : "/events")}><ArrowLeft size={16} /> {editing ? "Back to My Events" : "Back to Events"}</button><button onClick={() => go(editing ? "/events" : "/my-events")}>{editing ? "Browse Events" : "My Events"}</button></div>
         <p className="eyebrow">The Healing Directory</p>
         <h1>{editing ? "Edit your event listing." : "Create your event listing."}</h1>
-        <p>{editing ? "Update your workshop, circle, training, referral room event, or community offering. Saved changes move the listing back into review before appearing as approved." : "Add provider-only or community-facing workshops, circles, trainings, referral room events, and healing offerings."}</p>
+        <p>{editing ? "Update your workshop, circle, training, referral room event, or community offering. Saved changes move the listing back into review before appearing as approved." : "Add community-facing workshops, circles, trainings, referral room events, and healing offerings."}</p>
       </div>
       {editing ? <aside className="event-edit-summary"><Sparkles /><span>Editing</span><strong>{currentEvent?.name || form.eventName || "Event listing"}</strong><em>{currentEvent?.status || "Pending Review"}</em></aside> : null}
     </section>
