@@ -213,7 +213,7 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
     genderIdentity: optionChoices(data.directoryOptions?.genderIdentity, data.providers.flatMap((item) => item.genderIdentity || [])),
     availability: optionChoices(data.directoryOptions?.availability, data.providers.flatMap((item) => item.availability || [])),
     collaborationInterests: optionChoices(data.directoryOptions?.collaborationInterests, data.providers.flatMap((item) => item.collaborationInterests || [])),
-    currentAvailability: optionChoices(data.directoryOptions?.currentAvailability, data.providers.flatMap((item) => item.currentAvailability || item.availabilitySpecifics || [])),
+    currentAvailability: optionChoices(data.directoryOptions?.currentAvailability, data.providers.flatMap((item) => item.currentAvailability || [])),
   };
   const providers = data.providers.filter((item) => {
     const text = [item.name, item.profession, item.bio, ...(item.providerType || []), ...(item.services || []), ...(item.support || []), ...(item.location || []), ...(item.vibe || []), ...(item.identity || []), ...(item.genderIdentity || []), ...(item.availability || []), ...(item.collaborationInterests || []), ...(item.currentAvailability || [])].join(" ").toLowerCase();
@@ -230,7 +230,7 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
       matchesSelected(item.availability, filters.availability) &&
       (!canUseProviderFilters || (
         matchesSelected(item.collaborationInterests, filters.collaborationInterests) &&
-        matchesSelected(item.currentAvailability || item.availabilitySpecifics || item.availability, filters.currentAvailability)
+        matchesSelected(item.currentAvailability, filters.currentAvailability)
       ));
   });
   const toggleFilter = (key, value) => setFilters((current) => {
@@ -336,7 +336,7 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
 
 function ProviderCard({ provider, saved, onSave }) {
   const [contactOpen, setContactOpen] = React.useState(false);
-  const providerTypeText = provider.providerType?.join(", ") || provider.profession || "Provider";
+  const providerTypeText = provider.providerType?.join(", ") || "Provider";
   const supportTags = (provider.support || []).slice(0, 5);
   return <article className="provider-row">
     <Avatar item={provider} />
