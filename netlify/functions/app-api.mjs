@@ -294,6 +294,7 @@ export default async function handler(request) {
       if (action === "my-events") return reply(await myEvents(requireUser(user)));
       if (action === "saved-providers") return reply(await savedProviders(requireUser(user)));
       if (action === "admin-events") return reply(await adminEvents(requireAdmin(user)));
+      if (action === "account-access") return reply(await accountAccess(requireUser(user)));
       if (action === "view-as") return reply(await adminViewAs(await requirePreviewAdmin(user), url.searchParams.get("email")));
       if (action === "account-settings") return reply(await accountSettings(requireUser(user)));
       if (action === "my-profile") return reply(await myProfile(requireUser(user)));
@@ -370,7 +371,7 @@ async function dashboard(user) {
   const savedProviders = unique(myProviderSaves.flatMap(providerIds)).map((id) => providerMap.get(id)).filter(Boolean);
   const savedEvents = unique(myEventSaves.flatMap(eventIds)).map((id) => eventMap.get(id)).filter(Boolean);
   const upcoming = savedEvents.filter((event) => event.start && new Date(event.start).getTime() >= Date.now()).length;
-  const accountType = accountTypeForUser(user);
+  const accountType = await resolvedAccountType(user);
   const account = accountType === "provider" ? await ensureSaverAccount(user) : savedAccount;
   const signup = accountType === "provider" ? await findSignupByEmail("provider", user.email).catch(() => null) : account;
   return {
@@ -531,6 +532,14 @@ async function adminEvents() {
   const records = await list("events");
   const events = records.map(normalizeEvent).sort((a, b) => dateValue(b.created || b.start) - dateValue(a.created || a.start));
   return { events, counts: events.reduce((out, event) => { const key = statusKey(event.status); out[key] = (out[key] || 0) + 1; out.total += 1; return out; }, { total: 0 }) };
+}
+
+async function accountAccess(user) {
+  const [accountType, canEditHost] = await Promise.all([
+    resolvedAccountType(user),
+    canEditEventHost(user).catch(() => false)
+  ]);
+  return { ok: true, accountType, canEditEventHost: Boolean(canEditHost), roles: publicUser(user)?.roles || [] };
 }
 
 async function adminViewAs(_admin, email) {
@@ -716,7 +725,7 @@ async function inviteSupabaseProvider({ email, name, redirectTo }) {
 }
 
 async function accountSettings(user) {
-  const accountType = accountTypeForUser(user);
+  const accountType = await resolvedAccountType(user);
   const account = await ensureSaverAccount(user);
   const accountDetails = accountFromRecord(user, account, accountType);
   accountDetails.name = resolvedAccountName(user, accountDetails.name);
@@ -1744,6 +1753,25 @@ async function ensureMemberAccount(body) {
 function accountTypeForUser(user) {
   const publicAccountType = lower(publicUser(user)?.accountType);
   return hasProviderAccess(user) || publicAccountType === "provider" ? "provider" : "client";
+}
+
+async function resolvedAccountType(user) {
+  if (accountTypeForUser(user) === "provider") return "provider";
+  const [memberAccount, directoryAccount] = await Promise.all([
+    findSignupByEmail("client", user.email).catch(() => null),
+    findDirectoryByEmail(user.email).catch(() => null)
+  ]);
+  const memberType = lower(text(pick(memberAccount?.fields || {}, SAVE_FIELD_SETS.clientSignup.accountType)));
+  if (memberType === "provider") return "provider";
+  const directoryFields = directoryAccount?.fields || {};
+  const hasProviderSignals = Boolean(directoryAccount && (
+    array(pick(directoryFields, FIELDS.provider.type)).length ||
+    truthy(pick(directoryFields, FIELDS.provider.approved)) ||
+    truthy(pick(directoryFields, FIELDS.provider.inviteApproved)) ||
+    truthy(pick(directoryFields, FIELDS.provider.inviteSent)) ||
+    lower(text(pick(directoryFields, FIELDS.provider.status))) === "active"
+  ));
+  return hasProviderSignals ? "provider" : "client";
 }
 
 function accountInterests(accountRecord, signupRecord, accountType) {

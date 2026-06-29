@@ -41,8 +41,18 @@ export default function ProviderDashboard({ hideHeader = false, previewUser = nu
         roles: current.roles || [],
         accountType: current.userMetadata?.account_type || "",
       };
-      if (!normalized.roles.includes("provider") && normalized.accountType !== "provider" && !normalized.roles.includes("admin")) {
-        window.location.replace("/client-dashboard");
+      const hasProviderAccess = normalized.roles.includes("provider") || normalized.accountType === "provider" || normalized.roles.includes("admin");
+      if (!hasProviderAccess) {
+        api("account-access")
+          .then((access) => {
+            if (access.accountType !== "provider" && !access.roles?.includes("admin")) {
+              window.location.replace("/client-dashboard");
+              return;
+            }
+            setUser({ ...normalized, accountType: "provider", roles: unique([...(normalized.roles || []), ...(access.roles || [])]) });
+            loadDashboard().then(setPayload).catch(() => setPayload(emptyPayload()));
+          })
+          .catch(() => window.location.replace("/client-dashboard"));
         return;
       }
       setUser(normalized);
@@ -309,6 +319,7 @@ function EmptyPanel({ title, text, action, path, inline }) {
 function firstName(value) { return String(value || "there").split(/[ @._-]/).filter(Boolean)[0] || "there"; }
 function initials(value) { return String(value || "Provider").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "P"; }
 function providerTypeLabel(provider) { return Array.isArray(provider.providerType) ? provider.providerType.join(", ") : String(provider.providerType || ""); }
+function unique(values = []) { return [...new Set(values.filter(Boolean))]; }
 function displayText(value) {
   if (value == null) return "";
   if (typeof value === "string" || typeof value === "number") return String(value);
