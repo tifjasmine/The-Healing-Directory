@@ -315,7 +315,7 @@ function SideSeatPanel({ request, submitted, session, form, setForm, onManage, o
 }
 
 function RuleLedger({ rules, approvedProviders = [] }) {
-  const approvedRules = rules.filter((rule) => rule.approvedProviders?.length);
+  const approvedRules = mergeApprovedRules(rules.filter((rule) => rule.approvedProviders?.length));
   const matchedIds = new Set(approvedRules.flatMap((rule) => rule.approvedProviders.map((provider) => provider.id)));
   const unmatchedProviders = approvedProviders.filter((provider) => !matchedIds.has(provider.id));
   if (!approvedRules.length && !unmatchedProviders.length) return <p className="muted-italic">No approved providers yet.</p>;
@@ -345,6 +345,33 @@ function RuleLedger({ rules, approvedProviders = [] }) {
       ) : null}
     </div>
   );
+}
+
+function mergeApprovedRules(rules = []) {
+  const byType = new Map();
+  rules.forEach((rule) => {
+    const key = normalize(rule.serviceType);
+    const existing = byType.get(key);
+    if (!existing) {
+      byType.set(key, { ...rule, approvedProviders: uniqueProviders(rule.approvedProviders || []) });
+      return;
+    }
+    existing.seatLimit += Number(rule.seatLimit || 0);
+    existing.taken += Number(rule.taken || 0);
+    existing.remaining += Number(rule.remaining || 0);
+    existing.approvedProviders = uniqueProviders([...(existing.approvedProviders || []), ...(rule.approvedProviders || [])]);
+  });
+  return [...byType.values()];
+}
+
+function uniqueProviders(providers = []) {
+  const seen = new Set();
+  return providers.filter((provider) => {
+    const key = normalize([provider.profileId, provider.email, provider.name, provider.serviceType].filter(Boolean).join("|")) || provider.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function RoomPills({ sessions, selected, onSelect }) {

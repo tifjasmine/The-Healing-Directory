@@ -185,7 +185,7 @@ function normalizeSession(record, attendance, rules, providers = []) {
   };
   const accepted = acceptedAttendance.length;
   const totalSeats = Number(value(f, ["Total Seats", "Total Seat Cap", "Total Limit"])) || totalSeatsFromNotes(text(value(f, ["Notes"]))) || 8;
-  const sessionRules = uniqueRulesByType(rules.map(normalizeRule).filter((rule) => rule.sessionId === id)).map((rule) => {
+  const sessionRules = rules.map(normalizeRule).filter((rule) => rule.sessionId === id).map((rule) => {
     const approvedProviders = uniqueApprovedProviders(acceptedAttendance
       .filter((item) => providerTypeMatches(attendanceServiceType(item, providerMap), rule.serviceType))
       .map((item) => approvedProvider(item, providerMap)));
@@ -200,17 +200,6 @@ function normalizeSession(record, attendance, rules, providers = []) {
     remaining: Math.max(totalSeats - accepted, 0), rules: sessionRules,
     approvedProviders: uniqueApprovedProviders(acceptedAttendance.map((item) => approvedProvider(item, providerMap))),
   };
-}
-
-function uniqueRulesByType(rules = []) {
-  const seen = new Set();
-  return rules.filter((rule) => {
-    const key = compact(rule.serviceType);
-    if (!key) return true;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
 }
 
 function uniqueAttendance(items = []) {
