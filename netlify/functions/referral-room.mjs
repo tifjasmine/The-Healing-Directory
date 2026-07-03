@@ -259,7 +259,7 @@ function normalizeAttendance(record) {
     serviceType: text(value(f, ["Service Type", "Provider Type", "Provider Type (from Provider)", "Provider Type (from Name)"])),
     specialtyFocus: text(value(f, ["Specialty Focus", "Focus"])),
     notes: text(value(f, ["Notes"])), status: text(rawStatus) || "Accepted",
-    reason: text(value(f, ["Waitlist Reason", "Reason"])), attended: truthy(value(f, ["Attended"])),
+    reason: text(value(f, ["Waitlist Reason", "Reason"])), attended: checkboxTruthy(value(f, ["Attended"])),
     verified: truthy(value(f, ["Verified After Attendance", "Verified"])), created: text(value(f, ["Created", "Created At"])),
   };
 }
@@ -298,6 +298,7 @@ function text(input) { if (input == null) return ""; if (Array.isArray(input)) r
 function attachment(input) { const first = (Array.isArray(input) ? input : input ? [input] : [])[0]; return typeof first === "string" ? first : first?.url || first?.thumbnails?.large?.url || first?.thumbnails?.small?.url || ""; }
 function linked(input) { return (Array.isArray(input) ? input : input ? [input] : []).map((item) => typeof item === "object" ? clean(item.id || item.value) : clean(item)).filter((item) => item.startsWith("rec")); }
 function truthy(input) { return input === true || ["true", "yes", "1", "checked", "accepted", "attended", "verified"].includes(lower(text(input))); }
+function checkboxTruthy(input) { return input === true || ["true", "yes", "1", "checked"].includes(lower(text(input))); }
 function clean(input) { return String(input ?? "").replace(/\s+/g, " ").trim(); }
 function lower(input) { return clean(input).toLowerCase(); }
 function compact(input) { return lower(input).replace(/&/g, "and").replace(/[^a-z0-9]/g, ""); }

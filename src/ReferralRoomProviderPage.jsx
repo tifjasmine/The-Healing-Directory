@@ -40,7 +40,7 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
 
   const sessions = data.sessions || [];
   const attendance = hydrateAttendance(data.attendance || [], sessions);
-  const selectedSession = sessions.find((session) => session.id === selectedId) || sessions[0] || null;
+  const selectedSession = sessions.find((session) => session.id === selectedId) || (selectedId ? null : sessions[0]) || null;
   const selectedRequest = selectedSession ? attendance.find((item) => item.sessionId === selectedSession.id) : null;
   const upcoming = attendance.filter((item) => !item.attended);
   const attended = attendance.filter((item) => item.attended);
@@ -137,7 +137,7 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
               upcoming={upcoming}
               attended={attended}
               onManage={(item) => {
-                setSelectedId(item.sessionId);
+                setSelectedId(resolveSessionId(item, sessions));
                 setPage("details");
               }}
               onBrowse={() => setPage("browse")}
@@ -226,13 +226,11 @@ function DetailsView({ sessions, session, request, submitted, form, setForm, onS
 function RsvpView({ upcoming, attended, onManage, onBrowse }) {
   const pending = upcoming.filter((item) => normalize(item.status).includes("pending") || normalize(item.status).includes("waitlist"));
   const accepted = upcoming.filter((item) => normalize(item.status).includes("accept"));
-  const total = pending.length + accepted.length + attended.length;
 
   return (
     <section className="referral-stage rsvp-stage">
       <div className="rsvp-heading">
         <h1>My RSVPs</h1>
-        <span>{total} room{total === 1 ? "" : "s"} across requests, approvals, and attendance.</span>
         <button className="room-outline-button rsvp-browse-button" onClick={onBrowse}>Browse rooms</button>
       </div>
       <div className="rsvp-columns">
@@ -457,13 +455,26 @@ function normalizePayload(payload) {
 
 function hydrateAttendance(items, sessions) {
   return items.map((item) => {
-    const session = sessions.find((entry) => entry.id === item.sessionId);
+    const session = sessions.find((entry) => entry.id === item.sessionId) || findSessionForAttendance(item, sessions);
     return {
       ...item,
+      sessionId: item.sessionId || session?.id || "",
       sessionName: item.sessionName || session?.name || "Referral Room",
       sessionDate: item.sessionDate || session?.date || "",
     };
   });
+}
+
+function resolveSessionId(item, sessions) {
+  return item.sessionId || findSessionForAttendance(item, sessions)?.id || "";
+}
+
+function findSessionForAttendance(item, sessions) {
+  const itemName = normalize(item.sessionName);
+  const itemDate = dateKey(item.sessionDate);
+  return sessions.find((session) => (
+    itemName && normalize(session.name) === itemName && (!itemDate || dateKey(session.date) === itemDate)
+  )) || sessions.find((session) => itemDate && dateKey(session.date) === itemDate) || null;
 }
 
 function fillPercent(session) {
@@ -480,6 +491,11 @@ function accentFor(value) {
 
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function dateKey(value) {
+  const time = new Date(value || "").getTime();
+  return Number.isNaN(time) ? "" : new Date(time).toISOString().slice(0, 10);
 }
 
 function shortDate(value) {
