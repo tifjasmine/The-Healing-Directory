@@ -39,6 +39,7 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
   }, [load]);
 
   const sessions = data.sessions || [];
+  const browseSessions = sessions.filter(isUpcomingSession);
   const attendance = hydrateAttendance(data.attendance || [], sessions);
   const selectedSession = sessions.find((session) => session.id === selectedId) || (selectedId ? null : sessions[0]) || null;
   const selectedRequest = selectedSession ? findAttendanceForSession(selectedSession, attendance) : null;
@@ -108,7 +109,7 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
         <>
           {page === "browse" ? (
             <BrowseView
-              sessions={sessions}
+              sessions={browseSessions}
               attendance={attendance}
               onDetails={(session) => chooseSession(session, "details")}
               onRequest={(session) => chooseSession(session, "details")}
@@ -183,7 +184,7 @@ function BrowseView({ sessions, attendance, onDetails, onRequest }) {
               </div>
               <div className="room-progress"><i style={{ width: `${fillPercent(session)}%` }} /></div>
               <span className={request ? "room-outline-button" : "room-solid-button"}>
-                {request ? "Manage seat" : "Request a seat"}
+                {request ? "Manage RSVP" : "Request a seat"}
               </span>
             </button>
           );
@@ -235,7 +236,7 @@ function RsvpView({ upcoming, attended, onManage, onBrowse }) {
       </div>
       <div className="rsvp-columns">
         <RsvpColumn title="Pending" items={pending} onManage={onManage} />
-        <RsvpColumn title="Accepted" items={accepted} onManage={onManage} />
+        <RsvpColumn title="Upcoming" items={accepted} onManage={onManage} />
         <RsvpColumn title="Attended" items={attended} onManage={onManage} />
       </div>
     </section>
@@ -516,6 +517,15 @@ function normalize(value) {
 function dateKey(value) {
   const time = new Date(value || "").getTime();
   return Number.isNaN(time) ? "" : new Date(time).toISOString().slice(0, 10);
+}
+
+function isUpcomingSession(session = {}) {
+  if (!session.date) return true;
+  const time = new Date(session.date).getTime();
+  if (Number.isNaN(time)) return true;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return time >= today.getTime();
 }
 
 function shortDate(value) {
