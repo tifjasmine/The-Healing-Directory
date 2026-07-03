@@ -42,8 +42,8 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
   const attendance = hydrateAttendance(data.attendance || [], sessions);
   const selectedSession = sessions.find((session) => session.id === selectedId) || (selectedId ? null : sessions[0]) || null;
   const selectedRequest = selectedSession ? attendance.find((item) => item.sessionId === selectedSession.id) : null;
-  const upcoming = attendance.filter((item) => !item.attended);
-  const attended = attendance.filter((item) => item.attended);
+  const attended = attendance.filter(isAttendedRsvp);
+  const upcoming = attendance.filter((item) => !isAttendedRsvp(item));
 
   function chooseSession(session, nextPage = "details") {
     setSelectedId(session.id);
@@ -251,7 +251,7 @@ function RsvpColumn({ title, items, onManage }) {
           <p>{formatDate(item.sessionDate)}</p>
           <h2>{item.sessionName || "Referral Room"}</h2>
           <span>{item.serviceType || "Provider type not listed"}</span>
-          <footer><Status value={item.attended ? "Attended" : item.status} /><button onClick={() => onManage(item)}>Manage →</button></footer>
+          <footer><Status value={rsvpStatusLabel(item)} /><button onClick={() => onManage(item)}>Manage →</button></footer>
         </article>
       )) : <p className="rsvp-empty">No {title.toLowerCase()} rooms yet.</p>}
     </section>
@@ -414,6 +414,16 @@ function Status({ value }) {
   const clean = normalize(value);
   const tone = clean.includes("accept") || clean.includes("attended") ? "good" : clean.includes("declin") || clean.includes("cancel") ? "bad" : "warm";
   return <span className={`status ${tone}`}>{value || "Pending"}</span>;
+}
+
+function rsvpStatusLabel(item = {}) {
+  return item.status || (item.attended ? "Attended" : "Pending");
+}
+
+function isAttendedRsvp(item = {}) {
+  const status = normalize(item.status);
+  if (status.includes("accept") || status.includes("pending") || status.includes("waitlist")) return false;
+  return status.includes("attend") || item.attended === true;
 }
 
 function RoomLoading() {
