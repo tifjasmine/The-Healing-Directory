@@ -41,7 +41,7 @@ export default function ReferralRoomProviderPage({ user, setNotice }) {
   const sessions = data.sessions || [];
   const attendance = hydrateAttendance(data.attendance || [], sessions);
   const selectedSession = sessions.find((session) => session.id === selectedId) || (selectedId ? null : sessions[0]) || null;
-  const selectedRequest = selectedSession ? attendance.find((item) => item.sessionId === selectedSession.id) : null;
+  const selectedRequest = selectedSession ? findAttendanceForSession(selectedSession, attendance) : null;
   const attended = attendance.filter(isAttendedRsvp);
   const upcoming = attendance.filter((item) => !isAttendedRsvp(item));
 
@@ -166,7 +166,7 @@ function BrowseView({ sessions, attendance, onDetails, onRequest }) {
 
       <section className="room-card-grid">
         {sessions.length ? sessions.map((session) => {
-          const request = attendance.find((item) => item.sessionId === session.id);
+          const request = findAttendanceForSession(session, attendance);
           return (
             <button className="room-preview-card clickable-room-card" type="button" key={session.id} onClick={() => request ? onDetails(session) : onRequest(session)}>
               <div className="room-preview-top">
@@ -183,7 +183,7 @@ function BrowseView({ sessions, attendance, onDetails, onRequest }) {
               </div>
               <div className="room-progress"><i style={{ width: `${fillPercent(session)}%` }} /></div>
               <span className={request ? "room-outline-button" : "room-solid-button"}>
-                {request ? "Manage RSVP" : "Request a seat"}
+                {request ? "Manage seat" : "Request a seat"}
               </span>
             </button>
           );
@@ -477,6 +477,16 @@ function hydrateAttendance(items, sessions) {
 
 function resolveSessionId(item, sessions) {
   return item.sessionId || findSessionForAttendance(item, sessions)?.id || "";
+}
+
+function findAttendanceForSession(session, attendance) {
+  return attendance.find((item) => item.sessionId === session.id)
+    || attendance.find((item) => {
+      const itemName = normalize(item.sessionName);
+      const itemDate = dateKey(item.sessionDate);
+      return itemName && itemName === normalize(session.name) && (!itemDate || itemDate === dateKey(session.date));
+    })
+    || null;
 }
 
 function findSessionForAttendance(item, sessions) {

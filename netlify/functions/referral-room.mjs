@@ -53,11 +53,14 @@ async function providerData(user) {
   const openSessions = sessionRecords.map((record) => normalizeSession(record, attendance, ruleRecords, providers))
     .filter((session) => !["draft", "closed", "cancelled", "canceled"].includes(lower(session.status)))
     .sort((a, b) => dateValue(a.date) - dateValue(b.date));
+  const userAttendance = attendance.filter((item) => lower(item.email) === lower(user.email) && !["cancelled", "canceled"].includes(lower(item.status)));
+  const userSessionIds = new Set(userAttendance.map((item) => item.sessionId).filter(Boolean));
   const futureSessions = openSessions.filter((session) => !session.date || dateValue(session.date) >= startOfToday());
+  const rsvpSessions = openSessions.filter((session) => userSessionIds.has(session.id));
   return {
     serviceTypes: SERVICE_TYPES,
-    sessions: futureSessions.length ? futureSessions : openSessions,
-    attendance: attendance.filter((item) => lower(item.email) === lower(user.email) && !["cancelled", "canceled"].includes(lower(item.status))),
+    sessions: uniqueById([...futureSessions, ...rsvpSessions]),
+    attendance: userAttendance,
   };
 }
 
@@ -218,6 +221,15 @@ function uniqueApprovedProviders(providers = []) {
     const key = compact([provider.profileId, provider.email, provider.name, provider.serviceType].filter(Boolean).join("|")) || provider.id;
     if (seen.has(key)) return false;
     seen.add(key);
+    return true;
+  });
+}
+
+function uniqueById(items = []) {
+  const seen = new Set();
+  return items.filter((item) => {
+    if (!item?.id || seen.has(item.id)) return false;
+    seen.add(item.id);
     return true;
   });
 }
