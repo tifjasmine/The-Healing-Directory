@@ -355,6 +355,11 @@ function findReferralRequestForSession(session = {}, requests = []) {
     })
     || null;
 }
+function isAttendedReferralRequest(item = {}) {
+  const status = normalize(item.status);
+  if (status.includes("accept") || status.includes("pending") || status.includes("waitlist")) return false;
+  return status.includes("attend") || item.attended === true;
+}
 function statusTone(value) { const clean = normalize(value); return clean.includes("accept") || clean.includes("attended") ? "good" : clean.includes("cancel") || clean.includes("declin") ? "bad" : "warm"; }
 function emptyPayload() { return { counts: {}, savedProviders: [], savedProviderItems: [], savedEvents: [], myEvents: [], referralRequests: [], referralSessions: [] }; }
 async function loadDashboard() {
@@ -370,7 +375,7 @@ async function loadDashboard() {
     savedProviderItems: (savedProviders.items || []).filter((item) => item.active !== false),
     myEvents: myEvents.hosted || [],
     canEditEventHost: Boolean(myEvents.canEditEventHost),
-    referralRequests: (referralRoom.attendance || []).filter((item) => !item.attended),
+    referralRequests: (referralRoom.attendance || []).filter((item) => !isAttendedReferralRequest(item)),
     referralSessions: referralRoom.sessions || [],
   };
 }
