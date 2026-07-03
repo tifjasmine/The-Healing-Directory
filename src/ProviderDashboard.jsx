@@ -69,12 +69,13 @@ export default function ProviderDashboard({ hideHeader = false, previewUser = nu
   }, [payload?.savedProviderItems]);
 
   if (!user || !payload) return <div className="state"><RefreshCw className="spin" /><h2>Loading dashboard...</h2></div>;
+  const upcomingReferralSessions = (payload.referralSessions || []).filter(isUpcomingSession);
 
   const tabs = [
     { key: "providers", label: "Saved Providers", count: payload.savedProviderItems.length, icon: <Star size={16} /> },
     { key: "events", label: "Saved Events", count: payload.savedEvents.length, icon: <Bookmark size={16} /> },
     { key: "mine", label: "My Events", count: payload.myEvents.length + payload.referralRequests.length, icon: <CalendarDays size={16} /> },
-    { key: "referral", label: "The Referral Room", count: payload.referralSessions.length, icon: <HeartHandshake size={16} /> },
+    { key: "referral", label: "The Referral Room", count: upcomingReferralSessions.length, icon: <HeartHandshake size={16} /> },
   ];
 
   async function saveProviderNote(item) {
@@ -194,6 +195,7 @@ function MyEventsPanel({ items, referralRequests }) {
 
 function ReferralPanel({ items, sessions }) {
   const activeRequests = items.filter((item) => !isCancelled(item.status));
+  const upcomingSessions = sessions.filter(isUpcomingSession);
   return <div className="referral-dashboard-card">
     <section className="referral-dashboard-hero">
       <div>
@@ -210,13 +212,13 @@ function ReferralPanel({ items, sessions }) {
       <button className="button provider-dashboard-secondary" type="button" onClick={() => go("/referral-room?rsvps=1")}>My RSVPs <ArrowRight size={16} /></button>
     </div>
     <div className="referral-dashboard-sessions">
-      {sessions.length ? sessions.map((session) => <ReferralSessionCard key={session.id} session={session} requests={activeRequests} />) : <div className="client-empty inline-empty"><h2>No upcoming rooms yet</h2><p>New dates for The Referral Room will appear here when seats open.</p></div>}
+      {upcomingSessions.length ? upcomingSessions.map((session) => <ReferralSessionCard key={session.id} session={session} requests={activeRequests} />) : <div className="client-empty inline-empty"><h2>No upcoming rooms yet</h2><p>New dates for The Referral Room will appear here when seats open.</p></div>}
     </div>
   </div>;
 }
 
 function ReferralSessionCard({ session, requests = [] }) {
-  const myRequest = requests.find((item) => item.sessionId === session.id);
+  const myRequest = findReferralRequestForSession(session, requests);
   const totalSeats = Number(session.totalSeats || 0);
   const remaining = Number(session.remaining || 0);
   const accepted = Number(session.accepted || Math.max(totalSeats - remaining, 0));
@@ -255,7 +257,7 @@ function ReferralSessionSummary({ session, requests = [], open, onToggle }) {
       displayRemaining: Math.max(seatLimit - taken, 0),
     };
   });
-  const myRequest = requests.find((item) => item.sessionId === session.id);
+  const myRequest = findReferralRequestForSession(session, requests);
   return <article className={open ? "referral-session-summary" : "referral-session-summary collapsed"}>
     <button className="referral-session-heading" type="button" aria-expanded={open} onClick={onToggle}>
       <div>
@@ -342,6 +344,17 @@ async function signOut() { await logout().catch(() => null); window.location.ass
 function formatDate(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(time); }
 function formatShortDate(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(time).replace(",", " ·"); }
 function formatDateTime(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) || !time ? "Date coming soon" : new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(time); }
+function dateKey(value) { const time = new Date(value || "").getTime(); return Number.isNaN(time) ? "" : new Date(time).toISOString().slice(0, 10); }
+function isUpcomingSession(session = {}) { if (!session.date) return true; const time = new Date(session.date).getTime(); if (Number.isNaN(time)) return true; const today = new Date(); today.setHours(0, 0, 0, 0); return time >= today.getTime(); }
+function findReferralRequestForSession(session = {}, requests = []) {
+  return requests.find((item) => item.sessionId === session.id)
+    || requests.find((item) => {
+      const itemName = normalize(item.sessionName);
+      const itemDate = dateKey(item.sessionDate);
+      return itemName && itemName === normalize(session.name) && (!itemDate || itemDate === dateKey(session.date));
+    })
+    || null;
+}
 function statusTone(value) { const clean = normalize(value); return clean.includes("accept") || clean.includes("attended") ? "good" : clean.includes("cancel") || clean.includes("declin") ? "bad" : "warm"; }
 function emptyPayload() { return { counts: {}, savedProviders: [], savedProviderItems: [], savedEvents: [], myEvents: [], referralRequests: [], referralSessions: [] }; }
 async function loadDashboard() {
