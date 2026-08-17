@@ -302,19 +302,22 @@ function PhotoUpload({ value, onChange }) {
       setError("Please choose an image file.");
       return;
     }
-    if (file.size > 4 * 1024 * 1024) {
-      setError("Please choose an image under 4MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Please choose an image under 10MB.");
       return;
     }
-    const dataUrl = await fileToDataUrl(file);
-    onChange({ name: file.name, type: file.type, size: file.size, dataUrl });
+    try {
+      onChange(await prepareImageUpload(file));
+    } catch (error) {
+      setError(error.message || "Photo could not be read.");
+    }
   }
 
   return (
     <label className="profile-photo-upload">
       <span>Upload photo</span>
       <input type="file" accept="image/*" onChange={handleFile} />
-      <small>{value?.name ? `Selected: ${value.name}` : "JPG, PNG, or WebP under 4MB."}</small>
+      <small>{value?.name ? `Selected: ${value.name}` : "JPG, PNG, or WebP. Large photos will be resized before saving."}</small>
       {error ? <small className="field-error">{error}</small> : null}
     </label>
   );
@@ -396,6 +399,30 @@ function serializeProfile(form) {
     collaborationInterests: toList(form.collaborationInterests),
     vibe: toList(form.vibe),
   };
+}
+
+async function prepareImageUpload(file) {
+  const original = await fileToDataUrl(file);
+  if (file.type === "image/gif") return { name: file.name, type: file.type, size: file.size, dataUrl: original };
+  const image = await loadImage(original);
+  const maxEdge = 1600;
+  const scale = Math.min(1, maxEdge / Math.max(image.width, image.height));
+  if (scale === 1 && file.size <= 3.5 * 1024 * 1024) return { name: file.name, type: file.type, size: file.size, dataUrl: original };
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.86);
+  return { name: file.name.replace(/\.[^.]+$/, ".jpg"), type: "image/jpeg", size: Math.round((dataUrl.length * 3) / 4), dataUrl };
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Photo could not be resized."));
+    image.src = src;
+  });
 }
 
 function fileToDataUrl(file) {

@@ -883,7 +883,7 @@ async function providerApplicationFields(application = {}) {
   add(FIELDS.provider.pronouns, application.pronouns);
   add(FIELDS.provider.profession, application.profession || application.professionalTitle);
   add(FIELDS.provider.license, application.licenseCertification || application.license);
-  add(FIELDS.provider.photoUrl, uploadedPhotoUrl || application.photoUrl);
+  addProviderPhotoFields(fields, table, uploadedPhotoUrl, application.photoUrl);
   add(FIELDS.provider.genderIdentity, application.genderIdentity);
   add(FIELDS.provider.identity, application.racialEthnicIdentity || application.identity);
   add(FIELDS.provider.email, application.email);
@@ -1016,7 +1016,7 @@ async function saveProfile(user, body) {
   add(FIELDS.provider.profession, body.profession);
   add(FIELDS.provider.license, body.license);
   add(FIELDS.provider.identity, body.identity);
-  add(FIELDS.provider.photoUrl, uploadedPhotoUrl || body.photoUrl);
+  addProviderPhotoFields(fields, table, uploadedPhotoUrl, body.photoUrl);
   add(FIELDS.provider.email, user.email);
   add(FIELDS.provider.phone, body.phone);
   add(FIELDS.provider.website, body.website);
@@ -1831,6 +1831,13 @@ function setAlias(fields, names, value) {
 function setResolvedAlias(fields, table, names, value) {
   if (!names?.length) return;
   setAirtableValue(fields, table, findField(table, names), value);
+}
+
+function addProviderPhotoFields(fields, table, uploadedPhotoUrl, fallbackPhotoUrl = "") {
+  const photoUrl = clean(uploadedPhotoUrl || fallbackPhotoUrl);
+  if (!photoUrl) return;
+  setResolvedAlias(fields, table, FIELDS.provider.photoUrl, photoUrl);
+  setResolvedAlias(fields, table, FIELDS.provider.photo, photoUrl);
 }
 
 function listText(value) {
