@@ -298,6 +298,7 @@ export default async function handler(request) {
       if (action === "admin-events") return reply(await adminEvents(requireAdmin(user)));
       if (action === "account-access") return reply(await accountAccess(requireUser(user)));
       if (action === "view-as") return reply(await adminViewAs(await requirePreviewAdmin(user), url.searchParams.get("email")));
+      if (action === "storage-diagnostic") return reply(await storageDiagnostic(await requirePreviewAdmin(user)));
       if (action === "account-settings") return reply(await accountSettings(requireUser(user)));
       if (action === "my-profile") return reply(await myProfile(requireUser(user)));
       return reply({ error: "Unknown action." }, 404);
@@ -1874,6 +1875,65 @@ function listText(value) {
 function attachmentFromUrl(value) {
   const url = clean(value);
   return /^https?:\/\//i.test(url) ? [{ url }] : undefined;
+}
+
+async function storageDiagnostic(user) {
+  const bucket = "provider-uploads";
+  const storageKey = SUPABASE_STORAGE_SERVICE_ROLE_KEY();
+  const explicitStorageKey = process.env.SUPABASE_STORAGE_SERVICE_ROLE_KEY || "";
+  const headers = storageKey ? {
+    apikey: storageKey,
+    Authorization: `Bearer ${storageKey}`,
+    "Content-Type": "application/json"
+  } : {};
+  let bucketCheck = { ok: false, status: 0, message: "Storage key is missing." };
+  if (SUPABASE_URL && storageKey) {
+    const response = await fetch(`${SUPABASE_URL}/storage/v1/bucket/${encodeURIComponent(bucket)}`, { headers }).catch((error) => ({ ok: false, status: 0, json: async () => ({ message: error.message }) }));
+    const payload = await response.json().catch(() => ({}));
+    bucketCheck = {
+      ok: Boolean(response.ok),
+      status: response.status || 0,
+      message: payload.error || payload.message || (response.ok ? "Bucket is reachable." : "Bucket check failed.")
+    };
+  }
+  return {
+    ok: true,
+    checkedBy: user.email,
+    supabaseUrlRef: supabaseProjectRef(SUPABASE_URL),
+    hasSupabaseUrl: Boolean(SUPABASE_URL),
+    hasExplicitStorageKey: Boolean(explicitStorageKey),
+    storageKeyFallsBackToMainKey: !explicitStorageKey && Boolean(SUPABASE_SERVICE_ROLE_KEY()),
+    storageKey: supabaseKeySummary(storageKey),
+    bucket: { name: bucket, ...bucketCheck }
+  };
+}
+
+function supabaseProjectRef(url) {
+  return (clean(url).match(/^https?:\/\/([^.]+)\.supabase\.co/i) || [])[1] || "";
+}
+
+function supabaseKeySummary(key) {
+  const value = clean(key);
+  if (!value) return { present: false, format: "", role: "", ref: "", issuer: "" };
+  if (value.startsWith("sb_secret_")) return { present: true, format: "supabase-secret", role: "service_role", ref: "", issuer: "" };
+  const payload = decodeJwtPayload(value);
+  return {
+    present: true,
+    format: payload ? "jwt" : "unknown",
+    role: payload?.role || "",
+    ref: payload?.ref || "",
+    issuer: payload?.iss || ""
+  };
+}
+
+function decodeJwtPayload(token) {
+  try {
+    const part = clean(token).split(".")[1];
+    if (!part) return null;
+    return JSON.parse(Buffer.from(part, "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
 }
 
 async function uploadProviderAsset(file, owner = "", kind = "upload") {
