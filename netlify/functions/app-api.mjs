@@ -4,6 +4,7 @@ const BASE_ID = process.env.AIRTABLE_BASE_ID || process.env.AIRTABLE_DIRECTORY_B
 const TOKEN = () => process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "";
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+const SUPABASE_STORAGE_SERVICE_ROLE_KEY = () => process.env.SUPABASE_STORAGE_SERVICE_ROLE_KEY || SUPABASE_SERVICE_ROLE_KEY();
 const PROVIDER_APPROVAL_WEBHOOK_SECRET = () => process.env.PROVIDER_APPROVAL_WEBHOOK_SECRET || process.env.AIRTABLE_WEBHOOK_SECRET || "";
 const SITE_URL = () => (process.env.SITE_URL || process.env.URL || process.env.DEPLOY_PRIME_URL || "https://thehealingdirectory.com").replace(/\/+$/, "");
 const STRIPE_SECRET_KEY = () => process.env.STRIPE_SECRET_KEY || "";
@@ -1878,7 +1879,7 @@ function attachmentFromUrl(value) {
 async function uploadProviderAsset(file, owner = "", kind = "upload") {
   if (!file?.dataUrl) return "";
   if (!SUPABASE_URL) throw httpError(500, "Photo upload is not configured. Supabase URL is missing.");
-  if (!SUPABASE_SERVICE_ROLE_KEY()) throw httpError(500, "Photo upload is not configured. Supabase service role key is missing.");
+  if (!SUPABASE_STORAGE_SERVICE_ROLE_KEY()) throw httpError(500, "Photo upload is not configured. Supabase storage service role key is missing.");
   const match = String(file.dataUrl).match(/^data:([^;]+);base64,(.+)$/);
   if (!match) throw httpError(400, "Photo upload could not be read. Please choose the image again.");
   const mimeType = clean(file.type || match[1] || "application/octet-stream");
@@ -1894,8 +1895,8 @@ async function uploadProviderAsset(file, owner = "", kind = "upload") {
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
-        apikey: SUPABASE_SERVICE_ROLE_KEY(),
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY()}`,
+        apikey: SUPABASE_STORAGE_SERVICE_ROLE_KEY(),
+        Authorization: `Bearer ${SUPABASE_STORAGE_SERVICE_ROLE_KEY()}`,
         "Content-Type": mimeType,
         "x-upsert": "true"
       },
@@ -1914,8 +1915,8 @@ async function uploadProviderAsset(file, owner = "", kind = "upload") {
 
 async function ensureSupabaseBucket(bucket) {
   const headers = {
-    apikey: SUPABASE_SERVICE_ROLE_KEY(),
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY()}`,
+    apikey: SUPABASE_STORAGE_SERVICE_ROLE_KEY(),
+    Authorization: `Bearer ${SUPABASE_STORAGE_SERVICE_ROLE_KEY()}`,
     "Content-Type": "application/json"
   };
   const existing = await fetch(`${SUPABASE_URL}/storage/v1/bucket/${encodeURIComponent(bucket)}`, { headers });
