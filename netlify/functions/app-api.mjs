@@ -190,6 +190,7 @@ const FIELDS = {
     verified: ["Verified", "Verified Member", "Referral Room"],
     admin: ["Admin", "Administrator"],
     status: ["Status", "Approval Status", "Request Status"],
+    firstLoginDate: ["First Login Date", "First Login", "First Logged In At"],
     inviteSent: ["Invite Sent", "Approval Email Sent", "Provider Invite Sent", "Supabase Invite Sent"],
     inviteSentAt: ["Invite Sent At", "Approval Email Sent At", "Provider Invite Sent At", "Supabase Invite Sent At"],
     inviteError: ["Invite Error", "Provider Invite Error", "Supabase Invite Error"],
@@ -311,6 +312,7 @@ export default async function handler(request) {
     if (action === "save-event") return reply(await saveEvent(requireUser(user), body));
     if (action === "save-account") return reply(await saveAccount(requireUser(user), body));
     if (action === "save-profile") return reply(await saveProfile(requireUser(user), body));
+    if (action === "track-first-login") return reply(await trackFirstLogin(requireUser(user)));
     if (action === "stripe-portal") return reply(await stripePortal(requireUser(user), body));
     if (action === "admin-event") return reply(await updateAdminEvent(requireAdmin(user), body));
     return reply({ error: "Unknown action." }, 404);
@@ -752,6 +754,29 @@ async function accountSettings(user) {
   };
 }
 
+async function trackFirstLogin(user) {
+  const accountType = await resolvedAccountType(user);
+  const record = accountType === "provider"
+    ? await ensureDirectoryAccountForUser(user, {
+      email: user.email,
+      name: publicUser(user)?.name || user.email.split("@")[0],
+      accountType: "provider"
+    })
+    : await findSignupByEmail("client", user.email).catch(() => null);
+  if (!record) return { ok: true, tracked: false, accountType };
+
+  const fieldAliases = accountType === "provider" ? FIELDS.provider.firstLoginDate : ["First Login Date", "First Login", "First Logged In At"];
+  if (pick(record.fields || {}, fieldAliases)) return { ok: true, tracked: false, accountType, alreadySet: true };
+
+  const fields = {};
+  const tableKey = accountType === "provider" ? "directory" : "clients";
+  const table = await metadataTable(tableKey).catch(() => null);
+  setResolvedAlias(fields, table, fieldAliases, new Date().toISOString());
+  if (!Object.keys(fields).length) return { ok: true, tracked: false, accountType, missingField: true };
+  await updateSafe(tableKey, record.id, fields);
+  return { ok: true, tracked: true, accountType };
+}
+
 async function referralRoomPublicOptions() {
   const [records, circleThemes, connectionTypes, availabilityOptions] = await Promise.all([
     list("referralRoom").catch(() => []),
@@ -1063,6 +1088,7 @@ function normalizeProvider(record) {
   return {
     id: record.id, name: text(pick(f, FIELDS.provider.name)) || "Provider",
     createdTime: record.createdTime || "",
+    firstLoginDate: text(pick(f, FIELDS.provider.firstLoginDate)),
     accountType,
     order: numberValue(pick(f, FIELDS.provider.order)),
     email: text(pick(f, FIELDS.provider.email)), phone: text(pick(f, FIELDS.provider.phone)),

@@ -104,10 +104,12 @@ export default function AuthAccess({ path }) {
         } else {
           await updateUser({ password: form.password });
         }
+        await api("track-first-login", { method: "POST" }).catch(() => null);
         window.location.assign("/dashboard");
         return;
       }
       await login(form.email, form.password);
+      await api("track-first-login", { method: "POST" }).catch(() => null);
       const next = new URLSearchParams(window.location.search).get("next") || "/dashboard";
       window.location.assign(next);
     } catch (error) {

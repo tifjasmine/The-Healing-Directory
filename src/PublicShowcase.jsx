@@ -251,7 +251,7 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
   const visibleProviders = providers.slice(0, visibleCount);
   const recentlyJoinedProviders = React.useMemo(() => [...(data.providers || [])]
     .filter((item) => item?.name)
-    .sort((a, b) => dateNumber(b.createdTime) - dateNumber(a.createdTime))
+    .sort((a, b) => dateNumber(b.firstLoginDate || b.createdTime) - dateNumber(a.firstLoginDate || a.createdTime))
     .slice(0, 5), [data.providers]);
   const [recentProviderIndex, setRecentProviderIndex] = React.useState(0);
   React.useEffect(() => {
@@ -288,10 +288,10 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
           <img src="/homepage-logo-transparent.png" alt="The Healing Directory" />
           <div className="home-verified-card">
             <p>Recently joined</p>
-            <div className="home-verified-provider">
-              <span>{initials(newestProvider?.name || "Tiffany Wright")}</span>
-              <div><strong>{newestProvider?.name || "Tiffany Wright"}</strong><small>{verifiedProviderSubtitle(newestProvider)}</small></div>
-            </div>
+            {newestProvider ? <div className="home-verified-provider">
+              <span>{initials(newestProvider.name)}</span>
+              <div><strong>{newestProvider.name}</strong><small>{verifiedProviderSubtitle(newestProvider)}</small></div>
+            </div> : null}
           </div>
         </div>
       </div>

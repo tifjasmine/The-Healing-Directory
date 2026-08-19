@@ -625,6 +625,7 @@ function AuthPage({ mode, navigate, setUser, setNotice }) {
             },
           };
           setUser(nextUser);
+          await api("track-first-login", { method: "POST" }).catch(() => null);
           setNotice(form.accountType === "provider" ? "Your account is ready. Choose your provider membership next." : "Your account is ready. Welcome in.");
           navigate(defaultDashboardPath(nextUser));
         } else {
@@ -641,12 +642,14 @@ function AuthPage({ mode, navigate, setUser, setNotice }) {
         const current = await updateUser({ password: form.password });
         const normalized = normalizeUser(current);
         setUser(normalized);
+        await api("track-first-login", { method: "POST" }).catch(() => null);
         setNotice("Your password has been updated.");
         navigate(defaultDashboardPath(normalized));
       } else {
         const current = await login(form.email, form.password);
         const normalized = normalizeUser(current);
         setUser(normalized);
+        await api("track-first-login", { method: "POST" }).catch(() => null);
         const next = new URLSearchParams(window.location.search).get("next") || defaultDashboardPath(normalized);
         navigate(next);
       }
