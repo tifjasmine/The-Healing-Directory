@@ -1876,11 +1876,13 @@ function attachmentFromUrl(value) {
 }
 
 async function uploadProviderAsset(file, owner = "", kind = "upload") {
-  if (!file?.dataUrl || !SUPABASE_SERVICE_ROLE_KEY()) return "";
+  if (!file?.dataUrl) return "";
+  if (!SUPABASE_URL) throw httpError(500, "Photo upload is not configured. Supabase URL is missing.");
+  if (!SUPABASE_SERVICE_ROLE_KEY()) throw httpError(500, "Photo upload is not configured. Supabase service role key is missing.");
   const match = String(file.dataUrl).match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) return "";
+  if (!match) throw httpError(400, "Photo upload could not be read. Please choose the image again.");
   const mimeType = clean(file.type || match[1] || "application/octet-stream");
-  if (!mimeType.startsWith("image/")) return "";
+  if (!mimeType.startsWith("image/")) throw httpError(400, "Please choose an image file.");
   const extension = clean((file.name || "").split(".").pop() || mimeType.split("/").pop() || "jpg").replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) || "jpg";
   const bucket = "provider-uploads";
   const safeOwner = slug(owner || "provider");
@@ -1899,10 +1901,14 @@ async function uploadProviderAsset(file, owner = "", kind = "upload") {
       },
       body: bytes
     });
-    if (!response.ok) return "";
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw httpError(response.status, payload.error || payload.message || `Photo upload failed (${response.status}).`);
+    }
     return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${objectPath.split("/").map(encodeURIComponent).join("/")}`;
-  } catch {
-    return "";
+  } catch (error) {
+    if (error?.status) throw error;
+    throw httpError(500, error.message || "Photo upload failed. Please try again.");
   }
 }
 
