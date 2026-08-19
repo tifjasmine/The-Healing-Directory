@@ -30,6 +30,7 @@ export default function ClientDashboard({ hideHeader = false, previewUser = null
         email: current.email || "",
         name: current.userMetadata?.full_name || current.name || "",
       });
+      api("track-first-login", { method: "POST" }).catch((error) => console.warn("First login tracking failed", error));
       Promise.all([api("dashboard"), api("saved-providers").catch(() => ({ items: [] }))])
         .then(([nextPayload, savedProviderPayload]) => {
           const mergedPayload = { ...nextPayload, savedProviderItems: (savedProviderPayload.items || []).filter((item) => item.active !== false) };

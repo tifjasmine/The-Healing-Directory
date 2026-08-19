@@ -1913,18 +1913,23 @@ async function uploadProviderAsset(file, owner = "", kind = "upload") {
 }
 
 async function ensureSupabaseBucket(bucket) {
-  try {
-    await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_SERVICE_ROLE_KEY(),
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY()}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ id: bucket, name: bucket, public: true, file_size_limit: 5242880, allowed_mime_types: ["image/png", "image/jpeg", "image/webp", "image/gif"] })
-    });
-  } catch {
-    // Bucket may already exist or storage may be unavailable. Upload will decide whether to continue.
+  const headers = {
+    apikey: SUPABASE_SERVICE_ROLE_KEY(),
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY()}`,
+    "Content-Type": "application/json"
+  };
+  const existing = await fetch(`${SUPABASE_URL}/storage/v1/bucket/${encodeURIComponent(bucket)}`, { headers });
+  if (existing.ok) return;
+
+  const response = await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ id: bucket, name: bucket, public: true, file_size_limit: 5242880, allowed_mime_types: ["image/png", "image/jpeg", "image/webp", "image/gif"] })
+  });
+  if (!response.ok && response.status !== 409) {
+    const payload = await response.json().catch(() => ({}));
+    const message = payload.error || payload.message || `Supabase storage bucket could not be created (${response.status}).`;
+    throw httpError(response.status, message);
   }
 }
 

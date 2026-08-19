@@ -50,12 +50,14 @@ export default function ProviderDashboard({ hideHeader = false, previewUser = nu
               return;
             }
             setUser({ ...normalized, accountType: "provider", roles: unique([...(normalized.roles || []), ...(access.roles || [])]) });
+            api("track-first-login", { method: "POST" }).catch((error) => console.warn("First login tracking failed", error));
             loadDashboard().then(setPayload).catch(() => setPayload(emptyPayload()));
           })
           .catch(() => window.location.replace("/client-dashboard"));
         return;
       }
       setUser(normalized);
+      api("track-first-login", { method: "POST" }).catch((error) => console.warn("First login tracking failed", error));
       loadDashboard().then(setPayload).catch(() => setPayload(emptyPayload()));
     });
   }, [previewUser, previewPayload]);
