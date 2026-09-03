@@ -213,10 +213,10 @@ export default function EditProfilePage({ user, setNotice }) {
               <MultiField label="People served" value={form.populations} options={options.populations} onChange={(value) => update("populations", value)} fallback="Adults, Teens, Couples" />
               <MultiField label="Payment / insurance" value={form.payment} options={options.payment} onChange={(value) => update("payment", value)} fallback="Private Pay, Insurance" />
               <MultiField label="State" value={form.location} options={options.location} onChange={(value) => update("location", value)} fallback="PA, NJ, Virtual" />
-              <MultiField label="Availability" value={form.availability} options={options.availability} onChange={(value) => update("availability", value)} fallback="Accepting New Clients" />
+              <MultiField label="General Availability" value={form.availability} options={options.availability} onChange={(value) => update("availability", value)} fallback="Accepting New Clients" />
+              <Field label="Availability Specifics" value={form.availabilitySpecifics} onChange={(value) => update("availabilitySpecifics", value)} textarea full />
               <Field label="Price" value={form.price} onChange={(value) => update("price", value)} />
               <Field label="Physical locations" value={form.physicalLocations} onChange={(value) => update("physicalLocations", value)} full />
-              <Field label="Availability specifics" value={form.availabilitySpecifics} onChange={(value) => update("availabilitySpecifics", value)} textarea full />
             </div>
           </ProfileSection>
 
