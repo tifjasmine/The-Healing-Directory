@@ -16,16 +16,20 @@ const API = "/.netlify/functions/app-api";
 const FALLBACK_OPTIONS = {
   providerType: ["Acupuncturist", "Birth & Postpartum Provider", "Bodywork & Massage Therapist", "Chiropractor", "Clinical Supervisor", "Coach", "Educator / Facilitator / Retreat Leader", "Energy, Sound & Spiritual Healer", "Movement & Yoga Provider", "Nutritionist / Dietitian", "Occupational Therapist", "Pelvic Floor Therapist", "Physical Therapist", "Psychiatrist / Medication Provider", "Psychologist", "Somatic Practitioner", "Therapist / Counselor", "Speech Therapist | Reading Specialist", "Energy Healer", "Sound & Spiritual Healer"],
   support: ["ADHD & Executive Functioning", "Anxiety, Stress & Overwhelm", "Attachment & Inner Child Work", "Autism & Neurodivergence", "Body Image & Eating Concerns", "Burnout & Exhaustion", "Chronic Pain & Illness", "Depression & Mood", "Digestive & Gut Health", "Family Dynamics & Divorce", "Geriatric Care", "Grief & Loss", "Intimacy & Couples", "LGBTQIA+ & Gender Identity", "Life Transitions", "Motherhood & Identity Shifts", "Nervous System & Emotional Regulation", "Pelvic & Sexual Health", "Physical Health", "Pregnancy, Postpartum & Fertility", "Reading, Spelling, & Language Development", "Relationships & Communication", "Self-Worth & Identity", "Sleep, Fatigue & Low Energy", "Spiritual Transition & Faith", "Substance Use & Addiction Recovery"],
-  services: ["Acupuncture", "Birth, Postpartum & Lactation Support", "Bodywork & Massage", "Chiropractic Care", "Clinical Supervision & Consultation", "Couples & Relationship Support", "Creative Arts Therapy", "EMDR & Trauma-Informed Modalities", "Energy & Sound Healing", "Family Support", "Group Sessions & Circles", "Individual Sessions", "Movement & Yoga Therapy", "Nutrition & Health Support", "Occupational Therapy", "Parenting & Motherhood", "Pelvic Floor Therapy", "Physical Therapy", "Psychedelic Integration", "Somatic & Body-Based Therapy", "Spiritual & Faith-Based Support", "Workshops, Courses & Retreats", "Birth", "Postpartum & Lactation Support", "Workshops", "Courses & Retreats"],
+  services: ["Acupuncture", "Birth, Postpartum & Lactation Support", "Bodywork & Massage", "Chiropractic Care", "Clinical Supervision & Consultation", "Couples & Relationship Support", "Creative Arts Therapy", "EMDR & Trauma-Informed Modalities", "Energy & Sound Healing", "Family Support", "Group Sessions & Circles", "Individual Sessions", "Movement & Yoga Therapy", "Nutrition & Health Support", "Occupational Therapy", "Parenting & Motherhood", "Pelvic Floor Therapy", "Physical Therapy", "Psychedelic Integration", "Somatic & Body-Based Therapy", "Spiritual & Faith-Based Support", "Workshops, Courses & Retreats"],
   populations: ["Adolescents", "Adults", "All", "BIPOC", "Children", "College Students", "Couples", "First Responders", "LGBTQIA+", "Men", "Mothers", "Parents", "Senior Citizens", "Women", "Fathers"],
   payment: ["Aetna", "BCBS", "Carelon", "Cigna", "CVAP", "EAP", "Government Plans", "Highmark", "Horizon", "Lotus Fund", "MVP", "Optum", "Oxford", "Private Pay", "Quest", "Sliding Scale", "Tricare", "UBH", "United Healthcare", "UPMC", "VA Insurance", "Superbills Available", "Towergate Insurance", "Other", "HSA"],
   location: ["All states", "Some services all states", "New Jersey", "Pennsylvania", "Other", "Virtual"],
   availability: ["Morning", "Afternoon", "Evening", "Weekend"],
   responseTime: ["Same Day", "Within 24 hrs", "1-2 Business Days", "3-5 Business Days", "Weekly"],
   referralMethod: ["Warm Intro", "Email", "Website Form", "Phone", "Text", "Consultation Link"],
+  genderIdentity: ["Female", "Male", "Non-binary", "Transgender", "Agender", "Genderfluid", "Genderqueer", "Intersex", "Prefer not to say", "Other"],
+  identity: ["Black / African Diaspora", "Indigenous / First Nations", "Latinx / Hispanic", "Asian / Asian American", "Middle Eastern / North African", "Pacific Islander", "White", "Multiracial", "Other", "Prefer not to say"],
   collaborationInterests: ["Business card swaps", "Client referral discounts", "Cohost workshops and events", "Collaborative care for shared clients", "Cross-promotion on social media", "Guest teaching / speaking", "Friendships and meetups", "Peer support", "Podcast and interview opportunities", "Provider discounts", "Other", "Referrals", "Peer Consultation", "Workshops"],
   vibe: ["Calm and grounding", "Creative and adaptive", "Direct and challenging", "Focused and structured", "Warm and nurturing"],
 };
+
+const HIDDEN_SERVICE_OPTIONS = ["Birth", "Postpartum & Lactation Support", "Workshops", "Courses & Retreats"];
 
 const EMPTY_PROFILE = {
   id: "",
@@ -34,7 +38,8 @@ const EMPTY_PROFILE = {
   pronouns: "",
   profession: "",
   license: "",
-  identity: "",
+  genderIdentity: [],
+  identity: [],
   email: "",
   phone: "",
   website: "",
@@ -87,6 +92,7 @@ const EMPTY_OPTIONS = {
   location: [],
   availability: [],
   identity: [],
+  genderIdentity: [],
   responseTime: [],
   referralMethod: [],
   collaborationInterests: [],
@@ -118,13 +124,14 @@ export default function EditProfilePage({ user, setNotice }) {
         const incoming = optionPayload.directoryOptions || {};
         setOptions({
           providerType: incoming.providerType || [],
-          services: incoming.services || [],
+          services: withoutOptions(incoming.services || [], HIDDEN_SERVICE_OPTIONS),
           support: incoming.support || [],
           populations: incoming.populations || [],
           payment: incoming.payment || [],
           location: incoming.locations || [],
           availability: incoming.availability || [],
           identity: incoming.identity || [],
+          genderIdentity: incoming.genderIdentity || [],
           responseTime: incoming.responseTime || [],
           referralMethod: incoming.referralMethod || [],
           collaborationInterests: incoming.collaborationInterests || [],
@@ -225,7 +232,8 @@ export default function EditProfilePage({ user, setNotice }) {
               {isGroupPractice ? null : <Field label="Pronouns" value={form.pronouns} onChange={(value) => update("pronouns", value)} />}
               <Field label={isGroupPractice ? "Practice focus" : "Profession"} value={form.profession} onChange={(value) => update("profession", value)} required />
               <Field label="License / certification, if applicable" value={form.license} onChange={(value) => update("license", value)} />
-              {isGroupPractice ? null : <MultiField label="Racial / ethnic identity" value={form.identity} options={options.identity} onChange={(value) => update("identity", value)} fallback="Other" />}
+              {isGroupPractice ? null : <MultiField label="Gender identity" value={form.genderIdentity} options={options.genderIdentity} onChange={(value) => update("genderIdentity", value)} fallback={FALLBACK_OPTIONS.genderIdentity} />}
+              {isGroupPractice ? null : <MultiField label="Racial / ethnic identity" value={form.identity} options={options.identity} onChange={(value) => update("identity", value)} fallback={FALLBACK_OPTIONS.identity} />}
               <Field label="Email" value={form.email} readOnly />
               <Field label="Phone" value={form.phone} onChange={(value) => update("phone", value)} />
               <Field label="Website" value={form.website} onChange={(value) => update("website", value)} />
@@ -425,6 +433,8 @@ function hydrateProfile(profile = {}, user) {
     email: profile.email || user?.email || "",
     photoUrl: profile.photo || "",
     profilePhotoUpload: null,
+    genderIdentity: toList(profile.genderIdentity),
+    identity: toList(profile.identity),
     providerType: toList(profile.providerType),
     additionalProviderType: profile.additionalProviderType || "",
     services: toList(profile.services),
@@ -450,6 +460,8 @@ function serializeProfile(form) {
     ...form,
     photoUrl: form.photoUrl,
     profilePhotoUpload: form.profilePhotoUpload,
+    genderIdentity: toList(form.genderIdentity),
+    identity: toList(form.identity),
     providerType: toList(form.providerType),
     services: toList(form.services),
     support: toList(form.support),
@@ -510,6 +522,11 @@ function toList(value) {
 
 function unique(values) {
   return [...new Set((values || []).map((item) => String(item || "").trim()).filter(Boolean))];
+}
+
+function withoutOptions(values, hidden) {
+  const hiddenSet = new Set((hidden || []).map((value) => String(value).trim().toLowerCase()));
+  return (values || []).filter((value) => !hiddenSet.has(String(value).trim().toLowerCase()));
 }
 
 function initials(value) {

@@ -1045,6 +1045,7 @@ async function saveProfile(user, body) {
   add(FIELDS.provider.pronouns, body.pronouns);
   add(FIELDS.provider.profession, body.profession);
   add(FIELDS.provider.license, body.license);
+  add(FIELDS.provider.genderIdentity, body.genderIdentity);
   add(FIELDS.provider.identity, body.identity);
   addProviderPhotoFields(fields, table, uploadedPhotoUrl, body.photoUrl);
   add(FIELDS.provider.email, user.email);

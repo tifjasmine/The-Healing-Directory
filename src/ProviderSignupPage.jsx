@@ -26,7 +26,7 @@ const ADMIN_EMAIL = "admin@thehealingdirectory.com";
 const FALLBACK_OPTIONS = {
   providerType: ["Acupuncturist", "Birth & Postpartum Provider", "Bodywork & Massage Therapist", "Chiropractor", "Clinical Supervisor", "Coach", "Educator / Facilitator / Retreat Leader", "Energy, Sound & Spiritual Healer", "Movement & Yoga Provider", "Nutritionist / Dietitian", "Occupational Therapist", "Pelvic Floor Therapist", "Physical Therapist", "Psychiatrist / Medication Provider", "Psychologist", "Somatic Practitioner", "Therapist / Counselor", "Speech Therapist | Reading Specialist", "Energy Healer", "Sound & Spiritual Healer"],
   support: ["ADHD & Executive Functioning", "Anxiety, Stress & Overwhelm", "Attachment & Inner Child Work", "Autism & Neurodivergence", "Body Image & Eating Concerns", "Burnout & Exhaustion", "Chronic Pain & Illness", "Depression & Mood", "Digestive & Gut Health", "Family Dynamics & Divorce", "Geriatric Care", "Grief & Loss", "Intimacy & Couples", "LGBTQIA+ & Gender Identity", "Life Transitions", "Motherhood & Identity Shifts", "Nervous System & Emotional Regulation", "Pelvic & Sexual Health", "Physical Health", "Pregnancy, Postpartum & Fertility", "Reading, Spelling, & Language Development", "Relationships & Communication", "Self-Worth & Identity", "Sleep, Fatigue & Low Energy", "Spiritual Transition & Faith", "Substance Use & Addiction Recovery"],
-  services: ["Acupuncture", "Birth, Postpartum & Lactation Support", "Bodywork & Massage", "Chiropractic Care", "Clinical Supervision & Consultation", "Couples & Relationship Support", "Creative Arts Therapy", "EMDR & Trauma-Informed Modalities", "Energy & Sound Healing", "Family Support", "Group Sessions & Circles", "Individual Sessions", "Movement & Yoga Therapy", "Nutrition & Health Support", "Occupational Therapy", "Parenting & Motherhood", "Pelvic Floor Therapy", "Physical Therapy", "Psychedelic Integration", "Somatic & Body-Based Therapy", "Spiritual & Faith-Based Support", "Workshops, Courses & Retreats", "Birth", "Postpartum & Lactation Support", "Workshops", "Courses & Retreats"],
+  services: ["Acupuncture", "Birth, Postpartum & Lactation Support", "Bodywork & Massage", "Chiropractic Care", "Clinical Supervision & Consultation", "Couples & Relationship Support", "Creative Arts Therapy", "EMDR & Trauma-Informed Modalities", "Energy & Sound Healing", "Family Support", "Group Sessions & Circles", "Individual Sessions", "Movement & Yoga Therapy", "Nutrition & Health Support", "Occupational Therapy", "Parenting & Motherhood", "Pelvic Floor Therapy", "Physical Therapy", "Psychedelic Integration", "Somatic & Body-Based Therapy", "Spiritual & Faith-Based Support", "Workshops, Courses & Retreats"],
   populations: ["Adolescents", "Adults", "All", "BIPOC", "Children", "College Students", "Couples", "First Responders", "LGBTQIA+", "Men", "Mothers", "Parents", "Senior Citizens", "Women", "Fathers"],
   payment: ["Aetna", "BCBS", "Carelon", "Cigna", "CVAP", "EAP", "Government Plans", "Highmark", "Horizon", "Lotus Fund", "MVP", "Optum", "Oxford", "Private Pay", "Quest", "Sliding Scale", "Tricare", "UBH", "United Healthcare", "UPMC", "VA Insurance", "Superbills Available", "Towergate Insurance", "Other", "HSA"],
   locations: ["All states", "Some services all states", "New Jersey", "Pennsylvania", "Other", "Virtual"],
@@ -39,6 +39,8 @@ const FALLBACK_OPTIONS = {
   collaborationInterests: ["Business card swaps", "Client referral discounts", "Cohost workshops and events", "Collaborative care for shared clients", "Cross-promotion on social media", "Guest teaching / speaking", "Friendships and meetups", "Peer support", "Podcast and interview opportunities", "Provider discounts", "Other", "Referrals", "Peer Consultation", "Workshops"],
   vibe: ["Calm and grounding", "Creative and adaptive", "Direct and challenging", "Focused and structured", "Warm and nurturing"],
 };
+
+const HIDDEN_SERVICE_OPTIONS = ["Birth", "Postpartum & Lactation Support", "Workshops", "Courses & Retreats"];
 
 const STEPS = [
   { id: "basics", label: "The basics", icon: User },
@@ -120,7 +122,7 @@ export default function ProviderSignupPage() {
         setOptions({
           providerType: choose(incoming.providerType, FALLBACK_OPTIONS.providerType),
           support: choose(incoming.support, FALLBACK_OPTIONS.support),
-          services: choose(incoming.services, FALLBACK_OPTIONS.services),
+          services: withoutOptions(choose(incoming.services, FALLBACK_OPTIONS.services), HIDDEN_SERVICE_OPTIONS),
           populations: choose(incoming.populations, FALLBACK_OPTIONS.populations),
           payment: choose(incoming.payment, FALLBACK_OPTIONS.payment),
           locations: choose(incoming.locations, FALLBACK_OPTIONS.locations),
@@ -521,6 +523,11 @@ function validEmail(value) {
 
 function choose(value, fallback) {
   return Array.isArray(value) && value.length ? value : fallback;
+}
+
+function withoutOptions(values, hidden) {
+  const hiddenSet = new Set((hidden || []).map((value) => String(value).trim().toLowerCase()));
+  return (values || []).filter((value) => !hiddenSet.has(String(value).trim().toLowerCase()));
 }
 
 function mergeOptions(primary, required) {
