@@ -1051,11 +1051,17 @@ async function saveProfile(user, body) {
   add(FIELDS.provider.bio, body.bio);
   add(FIELDS.provider.accountType, "provider");
   add(FIELDS.provider.type, body.providerType);
+  add(FIELDS.provider.additionalProviderType, body.additionalProviderType);
   add(FIELDS.provider.services, body.services);
+  add(FIELDS.provider.additionalServices, body.additionalServices);
   add(FIELDS.provider.support, body.support);
+  add(FIELDS.provider.additionalConcerns, body.additionalConcerns);
   add(FIELDS.provider.population, body.populations);
+  add(FIELDS.provider.additionalPopulations, body.additionalPopulations);
   add(FIELDS.provider.location, body.location);
+  add(FIELDS.provider.additionalStates, body.additionalStates);
   add(FIELDS.provider.payment, body.payment);
+  add(FIELDS.provider.additionalPayTypes, body.additionalPayTypes);
   add(FIELDS.provider.availability, body.availability);
   add(FIELDS.provider.price, body.price);
   add(FIELDS.provider.physicalLocations, body.physicalLocations);
@@ -1064,6 +1070,7 @@ async function saveProfile(user, body) {
   add(FIELDS.provider.referralMethod, body.referralMethod);
   add(FIELDS.provider.referralInstructions, body.referralInstructions);
   add(FIELDS.provider.collaborationInterests, body.collaborationInterests);
+  add(FIELDS.provider.otherCollaboration, body.otherCollaboration);
   add(FIELDS.provider.collaborationDetails, body.collaborationDetails);
   add(FIELDS.provider.providerNotes, body.providerNotes);
   if (body.infoOptIn !== undefined) add(FIELDS.provider.infoOptIn, body.infoOptIn ? "Yes" : "No");
@@ -1097,11 +1104,18 @@ function normalizeProvider(record) {
     photo: attachment(pick(f, FIELDS.provider.photo)) || text(pick(f, FIELDS.provider.photoUrl)), bio: longText(pick(f, FIELDS.provider.bio)),
     profession: text(pick(f, FIELDS.provider.profession)), pronouns: text(pick(f, FIELDS.provider.pronouns)),
     providerType: array(pick(f, FIELDS.provider.type)), services: array(pick(f, FIELDS.provider.services)),
+    additionalProviderType: text(pick(f, FIELDS.provider.additionalProviderType)),
+    additionalServices: text(pick(f, FIELDS.provider.additionalServices)),
     support: arrayExact(pick(f, FIELDS.provider.support)), populations: array(pick(f, FIELDS.provider.population)),
+    additionalConcerns: text(pick(f, FIELDS.provider.additionalConcerns)),
+    additionalPopulations: text(pick(f, FIELDS.provider.additionalPopulations)),
     location: array(pick(f, FIELDS.provider.location)), payment: array(pick(f, FIELDS.provider.payment)),
+    additionalStates: text(pick(f, FIELDS.provider.additionalStates)),
+    additionalPayTypes: text(pick(f, FIELDS.provider.additionalPayTypes)),
     identity: array(pick(f, FIELDS.provider.identity)), genderIdentity: array(pick(f, FIELDS.provider.genderIdentity)),
     availability: array(pick(f, FIELDS.provider.availability)), currentAvailability: array(pick(f, FIELDS.provider.currentAvailability)),
     collaborationInterests: array(pick(f, FIELDS.provider.collaborationInterests)), vibe: array(pick(f, FIELDS.provider.vibe)),
+    otherCollaboration: text(pick(f, FIELDS.provider.otherCollaboration)),
     website: text(pick(f, FIELDS.provider.website)), consultationLink: text(pick(f, FIELDS.provider.consult)),
     humanSide: text(pick(f, FIELDS.provider.human)), collaboration: text(pick(f, FIELDS.provider.collaboration)),
     verified: truthy(pick(f, FIELDS.provider.verified)), approved: truthy(approvalValue),

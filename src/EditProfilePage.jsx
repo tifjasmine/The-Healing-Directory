@@ -29,11 +29,17 @@ const EMPTY_PROFILE = {
   photoUrl: "",
   profilePhotoUpload: null,
   providerType: "",
+  additionalProviderType: "",
   services: "",
+  additionalServices: "",
   support: "",
+  additionalConcerns: "",
   populations: "",
+  additionalPopulations: "",
   payment: "",
+  additionalPayTypes: "",
   location: "",
+  additionalStates: "",
   availability: "",
   price: "",
   physicalLocations: "",
@@ -42,6 +48,7 @@ const EMPTY_PROFILE = {
   referralMethod: "",
   referralInstructions: "",
   collaborationInterests: "",
+  otherCollaboration: "",
   collaborationDetails: "",
   providerNotes: "",
   infoOptIn: false,
@@ -212,11 +219,17 @@ export default function EditProfilePage({ user, setNotice }) {
           <ProfileSection title="Areas of care" text="Services, concerns, locations, availability, and payment.">
             <div className="profile-form-grid">
               <MultiField label="Provider type" value={form.providerType} options={options.providerType} onChange={(value) => update("providerType", value)} fallback="Therapist, Coach, Energy Worker" required />
+              <Field label="Additional Provider Type" value={form.additionalProviderType} onChange={(value) => update("additionalProviderType", value)} />
               <MultiField label="Concerns / areas of support" value={form.support} options={options.support} onChange={(value) => update("support", value)} fallback="Anxiety, Trauma, Grief" required />
+              <Field label="Additional Concerns" value={form.additionalConcerns} onChange={(value) => update("additionalConcerns", value)} />
               <MultiField label="Services offered" value={form.services} options={options.services} onChange={(value) => update("services", value)} fallback="Individual Sessions, Workshops" />
+              <Field label="Additional Services" value={form.additionalServices} onChange={(value) => update("additionalServices", value)} />
               <MultiField label="People served" value={form.populations} options={options.populations} onChange={(value) => update("populations", value)} fallback="Adults, Teens, Couples" />
+              <Field label="Additional Populations" value={form.additionalPopulations} onChange={(value) => update("additionalPopulations", value)} />
               <MultiField label="Payment / insurance" value={form.payment} options={options.payment} onChange={(value) => update("payment", value)} fallback="Private Pay, Insurance" />
+              <Field label="Additional Pay Types" value={form.additionalPayTypes} onChange={(value) => update("additionalPayTypes", value)} />
               <MultiField label="State" value={form.location} options={options.location} onChange={(value) => update("location", value)} fallback="PA, NJ, Virtual" />
+              <Field label="Additional States" value={form.additionalStates} onChange={(value) => update("additionalStates", value)} />
               <MultiField label="General Availability" value={form.availability} options={options.availability} onChange={(value) => update("availability", value)} fallback="Accepting New Clients" />
               <Field label="Availability Specifics" value={form.availabilitySpecifics} onChange={(value) => update("availabilitySpecifics", value)} textarea full />
               <Field label="Price" value={form.price} onChange={(value) => update("price", value)} />
@@ -226,10 +239,11 @@ export default function EditProfilePage({ user, setNotice }) {
 
           <ProfileSection title="Provider intel" text="Referral and collaboration details for aligned providers.">
             <div className="profile-form-grid">
-              <MultiField label="Typical response time" value={form.responseTime} options={options.responseTime} onChange={(value) => update("responseTime", value)} fallback="Within 24 hours, 1-2 business days, Within a week, Varies" />
-              <MultiField label="Preferred referral method" value={form.referralMethod} options={options.referralMethod} onChange={(value) => update("referralMethod", value)} fallback="Email, Phone, Website, Consultation link" />
+              <MultiField label="Typical response time" value={form.responseTime} options={options.responseTime} onChange={(value) => update("responseTime", value)} fallback="Same Day, Within 24 hrs, 1-2 Business Days, 3-5 Business Days, Weekly" />
+              <MultiField label="Preferred referral method" value={form.referralMethod} options={options.referralMethod} onChange={(value) => update("referralMethod", value)} fallback="Warm Intro, Email, Website Form, Phone, Text, Consultation Link" />
               <Field label="Referral instructions" value={form.referralInstructions} onChange={(value) => update("referralInstructions", value)} textarea full />
               <MultiField label="Collaboration interests" value={form.collaborationInterests} options={options.collaborationInterests} onChange={(value) => update("collaborationInterests", value)} fallback="Workshops, Referrals, Peer Consultation" full />
+              <Field label="Other Collaboration" value={form.otherCollaboration} onChange={(value) => update("otherCollaboration", value)} />
               <Field label="Collaboration details" value={form.collaborationDetails} onChange={(value) => update("collaborationDetails", value)} textarea full />
               <Field label="Provider-to-provider notes" value={form.providerNotes} onChange={(value) => update("providerNotes", value)} textarea full />
             </div>
@@ -376,13 +390,20 @@ function hydrateProfile(profile = {}, user) {
     photoUrl: profile.photo || "",
     profilePhotoUpload: null,
     providerType: toText(profile.providerType),
+    additionalProviderType: profile.additionalProviderType || "",
     services: toText(profile.services),
+    additionalServices: profile.additionalServices || "",
     support: toText(profile.support),
+    additionalConcerns: profile.additionalConcerns || "",
     populations: toText(profile.populations),
+    additionalPopulations: profile.additionalPopulations || "",
     payment: toText(profile.payment),
+    additionalPayTypes: profile.additionalPayTypes || "",
     location: toText(profile.location),
+    additionalStates: profile.additionalStates || "",
     availability: toText(profile.availability),
     collaborationInterests: toText(profile.collaborationInterests),
+    otherCollaboration: profile.otherCollaboration || "",
     vibe: toText(profile.vibe),
     infoOptIn: profile.infoOptIn === true || profile.infoOptIn === "Yes",
   };
