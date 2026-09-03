@@ -65,6 +65,8 @@ const EMPTY_OPTIONS = {
   location: [],
   availability: [],
   identity: [],
+  responseTime: [],
+  referralMethod: [],
   collaborationInterests: [],
   vibe: [],
 };
@@ -101,6 +103,8 @@ export default function EditProfilePage({ user, setNotice }) {
           location: incoming.locations || [],
           availability: incoming.availability || [],
           identity: incoming.identity || [],
+          responseTime: incoming.responseTime || [],
+          referralMethod: incoming.referralMethod || [],
           collaborationInterests: incoming.collaborationInterests || [],
           vibe: incoming.vibe || [],
         });
@@ -222,8 +226,8 @@ export default function EditProfilePage({ user, setNotice }) {
 
           <ProfileSection title="Provider intel" text="Referral and collaboration details for aligned providers.">
             <div className="profile-form-grid">
-              <Field label="Typical response time" value={form.responseTime} onChange={(value) => update("responseTime", value)} />
-              <Field label="Preferred referral method" value={form.referralMethod} onChange={(value) => update("referralMethod", value)} />
+              <MultiField label="Typical response time" value={form.responseTime} options={options.responseTime} onChange={(value) => update("responseTime", value)} fallback="Within 24 hours, 1-2 business days, Within a week, Varies" />
+              <MultiField label="Preferred referral method" value={form.referralMethod} options={options.referralMethod} onChange={(value) => update("referralMethod", value)} fallback="Email, Phone, Website, Consultation link" />
               <Field label="Referral instructions" value={form.referralInstructions} onChange={(value) => update("referralInstructions", value)} textarea full />
               <MultiField label="Collaboration interests" value={form.collaborationInterests} options={options.collaborationInterests} onChange={(value) => update("collaborationInterests", value)} fallback="Workshops, Referrals, Peer Consultation" full />
               <Field label="Collaboration details" value={form.collaborationDetails} onChange={(value) => update("collaborationDetails", value)} textarea full />

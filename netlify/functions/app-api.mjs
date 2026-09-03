@@ -1685,13 +1685,19 @@ function setAirtableValue(fields, table, fieldName, value) {
   }
   const values = arrayRaw(value).flatMap((item) => String(item || "").split(/[,;\n]+/)).map(clean).filter(Boolean);
   let nextValue;
-  if (field?.type === "multipleSelects") nextValue = values;
-  else if (field?.type === "singleSelect") nextValue = values[0] || "";
+  if (field?.type === "multipleSelects") nextValue = existingSelectChoices(field, values);
+  else if (field?.type === "singleSelect") nextValue = existingSelectChoices(field, values)[0] || "";
   else if (Array.isArray(value)) nextValue = listText(value);
   else if (typeof value === "boolean") nextValue = value;
   else nextValue = clean(value);
   if (Array.isArray(nextValue) ? !nextValue.length : nextValue === "" || nextValue === undefined || nextValue === null) return;
   fields[fieldName] = nextValue;
+}
+
+function existingSelectChoices(field, values) {
+  const choices = field?.options?.choices || [];
+  const allowed = new Map(choices.map((choice) => [lower(choice.name), clean(choice.name)]));
+  return unique(values.map((value) => allowed.get(lower(value))).filter(Boolean));
 }
 
 function isComputedField(field) {

@@ -262,7 +262,7 @@ function Care({ form, change, toggle, addOther, options }) {
 
 function Referral({ form, change, toggle, options }) {
   return <Section title="Referral intel" text="Share the practical details another provider needs before sending someone your way.">
-    <Row><MultiSelect label="Typical response time" values={form.typicalResponseTime} options={options.responseTime} onToggle={(value) => toggle("typicalResponseTime", value)} /><MultiSelect label="Preferred referral method" values={form.preferredReferralMethod} options={options.referralMethod} onToggle={(value) => toggle("preferredReferralMethod", value)} /></Row>
+    <Row><MultiSelect label="Typical response time" values={form.typicalResponseTime} options={options.responseTime} onToggle={(value) => toggle("typicalResponseTime", value)} allowCustom={false} /><MultiSelect label="Preferred referral method" values={form.preferredReferralMethod} options={options.referralMethod} onToggle={(value) => toggle("preferredReferralMethod", value)} allowCustom={false} /></Row>
     <TextField label="Referral instructions" value={form.referralInstructions} onChange={change("referralInstructions")} textarea placeholder="What should another provider include when referring to you?" />
   </Section>;
 }
