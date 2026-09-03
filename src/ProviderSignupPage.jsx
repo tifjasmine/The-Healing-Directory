@@ -24,20 +24,20 @@ const APP_API = "/.netlify/functions/app-api";
 const ADMIN_EMAIL = "admin@thehealingdirectory.com";
 
 const FALLBACK_OPTIONS = {
-  providerType: ["Therapist", "Coach", "Bodyworker", "Energy Worker", "Holistic Health", "Consultant", "Other"],
-  support: ["Anxiety", "Trauma", "Grief", "Relationships", "Identity", "Life Transitions", "Stress", "Spirituality", "Other"],
-  services: ["Individual Sessions", "Groups", "Workshops", "Consultation", "Training", "Retreats", "Other"],
-  populations: ["Adults", "Teens", "Couples", "Families", "Providers", "LGBTQIA+", "BIPOC", "Other"],
-  payment: ["Private Pay", "Sliding Scale", "Insurance", "Out of Network", "Free Consultation", "Other"],
-  locations: ["Virtual", "Pennsylvania", "New Jersey", "New York", "Delaware", "Other"],
-  availability: ["Accepting New Clients", "Waitlist", "Weekdays", "Evenings", "Weekends", "Virtual", "In Person"],
+  providerType: ["Acupuncturist", "Birth & Postpartum Provider", "Bodywork & Massage Therapist", "Chiropractor", "Clinical Supervisor", "Coach", "Educator / Facilitator / Retreat Leader", "Energy, Sound & Spiritual Healer", "Movement & Yoga Provider", "Nutritionist / Dietitian", "Occupational Therapist", "Pelvic Floor Therapist", "Physical Therapist", "Psychiatrist / Medication Provider", "Psychologist", "Somatic Practitioner", "Therapist / Counselor", "Speech Therapist | Reading Specialist", "Energy Healer", "Sound & Spiritual Healer"],
+  support: ["ADHD & Executive Functioning", "Anxiety, Stress & Overwhelm", "Attachment & Inner Child Work", "Autism & Neurodivergence", "Body Image & Eating Concerns", "Burnout & Exhaustion", "Chronic Pain & Illness", "Depression & Mood", "Digestive & Gut Health", "Family Dynamics & Divorce", "Geriatric Care", "Grief & Loss", "Intimacy & Couples", "LGBTQIA+ & Gender Identity", "Life Transitions", "Motherhood & Identity Shifts", "Nervous System & Emotional Regulation", "Pelvic & Sexual Health", "Physical Health", "Pregnancy, Postpartum & Fertility", "Reading, Spelling, & Language Development", "Relationships & Communication", "Self-Worth & Identity", "Sleep, Fatigue & Low Energy", "Spiritual Transition & Faith", "Substance Use & Addiction Recovery"],
+  services: ["Acupuncture", "Birth, Postpartum & Lactation Support", "Bodywork & Massage", "Chiropractic Care", "Clinical Supervision & Consultation", "Couples & Relationship Support", "Creative Arts Therapy", "EMDR & Trauma-Informed Modalities", "Energy & Sound Healing", "Family Support", "Group Sessions & Circles", "Individual Sessions", "Movement & Yoga Therapy", "Nutrition & Health Support", "Occupational Therapy", "Parenting & Motherhood", "Pelvic Floor Therapy", "Physical Therapy", "Psychedelic Integration", "Somatic & Body-Based Therapy", "Spiritual & Faith-Based Support", "Workshops, Courses & Retreats", "Birth", "Postpartum & Lactation Support", "Workshops", "Courses & Retreats"],
+  populations: ["Adolescents", "Adults", "All", "BIPOC", "Children", "College Students", "Couples", "First Responders", "LGBTQIA+", "Men", "Mothers", "Parents", "Senior Citizens", "Women", "Fathers"],
+  payment: ["Aetna", "BCBS", "Carelon", "Cigna", "CVAP", "EAP", "Government Plans", "Highmark", "Horizon", "Lotus Fund", "MVP", "Optum", "Oxford", "Private Pay", "Quest", "Sliding Scale", "Tricare", "UBH", "United Healthcare", "UPMC", "VA Insurance", "Superbills Available", "Towergate Insurance", "Other", "HSA"],
+  locations: ["All states", "Some services all states", "New Jersey", "Pennsylvania", "Other", "Virtual"],
+  availability: ["Morning", "Afternoon", "Evening", "Weekend"],
   responseTime: ["Same Day", "Within 24 hrs", "1-2 Business Days", "3-5 Business Days", "Weekly"],
   referralMethod: ["Warm Intro", "Email", "Website Form", "Phone", "Text", "Consultation Link"],
   genderIdentity: ["Female", "Male", "Non-binary", "Transgender", "Agender", "Genderfluid", "Genderqueer", "Intersex", "Prefer not to say", "Other"],
   racialEthnicIdentity: ["Black / African Diaspora", "Indigenous / First Nations", "Latinx / Hispanic", "Asian / Asian American", "Middle Eastern / North African", "Pacific Islander", "White", "Multiracial", "Other", "Prefer not to say"],
-  heardAboutUs: ["Provider referral", "Client referral", "Instagram", "Facebook", "Google search", "Event", "Referral Room", "Newsletter"],
-  collaborationInterests: ["Referrals", "Workshops", "Peer Consultation", "Speaking", "Community Events", "Provider Discounts", "Other"],
-  vibe: ["Warm", "Grounding", "Direct", "Creative", "Spiritual", "Clinical", "Collaborative", "Other"],
+  heardAboutUs: ["Google", "Facebook", "Instragram", "Provider", "Family/Friend", "Instagram", "Linkedin", "Other"],
+  collaborationInterests: ["Business card swaps", "Client referral discounts", "Cohost workshops and events", "Collaborative care for shared clients", "Cross-promotion on social media", "Guest teaching / speaking", "Friendships and meetups", "Peer support", "Podcast and interview opportunities", "Provider discounts", "Other", "Referrals", "Peer Consultation", "Workshops"],
+  vibe: ["Calm and grounding", "Creative and adaptive", "Direct and challenging", "Focused and structured", "Warm and nurturing"],
 };
 
 const STEPS = [
@@ -50,6 +50,7 @@ const STEPS = [
 ];
 
 const EMPTY = {
+  listingType: "Individual Provider",
   name: "",
   pronouns: "",
   profession: "",
@@ -223,26 +224,30 @@ export default function ProviderSignupPage() {
 }
 
 function Basics({ form, change, setValue, toggle, options }) {
+  const isGroupPractice = form.listingType === "Group Practice";
   return <Section title="The basics" text="Start with the public and contact details we need to review your provider profile.">
-    <Row><TextField label="Full name" value={form.name} onChange={change("name")} required placeholder="Dr. Jane Smith" /><TextField label="Pronouns" value={form.pronouns} onChange={change("pronouns")} placeholder="she/her, they/them..." /></Row>
+    <ListingTypeButtons value={form.listingType} onChange={(value) => setValue("listingType", value)} />
+    {isGroupPractice
+      ? <TextField label="Practice name" value={form.name} onChange={change("name")} required placeholder="The Healing Practice" full />
+      : <Row><TextField label="Full name" value={form.name} onChange={change("name")} required placeholder="Dr. Jane Smith" /><TextField label="Pronouns" value={form.pronouns} onChange={change("pronouns")} placeholder="she/her, they/them..." /></Row>}
     <Row>
       <TextField
-        label="Profession / title"
+        label={isGroupPractice ? "Practice focus" : "Profession / title"}
         value={form.profession}
         onChange={change("profession")}
         required
-        placeholder="Licensed Therapist, Holistic Health Coach..."
+        placeholder={isGroupPractice ? "Therapy practice, wellness collective..." : "Licensed Therapist, Holistic Health Coach..."}
       />
       <TextField
-        label="License # / certification"
+        label="License # / certification, if applicable"
         value={form.licenseCertification}
         onChange={change("licenseCertification")}
         placeholder="LPC #000000, RYT-500..."
       />
     </Row>
-    <Row><MultiSelect label="Gender Identity" values={form.genderIdentity} options={options.genderIdentity} onToggle={(value) => toggle("genderIdentity", value)} allowCustom={false} /><MultiSelect label="Racial / Ethnic Identity" values={form.racialEthnicIdentity} options={options.racialEthnicIdentity} onToggle={(value) => toggle("racialEthnicIdentity", value)} allowCustom={false} /></Row>
+    {isGroupPractice ? null : <Row><MultiSelect label="Gender Identity" values={form.genderIdentity} options={options.genderIdentity} onToggle={(value) => toggle("genderIdentity", value)} allowCustom={false} /><MultiSelect label="Racial / Ethnic Identity" values={form.racialEthnicIdentity} options={options.racialEthnicIdentity} onToggle={(value) => toggle("racialEthnicIdentity", value)} allowCustom={false} /></Row>}
     <PhotoUpload value={form.profilePhotoUpload} onChange={(value) => setValue("profilePhotoUpload", value)} />
-    <TextField label="Bio" value={form.bio} onChange={change("bio")} textarea placeholder="Let everyone get to know you and your practice." />
+    <TextField label={isGroupPractice ? "About the practice" : "Bio"} value={form.bio} onChange={change("bio")} textarea placeholder="Let everyone get to know you and your practice." />
     <Row><TextField label="Email" type="email" value={form.email} onChange={change("email")} required placeholder="you@practice.com" /><TextField label="Phone" value={form.phone} onChange={change("phone")} placeholder="(555) 000-0000" /></Row>
     <Row><TextField label="Website" value={form.website} onChange={change("website")} placeholder="yourwebsite.com" /><TextField label="Consultation / booking link" value={form.consultationLink} onChange={change("consultationLink")} placeholder="calendly.com/..." /></Row>
     <MultiSelect label="How'd you hear about us?" values={form.heardAboutUs} options={options.heardAboutUs} onToggle={(value) => toggle("heardAboutUs", value)} allowCustom={false} />
@@ -348,8 +353,25 @@ function Row({ children }) {
   return <div className="provider-row-fields">{children}</div>;
 }
 
-function TextField({ label, required, textarea, helper, ...props }) {
-  return <label className={textarea ? "provider-field provider-full" : "provider-field"}><span>{label}{required ? " *" : ""}</span>{textarea ? <textarea rows="5" {...props} /> : <input {...props} />}{helper ? <small>{helper}</small> : null}</label>;
+function TextField({ label, required, textarea, helper, full, ...props }) {
+  return <label className={textarea || full ? "provider-field provider-full" : "provider-field"}><span>{label}{required ? " *" : ""}</span>{textarea ? <textarea rows="5" {...props} /> : <input {...props} />}{helper ? <small>{helper}</small> : null}</label>;
+}
+
+function ListingTypeButtons({ value, onChange, profile }) {
+  const options = ["Individual Provider", "Group Practice"];
+  return <div className={profile ? "profile-field profile-listing-type full" : "provider-field provider-listing-type provider-full"}>
+    <span>Listing Type *</span>
+    <div>
+      {options.map((option) => <button
+        key={option}
+        type="button"
+        className={value === option ? "selected" : ""}
+        onClick={() => onChange(option)}
+      >
+        {option}
+      </button>)}
+    </div>
+  </div>;
 }
 
 function PhotoUpload({ value, onChange }) {

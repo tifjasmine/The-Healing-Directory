@@ -159,6 +159,7 @@ const FIELDS = {
     name: ["Provider / Practice Name", "Provider Name", "Name", "Full Name", "Full Name *"],
     email: ["Email", "Email Address", "Provider Email", "Provider Email Address", "Contact Email", "Login Email"], phone: ["Phone", "Phone Number"],
     accountType: ["Account Type", "User Type", "Member Type", "Role"],
+    listingType: ["Listing Type", "Provider Listing Type"],
     photo: ["Profile Photo", "Photo", "Headshot", "Image"],
     photoUrl: ["Profile Photo URL", "Photo URL", "Headshot URL", "Image URL"],
     bio: ["Provider Bio", "Bio", "About", "Description", "Bio / About", "Public Bio"],
@@ -907,6 +908,7 @@ async function providerApplicationFields(application = {}) {
   const add = (aliases, value) => setResolvedAlias(fields, table, aliases, value);
   const uploadedPhotoUrl = await uploadProviderAsset(application.profilePhotoUpload, application.email || application.name, "profile-photo");
   add(FIELDS.provider.name, application.name);
+  add(FIELDS.provider.listingType, application.listingType || "Individual Provider");
   add(FIELDS.provider.pronouns, application.pronouns);
   add(FIELDS.provider.profession, application.profession || application.professionalTitle);
   add(FIELDS.provider.license, application.licenseCertification || application.license);
@@ -1039,6 +1041,7 @@ async function saveProfile(user, body) {
   const table = await metadataTable("directory").catch(() => null);
   const add = (aliases, value) => setResolvedAlias(fields, table, aliases, value);
   add(FIELDS.provider.name, body.name);
+  add(FIELDS.provider.listingType, body.listingType || "Individual Provider");
   add(FIELDS.provider.pronouns, body.pronouns);
   add(FIELDS.provider.profession, body.profession);
   add(FIELDS.provider.license, body.license);
@@ -1099,6 +1102,7 @@ function normalizeProvider(record) {
     createdTime: record.createdTime || "",
     firstLoginDate: text(pick(f, FIELDS.provider.firstLoginDate)),
     accountType,
+    listingType: text(pick(f, FIELDS.provider.listingType)) || "Individual Provider",
     order: numberValue(pick(f, FIELDS.provider.order)),
     email: text(pick(f, FIELDS.provider.email)), phone: text(pick(f, FIELDS.provider.phone)),
     photo: attachment(pick(f, FIELDS.provider.photo)) || text(pick(f, FIELDS.provider.photoUrl)), bio: longText(pick(f, FIELDS.provider.bio)),

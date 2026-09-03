@@ -13,8 +13,23 @@ import { getAccessToken } from "./authClient.js";
 
 const API = "/.netlify/functions/app-api";
 
+const FALLBACK_OPTIONS = {
+  providerType: ["Acupuncturist", "Birth & Postpartum Provider", "Bodywork & Massage Therapist", "Chiropractor", "Clinical Supervisor", "Coach", "Educator / Facilitator / Retreat Leader", "Energy, Sound & Spiritual Healer", "Movement & Yoga Provider", "Nutritionist / Dietitian", "Occupational Therapist", "Pelvic Floor Therapist", "Physical Therapist", "Psychiatrist / Medication Provider", "Psychologist", "Somatic Practitioner", "Therapist / Counselor", "Speech Therapist | Reading Specialist", "Energy Healer", "Sound & Spiritual Healer"],
+  support: ["ADHD & Executive Functioning", "Anxiety, Stress & Overwhelm", "Attachment & Inner Child Work", "Autism & Neurodivergence", "Body Image & Eating Concerns", "Burnout & Exhaustion", "Chronic Pain & Illness", "Depression & Mood", "Digestive & Gut Health", "Family Dynamics & Divorce", "Geriatric Care", "Grief & Loss", "Intimacy & Couples", "LGBTQIA+ & Gender Identity", "Life Transitions", "Motherhood & Identity Shifts", "Nervous System & Emotional Regulation", "Pelvic & Sexual Health", "Physical Health", "Pregnancy, Postpartum & Fertility", "Reading, Spelling, & Language Development", "Relationships & Communication", "Self-Worth & Identity", "Sleep, Fatigue & Low Energy", "Spiritual Transition & Faith", "Substance Use & Addiction Recovery"],
+  services: ["Acupuncture", "Birth, Postpartum & Lactation Support", "Bodywork & Massage", "Chiropractic Care", "Clinical Supervision & Consultation", "Couples & Relationship Support", "Creative Arts Therapy", "EMDR & Trauma-Informed Modalities", "Energy & Sound Healing", "Family Support", "Group Sessions & Circles", "Individual Sessions", "Movement & Yoga Therapy", "Nutrition & Health Support", "Occupational Therapy", "Parenting & Motherhood", "Pelvic Floor Therapy", "Physical Therapy", "Psychedelic Integration", "Somatic & Body-Based Therapy", "Spiritual & Faith-Based Support", "Workshops, Courses & Retreats", "Birth", "Postpartum & Lactation Support", "Workshops", "Courses & Retreats"],
+  populations: ["Adolescents", "Adults", "All", "BIPOC", "Children", "College Students", "Couples", "First Responders", "LGBTQIA+", "Men", "Mothers", "Parents", "Senior Citizens", "Women", "Fathers"],
+  payment: ["Aetna", "BCBS", "Carelon", "Cigna", "CVAP", "EAP", "Government Plans", "Highmark", "Horizon", "Lotus Fund", "MVP", "Optum", "Oxford", "Private Pay", "Quest", "Sliding Scale", "Tricare", "UBH", "United Healthcare", "UPMC", "VA Insurance", "Superbills Available", "Towergate Insurance", "Other", "HSA"],
+  location: ["All states", "Some services all states", "New Jersey", "Pennsylvania", "Other", "Virtual"],
+  availability: ["Morning", "Afternoon", "Evening", "Weekend"],
+  responseTime: ["Same Day", "Within 24 hrs", "1-2 Business Days", "3-5 Business Days", "Weekly"],
+  referralMethod: ["Warm Intro", "Email", "Website Form", "Phone", "Text", "Consultation Link"],
+  collaborationInterests: ["Business card swaps", "Client referral discounts", "Cohost workshops and events", "Collaborative care for shared clients", "Cross-promotion on social media", "Guest teaching / speaking", "Friendships and meetups", "Peer support", "Podcast and interview opportunities", "Provider discounts", "Other", "Referrals", "Peer Consultation", "Workshops"],
+  vibe: ["Calm and grounding", "Creative and adaptive", "Direct and challenging", "Focused and structured", "Warm and nurturing"],
+};
+
 const EMPTY_PROFILE = {
   id: "",
+  listingType: "Individual Provider",
   name: "",
   pronouns: "",
   profession: "",
@@ -28,26 +43,26 @@ const EMPTY_PROFILE = {
   photo: "",
   photoUrl: "",
   profilePhotoUpload: null,
-  providerType: "",
+  providerType: [],
   additionalProviderType: "",
-  services: "",
+  services: [],
   additionalServices: "",
-  support: "",
+  support: [],
   additionalConcerns: "",
-  populations: "",
+  populations: [],
   additionalPopulations: "",
-  payment: "",
+  payment: [],
   additionalPayTypes: "",
-  location: "",
+  location: [],
   additionalStates: "",
-  availability: "",
+  availability: [],
   price: "",
   physicalLocations: "",
   availabilitySpecifics: "",
-  responseTime: "",
-  referralMethod: "",
+  responseTime: [],
+  referralMethod: [],
   referralInstructions: "",
-  collaborationInterests: "",
+  collaborationInterests: [],
   otherCollaboration: "",
   collaborationDetails: "",
   providerNotes: "",
@@ -60,7 +75,7 @@ const EMPTY_PROFILE = {
   healingWish: "",
   comfortPractice: "",
   funFact: "",
-  vibe: "",
+  vibe: [],
 };
 
 const EMPTY_OPTIONS = {
@@ -164,6 +179,8 @@ export default function EditProfilePage({ user, setNotice }) {
     }
   }
 
+  const isGroupPractice = form.listingType === "Group Practice";
+
   return (
     <main className="edit-profile-page">
       <section className="edit-profile-hero dark-hero">
@@ -184,8 +201,8 @@ export default function EditProfilePage({ user, setNotice }) {
       <section className="edit-profile-layout">
         <aside className="profile-preview account-card">
           <ProfilePhoto form={form} />
-          <h2>{form.name || "Your name"}</h2>
-          <p>{form.profession || "Provider profession"}</p>
+          <h2>{form.name || (isGroupPractice ? "Practice name" : "Your name")}</h2>
+          <p>{form.profession || (isGroupPractice ? "Practice focus" : "Provider profession")}</p>
           <div className="preview-divider" />
           <span>{form.email || user?.email || "Email connected to this account"}</span>
         </aside>
@@ -203,34 +220,35 @@ export default function EditProfilePage({ user, setNotice }) {
             </div>
 
             <div className="profile-form-grid">
-              <Field label="Name" value={form.name} onChange={(value) => update("name", value)} required />
-              <Field label="Pronouns" value={form.pronouns} onChange={(value) => update("pronouns", value)} />
-              <Field label="Profession" value={form.profession} onChange={(value) => update("profession", value)} required />
-              <Field label="License / certification" value={form.license} onChange={(value) => update("license", value)} />
-              <MultiField label="Racial / ethnic identity" value={form.identity} options={options.identity} onChange={(value) => update("identity", value)} fallback="Other" />
+              <ListingTypeButtons value={form.listingType} onChange={(value) => update("listingType", value)} profile />
+              <Field label={isGroupPractice ? "Practice name" : "Name"} value={form.name} onChange={(value) => update("name", value)} required />
+              {isGroupPractice ? null : <Field label="Pronouns" value={form.pronouns} onChange={(value) => update("pronouns", value)} />}
+              <Field label={isGroupPractice ? "Practice focus" : "Profession"} value={form.profession} onChange={(value) => update("profession", value)} required />
+              <Field label="License / certification, if applicable" value={form.license} onChange={(value) => update("license", value)} />
+              {isGroupPractice ? null : <MultiField label="Racial / ethnic identity" value={form.identity} options={options.identity} onChange={(value) => update("identity", value)} fallback="Other" />}
               <Field label="Email" value={form.email} readOnly />
               <Field label="Phone" value={form.phone} onChange={(value) => update("phone", value)} />
               <Field label="Website" value={form.website} onChange={(value) => update("website", value)} />
               <Field label="Consultation link" value={form.consultationLink} onChange={(value) => update("consultationLink", value)} />
-              <Field label="Bio" value={form.bio} onChange={(value) => update("bio", value)} textarea full required />
+              <Field label={isGroupPractice ? "About the practice" : "Bio"} value={form.bio} onChange={(value) => update("bio", value)} textarea full required />
             </div>
           </ProfileSection>
 
           <ProfileSection title="Areas of care" text="Services, concerns, locations, availability, and payment.">
             <div className="profile-form-grid">
-              <MultiField label="Provider type" value={form.providerType} options={options.providerType} onChange={(value) => update("providerType", value)} fallback="Therapist, Coach, Energy Worker" required />
+              <MultiField label="Provider type" value={form.providerType} options={options.providerType} onChange={(value) => update("providerType", value)} fallback={FALLBACK_OPTIONS.providerType} required />
               <Field label="Additional Provider Type" value={form.additionalProviderType} onChange={(value) => update("additionalProviderType", value)} />
-              <MultiField label="Concerns / areas of support" value={form.support} options={options.support} onChange={(value) => update("support", value)} fallback="Anxiety, Trauma, Grief" required />
+              <MultiField label="Concerns / areas of support" value={form.support} options={options.support} onChange={(value) => update("support", value)} fallback={FALLBACK_OPTIONS.support} required />
               <Field label="Additional Concerns" value={form.additionalConcerns} onChange={(value) => update("additionalConcerns", value)} />
-              <MultiField label="Services offered" value={form.services} options={options.services} onChange={(value) => update("services", value)} fallback="Individual Sessions, Workshops" />
+              <MultiField label="Services offered" value={form.services} options={options.services} onChange={(value) => update("services", value)} fallback={FALLBACK_OPTIONS.services} />
               <Field label="Additional Services" value={form.additionalServices} onChange={(value) => update("additionalServices", value)} />
-              <MultiField label="People served" value={form.populations} options={options.populations} onChange={(value) => update("populations", value)} fallback="Adults, Teens, Couples" />
+              <MultiField label="People served" value={form.populations} options={options.populations} onChange={(value) => update("populations", value)} fallback={FALLBACK_OPTIONS.populations} />
               <Field label="Additional Populations" value={form.additionalPopulations} onChange={(value) => update("additionalPopulations", value)} />
-              <MultiField label="Payment / insurance" value={form.payment} options={options.payment} onChange={(value) => update("payment", value)} fallback="Private Pay, Insurance" />
+              <MultiField label="Payment / insurance" value={form.payment} options={options.payment} onChange={(value) => update("payment", value)} fallback={FALLBACK_OPTIONS.payment} />
               <Field label="Additional Pay Types" value={form.additionalPayTypes} onChange={(value) => update("additionalPayTypes", value)} />
-              <MultiField label="State" value={form.location} options={options.location} onChange={(value) => update("location", value)} fallback="PA, NJ, Virtual" />
+              <MultiField label="State" value={form.location} options={options.location} onChange={(value) => update("location", value)} fallback={FALLBACK_OPTIONS.location} />
               <Field label="Additional States" value={form.additionalStates} onChange={(value) => update("additionalStates", value)} />
-              <MultiField label="General Availability" value={form.availability} options={options.availability} onChange={(value) => update("availability", value)} fallback="Accepting New Clients" />
+              <MultiField label="General Availability" value={form.availability} options={options.availability} onChange={(value) => update("availability", value)} fallback={FALLBACK_OPTIONS.availability} />
               <Field label="Availability Specifics" value={form.availabilitySpecifics} onChange={(value) => update("availabilitySpecifics", value)} textarea full />
               <Field label="Price" value={form.price} onChange={(value) => update("price", value)} />
               <Field label="Physical locations" value={form.physicalLocations} onChange={(value) => update("physicalLocations", value)} full />
@@ -239,10 +257,10 @@ export default function EditProfilePage({ user, setNotice }) {
 
           <ProfileSection title="Provider intel" text="Referral and collaboration details for aligned providers.">
             <div className="profile-form-grid">
-              <MultiField label="Typical response time" value={form.responseTime} options={options.responseTime} onChange={(value) => update("responseTime", value)} fallback="Same Day, Within 24 hrs, 1-2 Business Days, 3-5 Business Days, Weekly" />
-              <MultiField label="Preferred referral method" value={form.referralMethod} options={options.referralMethod} onChange={(value) => update("referralMethod", value)} fallback="Warm Intro, Email, Website Form, Phone, Text, Consultation Link" />
+              <MultiField label="Typical response time" value={form.responseTime} options={options.responseTime} onChange={(value) => update("responseTime", value)} fallback={FALLBACK_OPTIONS.responseTime} />
+              <MultiField label="Preferred referral method" value={form.referralMethod} options={options.referralMethod} onChange={(value) => update("referralMethod", value)} fallback={FALLBACK_OPTIONS.referralMethod} />
               <Field label="Referral instructions" value={form.referralInstructions} onChange={(value) => update("referralInstructions", value)} textarea full />
-              <MultiField label="Collaboration interests" value={form.collaborationInterests} options={options.collaborationInterests} onChange={(value) => update("collaborationInterests", value)} fallback="Workshops, Referrals, Peer Consultation" full />
+              <MultiField label="Collaboration interests" value={form.collaborationInterests} options={options.collaborationInterests} onChange={(value) => update("collaborationInterests", value)} fallback={FALLBACK_OPTIONS.collaborationInterests} full />
               <Field label="Other Collaboration" value={form.otherCollaboration} onChange={(value) => update("otherCollaboration", value)} />
               <Field label="Collaboration details" value={form.collaborationDetails} onChange={(value) => update("collaborationDetails", value)} textarea full />
               <Field label="Provider-to-provider notes" value={form.providerNotes} onChange={(value) => update("providerNotes", value)} textarea full />
@@ -264,7 +282,7 @@ export default function EditProfilePage({ user, setNotice }) {
               <Field label="What I wish people knew about healing" value={form.healingWish} onChange={(value) => update("healingWish", value)} textarea full />
               <Field label="Favorite comfort practice" value={form.comfortPractice} onChange={(value) => update("comfortPractice", value)} />
               <Field label="Fun fact" value={form.funFact} onChange={(value) => update("funFact", value)} />
-              <MultiField label="Vibe" value={form.vibe} options={options.vibe} onChange={(value) => update("vibe", value)} fallback="Warm, Grounding, Direct" />
+              <MultiField label="Vibe" value={form.vibe} options={options.vibe} onChange={(value) => update("vibe", value)} fallback={FALLBACK_OPTIONS.vibe} />
             </div>
           </ProfileSection>
 
@@ -364,7 +382,7 @@ function MultiField({ label, value, options, onChange, fallback, full, required 
     const next = selected.includes(valueToToggle)
       ? selected.filter((item) => item !== valueToToggle)
       : [...selected, valueToToggle];
-    onChange(toText(next));
+    onChange(next);
   }
 
   return (
@@ -382,29 +400,47 @@ function MultiField({ label, value, options, onChange, fallback, full, required 
   );
 }
 
+function ListingTypeButtons({ value, onChange, profile }) {
+  const options = ["Individual Provider", "Group Practice"];
+  return <div className={profile ? "profile-field profile-listing-type full" : "provider-field provider-listing-type provider-full"}>
+    <span>Listing Type *</span>
+    <div>
+      {options.map((option) => <button
+        key={option}
+        type="button"
+        className={value === option ? "selected" : ""}
+        onClick={() => onChange(option)}
+      >
+        {option}
+      </button>)}
+    </div>
+  </div>;
+}
+
 function hydrateProfile(profile = {}, user) {
   return {
     ...EMPTY_PROFILE,
     ...profile,
+    listingType: profile.listingType || "Individual Provider",
     email: profile.email || user?.email || "",
     photoUrl: profile.photo || "",
     profilePhotoUpload: null,
-    providerType: toText(profile.providerType),
+    providerType: toList(profile.providerType),
     additionalProviderType: profile.additionalProviderType || "",
-    services: toText(profile.services),
+    services: toList(profile.services),
     additionalServices: profile.additionalServices || "",
-    support: toText(profile.support),
+    support: toList(profile.support),
     additionalConcerns: profile.additionalConcerns || "",
-    populations: toText(profile.populations),
+    populations: toList(profile.populations),
     additionalPopulations: profile.additionalPopulations || "",
-    payment: toText(profile.payment),
+    payment: toList(profile.payment),
     additionalPayTypes: profile.additionalPayTypes || "",
-    location: toText(profile.location),
+    location: toList(profile.location),
     additionalStates: profile.additionalStates || "",
-    availability: toText(profile.availability),
-    collaborationInterests: toText(profile.collaborationInterests),
+    availability: toList(profile.availability),
+    collaborationInterests: toList(profile.collaborationInterests),
     otherCollaboration: profile.otherCollaboration || "",
-    vibe: toText(profile.vibe),
+    vibe: toList(profile.vibe),
     infoOptIn: profile.infoOptIn === true || profile.infoOptIn === "Yes",
   };
 }
@@ -465,6 +501,7 @@ function toText(value) {
 }
 
 function toList(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
   return String(value || "")
     .split(/[,;\n]+/)
     .map((item) => item.trim())

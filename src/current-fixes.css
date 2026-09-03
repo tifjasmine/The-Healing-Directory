@@ -3517,6 +3517,32 @@
   outline: none;
 }
 
+.provider-listing-type > div,
+.profile-listing-type > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.provider-listing-type button,
+.profile-listing-type button {
+  min-height: 48px;
+  border: 1.5px solid #dfcfc0;
+  border-radius: 14px;
+  background: #fffaf6;
+  color: #514940;
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.provider-listing-type button.selected,
+.profile-listing-type button.selected {
+  border-color: #24493d;
+  background: #24493d;
+  color: #fffaf6;
+}
+
 .provider-field input,
 .provider-multi-trigger {
   min-height: 52px;
