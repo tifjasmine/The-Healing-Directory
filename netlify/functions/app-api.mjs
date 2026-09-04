@@ -153,6 +153,7 @@ const AIRTABLE_BOOTSTRAP_SCHEMAS = {
 
 const TABLE_LOOKUP = new Map();
 const TABLE_META_CACHE = new Map();
+const HIDDEN_SERVICE_OPTIONS = ["Birth", "Postpartum & Lactation Support", "Workshops", "Courses & Retreats"];
 
 const FIELDS = {
   provider: {
@@ -925,7 +926,7 @@ async function providerApplicationFields(application = {}) {
   add(FIELDS.provider.approved, false);
   add(FIELDS.provider.type, application.providerType || application.serviceType);
   add(FIELDS.provider.additionalProviderType, application.additionalProviderType);
-  add(FIELDS.provider.services, application.servicesOffered || application.services);
+  add(FIELDS.provider.services, visibleServiceOptions(application.servicesOffered || application.services));
   add(FIELDS.provider.additionalServices, application.additionalServices);
   add(FIELDS.provider.support, application.concerns || application.support);
   add(FIELDS.provider.additionalConcerns, application.additionalConcerns);
@@ -1056,7 +1057,7 @@ async function saveProfile(user, body) {
   add(FIELDS.provider.accountType, "provider");
   add(FIELDS.provider.type, body.providerType);
   add(FIELDS.provider.additionalProviderType, body.additionalProviderType);
-  add(FIELDS.provider.services, body.services);
+  add(FIELDS.provider.services, visibleServiceOptions(body.services));
   add(FIELDS.provider.additionalServices, body.additionalServices);
   add(FIELDS.provider.support, body.support);
   add(FIELDS.provider.additionalConcerns, body.additionalConcerns);
@@ -1108,18 +1109,18 @@ function normalizeProvider(record) {
     email: text(pick(f, FIELDS.provider.email)), phone: text(pick(f, FIELDS.provider.phone)),
     photo: attachment(pick(f, FIELDS.provider.photo)) || text(pick(f, FIELDS.provider.photoUrl)), bio: longText(pick(f, FIELDS.provider.bio)),
     profession: text(pick(f, FIELDS.provider.profession)), pronouns: text(pick(f, FIELDS.provider.pronouns)),
-    providerType: array(pick(f, FIELDS.provider.type)), services: array(pick(f, FIELDS.provider.services)),
+    providerType: arrayExact(pick(f, FIELDS.provider.type)), services: visibleServiceOptions(arrayExact(pick(f, FIELDS.provider.services))),
     additionalProviderType: text(pick(f, FIELDS.provider.additionalProviderType)),
     additionalServices: text(pick(f, FIELDS.provider.additionalServices)),
-    support: arrayExact(pick(f, FIELDS.provider.support)), populations: array(pick(f, FIELDS.provider.population)),
+    support: arrayExact(pick(f, FIELDS.provider.support)), populations: arrayExact(pick(f, FIELDS.provider.population)),
     additionalConcerns: text(pick(f, FIELDS.provider.additionalConcerns)),
     additionalPopulations: text(pick(f, FIELDS.provider.additionalPopulations)),
-    location: array(pick(f, FIELDS.provider.location)), payment: array(pick(f, FIELDS.provider.payment)),
+    location: arrayExact(pick(f, FIELDS.provider.location)), payment: arrayExact(pick(f, FIELDS.provider.payment)),
     additionalStates: text(pick(f, FIELDS.provider.additionalStates)),
     additionalPayTypes: text(pick(f, FIELDS.provider.additionalPayTypes)),
-    identity: array(pick(f, FIELDS.provider.identity)), genderIdentity: array(pick(f, FIELDS.provider.genderIdentity)),
-    availability: array(pick(f, FIELDS.provider.availability)), currentAvailability: array(pick(f, FIELDS.provider.currentAvailability)),
-    collaborationInterests: array(pick(f, FIELDS.provider.collaborationInterests)), vibe: array(pick(f, FIELDS.provider.vibe)),
+    identity: arrayExact(pick(f, FIELDS.provider.identity)), genderIdentity: arrayExact(pick(f, FIELDS.provider.genderIdentity)),
+    availability: arrayExact(pick(f, FIELDS.provider.availability)), currentAvailability: arrayExact(pick(f, FIELDS.provider.currentAvailability)),
+    collaborationInterests: arrayExact(pick(f, FIELDS.provider.collaborationInterests)), vibe: arrayExact(pick(f, FIELDS.provider.vibe)),
     otherCollaboration: text(pick(f, FIELDS.provider.otherCollaboration)),
     website: text(pick(f, FIELDS.provider.website)), consultationLink: text(pick(f, FIELDS.provider.consult)),
     humanSide: text(pick(f, FIELDS.provider.human)), collaboration: text(pick(f, FIELDS.provider.collaboration)),
@@ -1188,15 +1189,15 @@ async function list(key) {
 }
 
 async function get(key, id) { return airtable(key, id); }
-async function create(key, fields) { return airtable(key, "", { method: "POST", body: { records: [{ fields }], typecast: true } }).then((p) => p.records[0]); }
-async function update(key, id, fields) { return airtable(key, id, { method: "PATCH", body: { fields, typecast: true } }); }
+async function create(key, fields) { return airtable(key, "", { method: "POST", body: { records: [{ fields }] } }).then((p) => p.records[0]); }
+async function update(key, id, fields) { return airtable(key, id, { method: "PATCH", body: { fields } }); }
 
 async function getDirectoryOptions() {
   return {
     support: await selectOptions("directory", FIELDS.provider.support),
     providerType: await selectOptions("directory", FIELDS.provider.type),
     payment: await selectOptions("directory", FIELDS.provider.payment),
-    services: await selectOptions("directory", FIELDS.provider.services),
+    services: visibleServiceOptions(await selectOptions("directory", FIELDS.provider.services)),
     populations: await selectOptions("directory", FIELDS.provider.population),
     locations: await selectOptions("directory", FIELDS.provider.location),
     availability: await selectOptions("directory", FIELDS.provider.availability),
@@ -1702,10 +1703,11 @@ function setAirtableValue(fields, table, fieldName, value) {
     if (attachments.length) fields[fieldName] = attachments;
     return;
   }
-  const values = arrayRaw(value).flatMap((item) => String(item || "").split(/[,;\n]+/)).map(clean).filter(Boolean);
+  const values = selectInputValues(value);
   let nextValue;
-  if (field?.type === "multipleSelects") nextValue = existingSelectChoices(field, values);
-  else if (field?.type === "singleSelect") nextValue = existingSelectChoices(field, values)[0] || "";
+  const safeValues = removeHiddenSelectOptions(field, values);
+  if (field?.type === "multipleSelects") nextValue = existingSelectChoices(field, safeValues);
+  else if (field?.type === "singleSelect") nextValue = existingSelectChoices(field, safeValues)[0] || "";
   else if (Array.isArray(value)) nextValue = listText(value);
   else if (typeof value === "boolean") nextValue = value;
   else nextValue = clean(value);
@@ -1717,6 +1719,22 @@ function existingSelectChoices(field, values) {
   const choices = field?.options?.choices || [];
   const allowed = new Map(choices.map((choice) => [lower(choice.name), clean(choice.name)]));
   return unique(values.map((value) => allowed.get(lower(value))).filter(Boolean));
+}
+
+function selectInputValues(value) {
+  if (Array.isArray(value)) return value.map(clean).filter(Boolean);
+  return String(value || "").split(/[,;\n]+/).map(clean).filter(Boolean);
+}
+
+function removeHiddenSelectOptions(field, values) {
+  const fieldName = lower(field?.name);
+  if (fieldName !== "services offered" && fieldName !== "services") return values;
+  return visibleServiceOptions(values);
+}
+
+function visibleServiceOptions(values) {
+  const hidden = new Set(HIDDEN_SERVICE_OPTIONS.map((value) => lower(value)));
+  return arrayRaw(values).map(clean).filter((value) => value && !hidden.has(lower(value)));
 }
 
 function isComputedField(field) {

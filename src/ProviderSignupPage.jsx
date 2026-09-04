@@ -25,7 +25,7 @@ const ADMIN_EMAIL = "admin@thehealingdirectory.com";
 
 const FALLBACK_OPTIONS = {
   providerType: ["Acupuncturist", "Birth & Postpartum Provider", "Bodywork & Massage Therapist", "Chiropractor", "Clinical Supervisor", "Coach", "Educator / Facilitator / Retreat Leader", "Energy, Sound & Spiritual Healer", "Movement & Yoga Provider", "Nutritionist / Dietitian", "Occupational Therapist", "Pelvic Floor Therapist", "Physical Therapist", "Psychiatrist / Medication Provider", "Psychologist", "Somatic Practitioner", "Therapist / Counselor", "Speech Therapist | Reading Specialist", "Energy Healer", "Sound & Spiritual Healer"],
-  support: ["ADHD & Executive Functioning", "Anxiety, Stress & Overwhelm", "Attachment & Inner Child Work", "Autism & Neurodivergence", "Body Image & Eating Concerns", "Burnout & Exhaustion", "Chronic Pain & Illness", "Depression & Mood", "Digestive & Gut Health", "Family Dynamics & Divorce", "Geriatric Care", "Grief & Loss", "Intimacy & Couples", "LGBTQIA+ & Gender Identity", "Life Transitions", "Motherhood & Identity Shifts", "Nervous System & Emotional Regulation", "Pelvic & Sexual Health", "Physical Health", "Pregnancy, Postpartum & Fertility", "Reading, Spelling, & Language Development", "Relationships & Communication", "Self-Worth & Identity", "Sleep, Fatigue & Low Energy", "Spiritual Transition & Faith", "Substance Use & Addiction Recovery"],
+  support: ["ADHD & Executive Functioning", "Anxiety, Stress & Overwhelm", "Attachment & Inner Child Work", "Autism & Neurodivergence", "Body Image & Eating Concerns", "Burnout & Exhaustion", "Chronic Pain & Illness", "Depression & Mood", "Digestive & Gut Health", "Family Dynamics & Divorce", "Geriatric Care", "Grief & Loss", "Intimacy & Couples", "LGBTQIA+ & Gender Identity", "Life Transitions", "Mentorship", "Motherhood & Identity Shifts", "Nervous System & Emotional Regulation", "Pelvic & Sexual Health", "Physical Health", "Pregnancy, Postpartum & Fertility", "PTSD and Trauma", "Reading, Spelling, & Language Development", "Relationships & Communication", "Self-Worth & Identity", "Sleep, Fatigue & Low Energy", "Spiritual Transition & Faith", "Substance Use & Addiction Recovery"],
   services: ["Acupuncture", "Birth, Postpartum & Lactation Support", "Bodywork & Massage", "Chiropractic Care", "Clinical Supervision & Consultation", "Couples & Relationship Support", "Creative Arts Therapy", "EMDR & Trauma-Informed Modalities", "Energy & Sound Healing", "Family Support", "Group Sessions & Circles", "Individual Sessions", "Movement & Yoga Therapy", "Nutrition & Health Support", "Occupational Therapy", "Parenting & Motherhood", "Pelvic Floor Therapy", "Physical Therapy", "Psychedelic Integration", "Somatic & Body-Based Therapy", "Spiritual & Faith-Based Support", "Workshops, Courses & Retreats"],
   populations: ["Adolescents", "Adults", "All", "BIPOC", "Children", "College Students", "Couples", "First Responders", "LGBTQIA+", "Men", "Mothers", "Parents", "Senior Citizens", "Women", "Fathers"],
   payment: ["Aetna", "BCBS", "Carelon", "Cigna", "CVAP", "EAP", "Government Plans", "Highmark", "Horizon", "Lotus Fund", "MVP", "Optum", "Oxford", "Private Pay", "Quest", "Sliding Scale", "Tricare", "UBH", "United Healthcare", "UPMC", "VA Insurance", "Superbills Available", "Towergate Insurance", "Other", "HSA"],
@@ -157,6 +157,10 @@ export default function ProviderSignupPage() {
     setBusy(true);
     setNotice("");
     try {
+      const application = {
+        ...form,
+        servicesOffered: withoutOptions(form.servicesOffered, HIDDEN_SERVICE_OPTIONS),
+      };
       const result = await api("signup-profile", {
         method: "POST",
         body: {
@@ -168,7 +172,7 @@ export default function ProviderSignupPage() {
           professionalTitle: form.profession,
           message: form.bio,
           areaInterest: form.providerType,
-          application: form,
+          application,
         },
       });
       if (result.supabaseSync && result.supabaseSync.synced === false) setSyncWarning("");
