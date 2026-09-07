@@ -309,8 +309,17 @@ function DirectoryPage({ data, loading, navigate, toggleSave }) {
       <div className="provider-invite directory-join-invite"><div><p className="eyebrow ink">Are you a provider?</p><h2>Join a trusted, relationship-based healing network.</h2></div><div className="directory-join-actions"><button className="button warm" onClick={() => navigate("/provider-signup")}>Become a Provider <ArrowRight size={17} /></button><button className="button member-save-cta" onClick={() => navigate("/signup")}>Become a Member <span>Save providers and events in one place.</span></button></div></div>
       <div className="results-count"><strong>{providers.length}</strong> providers shown</div>
       {loading ? <LoadingState label="Loading providers" /> : providers.length ? <div className="provider-list">{providers.map((provider) => <ProviderCard key={provider.id} provider={provider} saved={data.savedProviderIds.includes(provider.id)} onSave={() => toggleSave("provider", provider.id, !data.savedProviderIds.includes(provider.id))} onOpen={() => navigate(`/provider-details?id=${provider.id}`)} />)}</div> : <EmptyState title="No providers match that search" text="Try a broader phrase or clear one of the filters." />}
+      <DirectoryDisclaimer />
     </section>
   </main>;
+}
+
+function DirectoryDisclaimer() {
+  return <aside className="directory-disclaimer">
+    <p className="eyebrow ink">A note about providers</p>
+    <p>The Healing Directory is a community-based directory that may include licensed professionals and non-licensed practitioners. We do our best to share thoughtful, values-aligned providers, but each person is responsible for deciding whether a provider is the right fit. Please review credentials, ask questions, and use your own judgment before beginning care or services.</p>
+    <p>The Healing Directory does not provide medical, mental health, legal, or emergency services, and listings do not guarantee outcomes, availability, or provider-client fit.</p>
+  </aside>;
 }
 
 function ProviderCard({ provider, saved, onSave, onOpen }) {

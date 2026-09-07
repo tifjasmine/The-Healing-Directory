@@ -10151,6 +10151,31 @@ button.referral-room-preview-card:hover {
   justify-content: flex-end;
 }
 
+.directory-disclaimer {
+  margin-top: 28px;
+  padding: 22px 24px;
+  border: 1px solid #decfbd;
+  border-radius: 8px;
+  background: #fffaf1;
+  color: #5d655f;
+}
+
+.directory-disclaimer .eyebrow {
+  margin-bottom: 8px;
+  color: #b36545;
+}
+
+.directory-disclaimer p {
+  max-width: 980px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.directory-disclaimer p + p {
+  margin-top: 8px;
+}
+
 @media (max-width: 900px) {
   .site-footer > .site-footer-inner {
     grid-template-columns: 1fr;
@@ -10158,5 +10183,9 @@ button.referral-room-preview-card:hover {
 
   .site-footer nav {
     justify-content: flex-start;
+  }
+
+  .directory-disclaimer {
+    padding: 19px 18px;
   }
 }
