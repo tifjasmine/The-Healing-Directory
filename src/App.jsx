@@ -253,7 +253,13 @@ function SiteHeader({ route, user, authReady, navigate, onLogout, menuOpen, setM
 }
 
 function SiteFooter({ navigate }) {
-  return <footer className="site-footer"><div><strong>The Healing Directory</strong><p>Thoughtful connections for healing, wellness, and trusted referrals.</p></div><nav><button onClick={() => navigate("/terms")}>Terms & Conditions</button><button onClick={() => navigate("/privacy")}>Privacy Policy</button><PwaInstallButton /></nav></footer>;
+  return <footer className="site-footer">
+    <div className="site-footer-inner">
+      <div className="site-footer-brand"><strong>The Healing Directory</strong><p>Thoughtful connections for healing, wellness, and trusted referrals.</p></div>
+      <p className="site-footer-disclaimer">The Healing Directory is a community-based directory that may include licensed professionals and non-licensed practitioners. We do our best to share thoughtful, values-aligned providers, but each person is responsible for deciding whether a provider is the right fit. Please review credentials, ask questions, and use your own judgment before beginning care or services. The Healing Directory does not provide medical, mental health, legal, or emergency services, and listings do not guarantee outcomes, availability, or provider-client fit.</p>
+      <nav><button onClick={() => navigate("/terms")}>Terms & Conditions</button><button onClick={() => navigate("/privacy")}>Privacy Policy</button><PwaInstallButton /></nav>
+    </div>
+  </footer>;
 }
 
 function DirectoryPage({ data, loading, navigate, toggleSave }) {
