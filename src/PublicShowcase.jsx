@@ -330,8 +330,17 @@ function DirectoryPage({ data, loading, toggleSave, user }) {
     </section>
     <section className="content-shell">
       {loading ? <State label="Loading providers" /> : providers.length ? <><div className="provider-list">{visibleProviders.map((provider) => <ProviderCard key={provider.id} provider={provider} saved={data.savedProviderIds.includes(provider.id)} onSave={() => toggleSave("provider", provider.id, !data.savedProviderIds.includes(provider.id))} />)}</div><ViewMoreList shown={visibleProviders.length} total={providers.length} label="providers" onMore={() => setVisibleCount((value) => value + LIST_PAGE_SIZE)} /></> : <State label="No providers match that search" />}
+      <DirectoryDisclaimer />
     </section>
   </main>;
+}
+
+function DirectoryDisclaimer() {
+  return <aside className="directory-disclaimer">
+    <p className="eyebrow ink">A note about providers</p>
+    <p>The Healing Directory is a community-based directory that may include licensed professionals and non-licensed practitioners. We do our best to share thoughtful, values-aligned providers, but each person is responsible for deciding whether a provider is the right fit. Please review credentials, ask questions, and use your own judgment before beginning care or services.</p>
+    <p>The Healing Directory does not provide medical, mental health, legal, or emergency services, and listings do not guarantee outcomes, availability, or provider-client fit.</p>
+  </aside>;
 }
 
 function ProviderCard({ provider, saved, onSave }) {
