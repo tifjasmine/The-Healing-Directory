@@ -30,7 +30,8 @@ const TABLES = {
   referralCircleThemes: process.env.AIRTABLE_REFERRAL_CIRCLE_THEMES_TABLE_ID || "Referral Room Circle Themes",
   referralConnectionTypes: process.env.AIRTABLE_REFERRAL_CONNECTION_TYPES_TABLE_ID || "Referral Connection Types",
   referralAvailabilityOptions: process.env.AIRTABLE_REFERRAL_AVAILABILITY_OPTIONS_TABLE_ID || "Referral Availability Options",
-  connections: process.env.AIRTABLE_CONNECTIONS_TABLE_ID || "Provider Connections"
+  connections: process.env.AIRTABLE_CONNECTIONS_TABLE_ID || "Provider Connections",
+  providerInquiries: process.env.AIRTABLE_PROVIDER_INQUIRIES_TABLE_ID || "Provider Inquiries"
 };
 
 const TABLE_ALIASES = {
@@ -147,6 +148,24 @@ const AIRTABLE_BOOTSTRAP_SCHEMAS = {
       { name: "Directory Profile", type: "multipleRecordLinks", options: { linkedTableId: TABLES.directory } },
       { name: "Converted To Directory Profile", type: "checkbox", options: { icon: "check", color: "greenBright" } },
       { name: "Review Status", type: "singleSelect", options: { choices: [{ name: "New Submission" }, { name: "Reviewing" }, { name: "Invite" }, { name: "Waitlist" }, { name: "Follow-Up Needed" }, { name: "Archive" }, { name: "Converted" }] } }
+    ]
+  },
+  providerInquiries: {
+    name: "Provider Inquiries",
+    fields: [
+      { name: "Name", type: "singleLineText" },
+      { name: "Provider", type: "multipleRecordLinks", options: { linkedTableId: TABLES.directory } },
+      { name: "Provider Name", type: "singleLineText" },
+      { name: "Provider Email", type: "email" },
+      { name: "Client Name", type: "singleLineText" },
+      { name: "Client Email", type: "email" },
+      { name: "Client Phone", type: "phoneNumber" },
+      { name: "Message", type: "multilineText" },
+      { name: "Consent", type: "checkbox", options: { icon: "check", color: "greenBright" } },
+      { name: "Submitted At", type: "dateTime", options: { timeZone: "client", dateFormat: { name: "local" }, timeFormat: { name: "12hour" } } },
+      { name: "Source URL", type: "url" },
+      { name: "Page Path", type: "singleLineText" },
+      { name: "Status", type: "singleSelect", options: { choices: [{ name: "New" }, { name: "Sent to Provider" }, { name: "Spam" }, { name: "Archived" }] } }
     ]
   }
 };
@@ -310,6 +329,7 @@ export default async function handler(request) {
     const body = await request.json().catch(() => ({}));
 
     if (action === "signup-profile") return reply(await signupProfile(body));
+    if (action === "provider-inquiry") return reply(await providerInquiry(body, request));
     if (action === "referral-room-interest") return reply(await referralRoomInterest(body));
     if (action === "toggle-provider") return reply(await toggleProvider(requireUser(user), body));
     if (action === "toggle-event") return reply(await toggleEvent(requireUser(user), body));
@@ -1090,6 +1110,41 @@ async function saveProfile(user, body) {
   add(FIELDS.provider.vibe, body.vibe);
   const saved = await updateSafe("directory", profile.id, fields);
   return { ok: true, profile: normalizeProfile(saved) };
+}
+
+async function providerInquiry(body = {}, request) {
+  if (clean(body.website)) return { ok: true };
+  const providerId = clean(body.providerId);
+  if (!providerId) throw httpError(400, "Provider is required.");
+
+  const provider = normalizeProvider(await get("directory", providerId));
+  if (!provider?.id || !provider.isPublic) throw httpError(404, "Provider not found.");
+
+  const clientName = clean(body.name);
+  const clientEmail = requiredEmail(body.email);
+  const clientPhone = limitText(body.phone, 80);
+  const message = limitText(body.message, 2000);
+  const consent = body.consent === true;
+  if (!clientName) throw httpError(400, "Your name is required.");
+  if (!message) throw httpError(400, "Please include a short message for the provider.");
+  if (!consent) throw httpError(400, "Please confirm the general inquiry note before sending.");
+
+  const record = await createSafe("providerInquiries", {
+    Name: `${clientName} → ${provider.name || "Provider"}`,
+    Provider: [provider.id],
+    "Provider Name": provider.name || "",
+    "Provider Email": clean(provider.email),
+    "Client Name": clientName,
+    "Client Email": clientEmail,
+    "Client Phone": clientPhone,
+    Message: message,
+    Consent: true,
+    "Submitted At": new Date().toISOString(),
+    "Source URL": limitText(body.sourceUrl || request?.headers?.get("referer"), 500),
+    "Page Path": limitText(body.pagePath, 220),
+    Status: "New"
+  });
+  return { ok: true, id: record.id };
 }
 
 function normalizeProvider(record) {
@@ -2209,6 +2264,7 @@ function truthy(value) { if (value === true || value === 1) return true; return 
 function clean(value) { return String(value ?? "").replace(/\s+/g, " ").trim(); }
 function normalizeWebsite(value) { const next = clean(value); return next && !/^https?:\/\//i.test(next) ? `https://${next}` : next; }
 function lower(value) { return clean(value).toLowerCase(); }
+function limitText(value, max = 1000) { return longText(value).slice(0, max); }
 function slug(value) { return lower(value).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "provider"; }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function required(value, label) { const cleanValue = clean(value); if (!cleanValue) throw httpError(400, `${label} is required.`); return cleanValue; }
