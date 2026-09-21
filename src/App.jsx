@@ -323,10 +323,11 @@ function DirectoryDisclaimer() {
 }
 
 function ProviderCard({ provider, saved, onSave, onOpen }) {
+  const messageLink = providerInquiryMailto(provider);
   return <article className="provider-row">
     <Avatar item={provider} />
     <div className="provider-copy"><div className="title-line"><button className="text-link title-link" onClick={onOpen}>{provider.name}</button>{provider.verified ? <span className="status good"><Check size={12} /> Verified</span> : null}</div><p className="profession">{provider.providerType?.join(", ") || "Provider"}</p>{provider.location?.length ? <p className="meta"><MapPin size={14} /> {provider.location.join(", ")}</p> : null}<p className="summary">{truncate(provider.bio, 210) || "View this provider's profile, approach, services, and contact options."}</p><div className="tag-row">{[...(provider.providerType || []), ...(provider.support || [])].slice(0, 5).map((tag) => <span key={tag}>{tag}</span>)}</div></div>
-    <div className="provider-contact"><div className="provider-contact-title">Contact<button className={saved ? "icon-button saved" : "icon-button"} onClick={onSave} title={saved ? "Remove saved provider" : "Save provider"}>{saved ? <Star fill="currentColor" /> : <Star />}</button></div>{provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}{provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}{provider.website ? <a href={toHref(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>Website</span></a> : null}<button className="button full" onClick={onOpen}>View profile <ArrowRight size={15} /></button></div>
+    <div className="provider-contact"><div className="provider-contact-title">Contact<button className={saved ? "icon-button saved" : "icon-button"} onClick={onSave} title={saved ? "Remove saved provider" : "Save provider"}>{saved ? <Star fill="currentColor" /> : <Star />}</button></div>{messageLink ? <a href={messageLink}><Mail size={17} /><span>Message provider</span></a> : null}{provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}{provider.website ? <a href={toHref(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>Website</span></a> : null}<button className="button full" onClick={onOpen}>View profile <ArrowRight size={15} /></button></div>
   </article>;
 }
 
@@ -339,8 +340,9 @@ function ProviderDetails({ route, data, loading, navigate, toggleSave, user }) {
   if (loading && !provider) return <LoadingState label="Loading provider profile" />;
   if (!provider) return <EmptyState title="Provider not found" text="This profile may be unavailable or awaiting approval." action="Back to directory" onAction={() => navigate("/")} />;
   const saved = data.savedProviderIds.includes(provider.id);
+  const messageLink = providerInquiryMailto(provider);
   return <main className="provider-detail-page"><section className="profile-band"><div className="band-inner"><div className="profile-actions"><button className="back-link" onClick={() => navigate("/")}><ArrowLeft size={16} /> Back to directory</button><button className={saved ? "button saved-profile" : "button outline-light"} onClick={() => toggleSave("provider", provider.id, !saved)}>{saved ? <CheckCircle2 size={16} /> : <Bookmark size={16} />}{saved ? "Saved provider" : "Save provider"}</button></div><div className="profile-hero"><Avatar item={provider} large /><div><p className="eyebrow">The Healing Directory</p><div className="title-line"><h1>{provider.name}</h1>{provider.pronouns ? <span className="pronouns">({provider.pronouns})</span> : null}{provider.verified ? <span className="status verified-dark"><CheckCircle2 size={13} /> Verified</span> : null}</div><p className="profile-title">{provider.profession || provider.providerType?.join(", ")}</p><div className="meta-row">{provider.location?.length ? <span><MapPin size={17} />{provider.location.join(", ")}</span> : null}{provider.providerType?.length ? <span><HeartHandshake size={17} />{provider.providerType.join(", ")}</span> : null}</div><ProfileTags label="Provider type" values={provider.providerType} /><ProfileTags label="Areas of support" values={provider.support} warm /></div></div></div></section>
-    <section className="content-shell detail-grid profile-content-grid"><div className="detail-main"><ContentSection kicker="About"><p>{provider.bio || "Profile details are being completed."}</p></ContentSection><ContentSection kicker="Specialties & support"><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>{provider.humanSide ? <ContentSection kicker="Get to know your provider"><p>{provider.humanSide}</p></ContentSection> : null}{showProviderOnlySection ? <ProviderOnlySection provider={provider} /> : null}</div><aside className="profile-sidebar"><div className="contact-panel"><h2>Connect</h2>{provider.consultationLink ? <a className="button full" href={toHref(provider.consultationLink)} target="_blank" rel="noreferrer">Book consultation <ArrowRight size={16} /></a> : provider.website ? <a className="button full" href={toHref(provider.website)} target="_blank" rel="noreferrer">Visit website <ArrowRight size={16} /></a> : null}{provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}{provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}{provider.website ? <a href={toHref(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>{provider.website}</span></a> : null}</div><div className="contact-panel access-panel"><h2>Access &amp;<br />Availability</h2><InfoLine icon={<Tag />} label="Pay type / insurance" value={provider.payment?.join(", ")} /><InfoLine icon={<MapPin />} label="Location" value={provider.location?.join(", ")} /></div></aside></section>
+    <section className="content-shell detail-grid profile-content-grid"><div className="detail-main"><ContentSection kicker="About"><p>{provider.bio || "Profile details are being completed."}</p></ContentSection><ContentSection kicker="Specialties & support"><div className="care-grid"><CareGroup label="Provider type" values={provider.providerType} /><CareGroup label="Services" values={provider.services} /><CareGroup label="Areas of support" values={provider.support} warm /><CareGroup label="Population focus" values={provider.populations} neutral /></div></ContentSection>{provider.humanSide ? <ContentSection kicker="Get to know your provider"><p>{provider.humanSide}</p></ContentSection> : null}{showProviderOnlySection ? <ProviderOnlySection provider={provider} /> : null}</div><aside className="profile-sidebar"><div className="contact-panel"><h2>Connect</h2>{provider.consultationLink ? <a className="button full" href={toHref(provider.consultationLink)} target="_blank" rel="noreferrer">Book consultation <ArrowRight size={16} /></a> : provider.website ? <a className="button full" href={toHref(provider.website)} target="_blank" rel="noreferrer">Visit website <ArrowRight size={16} /></a> : null}{messageLink ? <a href={messageLink}><Mail size={17} /><span>Message provider</span></a> : null}{provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}{provider.website ? <a href={toHref(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>{provider.website}</span></a> : null}</div><div className="contact-panel access-panel"><h2>Access &amp;<br />Availability</h2><InfoLine icon={<Tag />} label="Pay type / insurance" value={provider.payment?.join(", ")} /><InfoLine icon={<MapPin />} label="Location" value={provider.location?.join(", ")} /></div></aside></section>
   </main>;
 }
 
@@ -914,6 +916,28 @@ function firstName(value) { return String(value || "there").split(/[ @._-]/).fil
 function initials(value) { const parts = String(value || "TH").split(/\s+/).filter(Boolean); return (parts[0]?.[0] + (parts.length > 1 ? parts.at(-1)?.[0] : parts[0]?.[1] || "")).toUpperCase(); }
 function truncate(value, max = 160) { const text = String(value || "").replace(/\s+/g, " ").trim(); return text.length > max ? `${text.slice(0, max - 1)}...` : text; }
 function toHref(value) { const text = String(value || "").trim(); if (!text) return "#"; if (/^(https?:|mailto:|tel:)/i.test(text)) return text; return `https://${text}`; }
+function providerInquiryMailto(provider) {
+  const email = String(provider?.email || "").trim();
+  if (!email) return "";
+  const providerName = provider?.name || "there";
+  const subject = "Inquiry from The Healing Directory";
+  const body = [
+    `Hi ${providerName},`,
+    "",
+    "I found your profile on The Healing Directory and wanted to reach out.",
+    "",
+    "I am looking for support with:",
+    "",
+    "A little about me:",
+    "",
+    "My availability:",
+    "",
+    "Best way to reach me:",
+    "",
+    "Thank you,",
+  ].join("\n");
+  return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
 function dateValue(value) { const time = new Date(value || 0).getTime(); return Number.isNaN(time) ? 0 : time; }
 function formatDate(value) { const time = dateValue(value); return time ? new Intl.DateTimeFormat(undefined, { weekday: "short", month: "long", day: "numeric", year: "numeric" }).format(time) : "Date TBA"; }
 function formatTime(value) { const time = dateValue(value); return time ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(time) : ""; }

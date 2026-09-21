@@ -347,6 +347,7 @@ function ProviderCard({ provider, saved, onSave }) {
   const [contactOpen, setContactOpen] = React.useState(false);
   const providerTypeText = provider.providerType?.join(", ") || "Provider";
   const supportTags = (provider.support || []).slice(0, 5);
+  const messageLink = providerInquiryMailto(provider);
   return <article className="provider-row">
     <Avatar item={provider} />
     <div className="provider-copy">
@@ -362,7 +363,7 @@ function ProviderCard({ provider, saved, onSave }) {
         <button className={saved ? "icon-button saved" : "icon-button"} onClick={onSave} title="Save provider">{saved ? <Star fill="currentColor" /> : <Star />}</button>
       </div>
       <div className="provider-contact-body">
-        {provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}
+        {messageLink ? <a href={messageLink}><Mail size={17} /><span>Message provider</span></a> : null}
         {provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}
         {provider.website ? <a href={href(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>Website</span></a> : null}
         <button className="button full" onClick={() => go(`/provider-details?id=${provider.id}`)}>View profile <ArrowRight size={15} /></button>
@@ -394,6 +395,7 @@ function ProviderDetails({ data, loading, toggleSave }) {
   if (loading || (checkingProfile && !listedProvider)) return <State label="Loading provider profile" />;
   if (!provider) return <State label="Provider not found" />;
   const saved = data.savedProviderIds.includes(provider.id);
+  const messageLink = providerInquiryMailto(provider);
   return <main className="provider-detail-page">
     <section className="profile-band"><div className="band-inner">
       <div className="profile-actions"><button className="back-link" onClick={() => go("/")}><ArrowLeft size={16} /> Back to directory</button><div className="profile-action-cluster">{provider.verified ? <span className="status verified-dark profile-verified-badge"><CheckCircle2 size={13} /> Verified</span> : null}<button className={saved ? "button saved-profile" : "button outline-light"} onClick={() => toggleSave("provider", provider.id, !saved)}>{saved ? <CheckCircle2 size={16} /> : <Bookmark size={16} />}{saved ? "Saved provider" : "Save provider"}</button></div></div>
@@ -409,7 +411,7 @@ function ProviderDetails({ data, loading, toggleSave }) {
       <aside className="profile-sidebar">
         <DetailPanel className="contact-panel" title="Connect" defaultOpen={false}>
           {provider.consultationLink ? <a className="button full" href={href(provider.consultationLink)} target="_blank" rel="noreferrer">Book consultation <ArrowRight size={16} /></a> : provider.website ? <a className="button full" href={href(provider.website)} target="_blank" rel="noreferrer">Visit website <ArrowRight size={16} /></a> : null}
-          {provider.email ? <a href={`mailto:${provider.email}`}><Mail size={17} /><span>{provider.email}</span></a> : null}
+          {messageLink ? <a href={messageLink}><Mail size={17} /><span>Message provider</span></a> : null}
           {provider.phone ? <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`}><Phone size={17} /><span>{provider.phone}</span></a> : null}
           {provider.website ? <a href={href(provider.website)} target="_blank" rel="noreferrer"><ExternalLink size={17} /><span>{provider.website}</span></a> : null}
         </DetailPanel>
@@ -659,6 +661,28 @@ function dateNumber(value) {
 }
 function truncate(value, max) { const text = String(value || "").replace(/\s+/g, " ").trim(); return text.length > max ? `${text.slice(0, max - 1)}...` : text; }
 function href(value) { return /^(https?:|mailto:|tel:)/i.test(String(value || "")) ? value : `https://${value}`; }
+function providerInquiryMailto(provider) {
+  const email = String(provider?.email || "").trim();
+  if (!email) return "";
+  const providerName = provider?.name || "there";
+  const subject = "Inquiry from The Healing Directory";
+  const body = [
+    `Hi ${providerName},`,
+    "",
+    "I found your profile on The Healing Directory and wanted to reach out.",
+    "",
+    "I am looking for support with:",
+    "",
+    "A little about me:",
+    "",
+    "My availability:",
+    "",
+    "Best way to reach me:",
+    "",
+    "Thank you,",
+  ].join("\n");
+  return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
 function initials(value) { const parts = String(value || "TH").split(/\s+/).filter(Boolean); return `${parts[0]?.[0] || "T"}${parts.at(-1)?.[0] || "H"}`.toUpperCase(); }
 function firstName(value) { return String(value || "there").split(/\s+/)[0]; }
 function verifiedProviderSubtitle(provider) {
