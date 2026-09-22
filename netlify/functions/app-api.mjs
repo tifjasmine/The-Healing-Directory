@@ -2,6 +2,7 @@ import { getUser } from "./supabase-user.mjs";
 
 const BASE_ID = process.env.AIRTABLE_BASE_ID || process.env.AIRTABLE_DIRECTORY_BASE_ID || "appACV3Zz7ngug6yt";
 const TOKEN = () => process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "";
+const INQUIRIES_TOKEN = () => process.env.AIRTABLE_INQUIRIES_TOKEN || "";
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
 const SUPABASE_STORAGE_SERVICE_ROLE_KEY = () => process.env.SUPABASE_STORAGE_SERVICE_ROLE_KEY || SUPABASE_SERVICE_ROLE_KEY();
@@ -293,10 +294,11 @@ const FIELD_NAME_CACHE = new Map();
 
 export default async function handler(request) {
   try {
-    if (!TOKEN()) return reply({ configured: false, error: "AIRTABLE_TOKEN is not configured." }, 503);
-
     const url = new URL(request.url);
     const action = url.searchParams.get("action") || "bootstrap";
+    if (!TOKEN() && !(action === "provider-inquiry" && airtableToken("providerInquiries"))) {
+      return reply({ configured: false, error: "AIRTABLE_TOKEN is not configured." }, 503);
+    }
 
     if (request.method === "POST" && action === "provider-approved-invite") {
       const body = await request.json().catch(() => ({}));
@@ -1117,7 +1119,7 @@ async function providerInquiry(body = {}, request) {
   const providerId = clean(body.providerId);
   if (!providerId) throw httpError(400, "Provider is required.");
 
-  const provider = normalizeProvider(await get("directory", providerId));
+  const provider = normalizeProvider(await getInquiryProvider(providerId));
   if (!provider?.id || !provider.isPublic) throw httpError(404, "Provider not found.");
 
   const clientName = clean(body.name);
@@ -1145,6 +1147,15 @@ async function providerInquiry(body = {}, request) {
     Status: "New"
   });
   return { ok: true, id: record.id };
+}
+
+async function getInquiryProvider(providerId) {
+  const table = TABLES.directory;
+  const endpoint = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}/${encodeURIComponent(providerId)}`;
+  const response = await fetch(endpoint, { headers: airtableHeaders("providerInquiries") });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw httpError(response.status, payload.error?.message || `Airtable request failed (${response.status}).`);
+  return payload;
 }
 
 function normalizeProvider(record) {
@@ -1323,7 +1334,7 @@ function optionListWithOther(key, values) {
 async function metadataTable(key) {
   const tableNameOrId = await resolveAirtableTableName(key);
   const response = await fetch(`https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables`, {
-    headers: { Authorization: `Bearer ${TOKEN()}`, "Content-Type": "application/json" }
+    headers: airtableHeaders(key)
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw httpError(response.status, payload.error?.message || `Airtable metadata request failed (${response.status}).`);
@@ -1333,7 +1344,7 @@ async function metadataTable(key) {
 async function resolveAirtableTableName(key) {
   if (TABLE_LOOKUP.has(key)) return TABLE_LOOKUP.get(key);
   const candidates = resolveTableCandidates(key);
-  const tables = await getAirtableTables();
+  const tables = await getAirtableTables(key);
 
   const match = tables.find((table) => candidates.some((candidate) => table.id === candidate || lower(table.name) === lower(candidate)));
   if (match) {
@@ -1369,7 +1380,8 @@ async function ensureAirtableTable(key, candidates = []) {
   const desiredName = getPreferredTableName(key, candidates);
   const response = await createAirtableTable({
     ...schema,
-    name: desiredName
+    name: desiredName,
+    tableKey: key
   });
   if (!response) return null;
   TABLE_META_CACHE.clear();
@@ -1384,7 +1396,7 @@ async function createAirtableTable(definition) {
   try {
     const response = await fetch(`https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${TOKEN()}`, "Content-Type": "application/json" },
+      headers: airtableHeaders(definition.tableKey),
       body: JSON.stringify({ name: definition.name, fields: definition.fields })
     });
     const payload = await response.json().catch(() => ({}));
@@ -1403,16 +1415,16 @@ async function ensureAirtableFields(key) {
   const existing = new Set((table.fields || []).map((field) => lower(field.name)));
   for (const field of schema.fields) {
     if (existing.has(lower(field.name))) continue;
-    await createAirtableField(table.id, field);
+    await createAirtableField(key, table.id, field);
   }
   TABLE_META_CACHE.clear();
   return metadataTable(key).catch(() => table);
 }
 
-async function createAirtableField(tableId, field) {
+async function createAirtableField(key, tableId, field) {
   const response = await fetch(`https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables/${tableId}/fields`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${TOKEN()}`, "Content-Type": "application/json" },
+    headers: airtableHeaders(key),
     body: JSON.stringify(field)
   });
   const payload = await response.json().catch(() => ({}));
@@ -1420,17 +1432,18 @@ async function createAirtableField(tableId, field) {
   return payload;
 }
 
-async function getAirtableTables() {
-  if (TABLE_META_CACHE.has("tables")) return TABLE_META_CACHE.get("tables");
+async function getAirtableTables(key = "") {
+  const cacheKey = `tables:${key || "default"}`;
+  if (TABLE_META_CACHE.has(cacheKey)) return TABLE_META_CACHE.get(cacheKey);
 
   const response = await fetch(`https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables`, {
-    headers: { Authorization: `Bearer ${TOKEN()}`, "Content-Type": "application/json" }
+    headers: airtableHeaders(key)
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw httpError(response.status, payload.error?.message || `Airtable metadata request failed (${response.status}).`);
 
   const tables = payload.tables || [];
-  TABLE_META_CACHE.set("tables", tables);
+  TABLE_META_CACHE.set(cacheKey, tables);
   return tables;
 }
 
@@ -2133,12 +2146,20 @@ async function airtable(key, id = "", options = {}) {
   const endpoint = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}${id ? `/${encodeURIComponent(id)}` : ""}${query}`;
   const response = await fetch(endpoint, {
     method: options.method || "GET",
-    headers: { Authorization: `Bearer ${TOKEN()}`, "Content-Type": "application/json" },
+    headers: airtableHeaders(key),
     body: options.body ? JSON.stringify(options.body) : undefined
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw httpError(response.status, payload.error?.message || `Airtable request failed (${response.status}).`);
   return payload;
+}
+
+function airtableToken(key = "") {
+  return key === "providerInquiries" ? (INQUIRIES_TOKEN() || TOKEN()) : TOKEN();
+}
+
+function airtableHeaders(key = "") {
+  return { Authorization: `Bearer ${airtableToken(key)}`, "Content-Type": "application/json" };
 }
 
 function requireUser(user) { if (!user?.email) throw httpError(401, "Please log in."); return user; }
