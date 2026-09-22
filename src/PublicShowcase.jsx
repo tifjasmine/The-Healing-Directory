@@ -396,8 +396,8 @@ function ProviderInquiryModal({ provider, onClose }) {
       <button type="button" className="inquiry-close icon-button" onClick={onClose} aria-label="Close message form"><X size={19} /></button>
       {status.sent ? <div className="inquiry-success">
         <p className="eyebrow ink">Message sent</p>
-        <h2 id="provider-inquiry-title">Your message was sent to {provider.name}.</h2>
-        <p>Thanks for reaching out through The Healing Directory. The provider will follow up directly if they are able to connect.</p>
+        <h2 id="provider-inquiry-title">Your message was received.</h2>
+        <p>Thanks for reaching out through The Healing Directory. Your message has been shared with {provider.name}. If they are available and feel like a fit, they will reach out to you directly soon. We are so glad you are here and hope you find support that feels aligned.</p>
         <button type="button" className="button full" onClick={onClose}>Close</button>
       </div> : <form onSubmit={submit}>
         <div className="inquiry-header">
@@ -410,7 +410,7 @@ function ProviderInquiryModal({ provider, onClose }) {
           <label><span>Your email *</span><input type="email" value={form.email} onChange={(event) => update("email", event.target.value)} required autoComplete="email" /></label>
           <label><span>Phone <small>optional</small></span><input value={form.phone} onChange={(event) => update("phone", event.target.value)} autoComplete="tel" /></label>
           <label className="inquiry-honeypot"><span>Website</span><input value={form.website} onChange={(event) => update("website", event.target.value)} tabIndex="-1" autoComplete="off" /></label>
-          <label className="inquiry-message"><span>Send a message to your provider *</span><textarea value={form.message} onChange={(event) => update("message", event.target.value)} required rows={7} placeholder="Example: I found your profile on The Healing Directory and wanted to ask about fit, availability, and next steps." /></label>
+          <label className="inquiry-message"><span>Send a message to your provider *</span><textarea value={form.message} onChange={(event) => update("message", event.target.value)} required rows={7} placeholder={`Hi ${provider.name},\n\nI found your profile on The Healing Directory and I'm looking for support with...\n\nI'd love to ask about your availability, approach, and possible next steps.`} /></label>
         </div>
         <label className="inquiry-consent">
           <input type="checkbox" checked={form.consent} onChange={(event) => update("consent", event.target.checked)} />

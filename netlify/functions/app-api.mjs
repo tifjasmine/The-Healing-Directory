@@ -162,6 +162,10 @@ const AIRTABLE_BOOTSTRAP_SCHEMAS = {
       { name: "Client Email", type: "email" },
       { name: "Client Phone", type: "phoneNumber" },
       { name: "Message", type: "multilineText" },
+      { name: "Provider Email Subject", type: "singleLineText" },
+      { name: "Provider Email Body", type: "multilineText" },
+      { name: "Client Confirmation Subject", type: "singleLineText" },
+      { name: "Client Confirmation Body", type: "multilineText" },
       { name: "Consent", type: "checkbox", options: { icon: "check", color: "greenBright" } },
       { name: "Submitted At", type: "dateTime", options: { timeZone: "client", dateFormat: { name: "local" }, timeFormat: { name: "12hour" } } },
       { name: "Source URL", type: "url" },
@@ -1131,6 +1135,12 @@ async function providerInquiry(body = {}, request) {
   if (!message) throw httpError(400, "Please include a short message for the provider.");
   if (!consent) throw httpError(400, "Please confirm the general inquiry note before sending.");
 
+  await ensureAirtableFields("providerInquiries").catch(() => null);
+  const providerSubject = "New inquiry from The Healing Directory";
+  const providerBody = providerInquiryProviderEmail({ provider, clientName, clientEmail, clientPhone, message });
+  const clientSubject = `Your message to ${provider.name || "a provider"} through The Healing Directory`;
+  const clientBody = providerInquiryClientEmail({ provider, clientName, clientEmail, clientPhone, message });
+
   const record = await createSafe("providerInquiries", {
     Name: `${clientName} → ${provider.name || "Provider"}`,
     Provider: [provider.id],
@@ -1140,6 +1150,10 @@ async function providerInquiry(body = {}, request) {
     "Client Email": clientEmail,
     "Client Phone": clientPhone,
     Message: message,
+    "Provider Email Subject": providerSubject,
+    "Provider Email Body": providerBody,
+    "Client Confirmation Subject": clientSubject,
+    "Client Confirmation Body": clientBody,
     Consent: true,
     "Submitted At": new Date().toISOString(),
     "Source URL": limitText(body.sourceUrl || request?.headers?.get("referer"), 500),
@@ -1156,6 +1170,49 @@ async function getInquiryProvider(providerId) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw httpError(response.status, payload.error?.message || `Airtable request failed (${response.status}).`);
   return payload;
+}
+
+function providerInquiryProviderEmail({ provider, clientName, clientEmail, clientPhone, message }) {
+  return [
+    `Hi ${provider.name || "there"},`,
+    "",
+    "Someone reached out to you through The Healing Directory.",
+    "",
+    `From: ${clientName}`,
+    `Email: ${clientEmail}`,
+    `Phone: ${clientPhone || "Not provided"}`,
+    "",
+    "Message:",
+    message,
+    "",
+    `Please reply directly to ${clientEmail} if you are available and feel like it may be a fit.`,
+    "",
+    "Warmly,",
+    "The Healing Directory",
+  ].join("\n");
+}
+
+function providerInquiryClientEmail({ provider, clientName, clientEmail, clientPhone, message }) {
+  return [
+    `Hi ${firstName(clientName)},`,
+    "",
+    `Thanks for reaching out through The Healing Directory. We shared your message with ${provider.name || "the provider"}.`,
+    "",
+    "If they are available and feel like it may be a fit, they will reach out to you directly soon. We are so glad you are here and hope you find support that feels aligned.",
+    "",
+    "For your records, here is the message you sent:",
+    "",
+    `Name: ${clientName}`,
+    `Email: ${clientEmail}`,
+    `Phone: ${clientPhone || "Not provided"}`,
+    "",
+    message,
+    "",
+    "Please do not use this form for emergencies or urgent medical needs. If this is an emergency, call 911 or go to your nearest emergency room.",
+    "",
+    "Warmly,",
+    "The Healing Directory",
+  ].join("\n");
 }
 
 function normalizeProvider(record) {
@@ -2286,6 +2343,7 @@ function clean(value) { return String(value ?? "").replace(/\s+/g, " ").trim(); 
 function normalizeWebsite(value) { const next = clean(value); return next && !/^https?:\/\//i.test(next) ? `https://${next}` : next; }
 function lower(value) { return clean(value).toLowerCase(); }
 function limitText(value, max = 1000) { return longText(value).slice(0, max); }
+function firstName(value) { return clean(value).split(/\s+/)[0] || "there"; }
 function slug(value) { return lower(value).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "provider"; }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function required(value, label) { const cleanValue = clean(value); if (!cleanValue) throw httpError(400, `${label} is required.`); return cleanValue; }
